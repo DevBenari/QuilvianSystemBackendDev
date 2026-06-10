@@ -38,8 +38,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ITTDService _ttdService;
         private readonly ILogger<LabBookingDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
-        private readonly IAsuransiCoverageService _asuransiCoverageService; 
         private readonly INoPhotoGeneratorService _noPhotoGeneratorService;
 
         public LabBookingDetailController(
@@ -51,8 +49,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             //IConfiguration configuration,
             ITTDService ttdService,
             IHubContext<LabBookingDetailHub> hubContext,
-            IGenerateInvoiceBillingService generateInvoiceBillingService,
-            IAsuransiCoverageService asuransiCoverageService,
             INoPhotoGeneratorService noPhotoGeneratorService)
         {
             _applicationDbContext = applicationDbContext;
@@ -63,8 +59,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             //_uploadUrl = configuration["FileStorage:UploadUrl"];
             _hubContext = hubContext;
             _ttdService = ttdService;
-            _generateInvoiceBillingService = generateInvoiceBillingService;
-            _asuransiCoverageService = asuransiCoverageService;
             _noPhotoGeneratorService = noPhotoGeneratorService;
         }
 
@@ -315,55 +309,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 _applicationDbContext.LabBookingDetails.Add(data);
                 await _applicationDbContext.SaveChangesAsync(ct);
 
-                // ==========================================================
-                // ✅ Tambahkan otomatis ke Billing
-                // ==========================================================
-                if (vm.PemeriksaanLabId != null && vm.BookingLabId != null)
-                {
-                    var pemeriksaan = await _applicationDbContext.LabPemeriksaans
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(p => p.PemeriksaanLabId == vm.PemeriksaanLabId);
-
-                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
-                        vm.KunjunganId.Value,
-                        "Pemeriksaan Lab",
-                        pemeriksaan.PemeriksaanLabId,
-                        ct);
-
-                    if (pemeriksaan != null)
-                    {
-                        var billing = new Billing
-                        {
-                            BillingId = Guid.NewGuid(),
-                            KunjunganId = vm.KunjunganId ?? Guid.Empty, // jika dikirim dari ViewModel
-                            ItemId = pemeriksaan.PemeriksaanLabId,
-                            NamaItem = pemeriksaan.NamaPemeriksaan,
-                            HargaItem = pemeriksaan.HargaPemeriksaan ?? 0,
-                            QtyItem = 1,
-                            SubTotalItem = pemeriksaan.HargaPemeriksaan ?? 0,
-                            InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-                                (Guid)vm.KunjunganId,
-                                DateTime.UtcNow),
-                            IsListWhiteOff = false,
-                            BillingKode = "LAB",
-                            JenisBilling = "Pemeriksaan Lab",
-                            StatusBilling = false,
-                            TipeLayanan = vm.TipeLayanan,
-                            BillingDate = DateTime.UtcNow,
-                            TanggalInvoice = DateTime.UtcNow,
-                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                            IsCovered = coverage?.IsCovered,
-                            IsCoveredExcess = coverage?.IsCoveredExcess,
-                            AsuransiId = coverage?.AsuransiId,
-                            AsuransiExcessId = coverage?.AsuransiExcessId,
-                            CreateBy = userActiveId,
-                            CreateDateTime = DateTimeOffset.UtcNow,
-                        };
-
-                        _applicationDbContext.Billings.Add(billing);
-                        await _applicationDbContext.SaveChangesAsync();
-                    }
-                }
                 await transaction.CommitAsync(ct);
                 await _hubContext.Clients.All.SendAsync("Lab booking detail created", new
                 {
@@ -579,80 +524,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 _applicationDbContext.LabBookingDetails.Update(existingData);
                 await _applicationDbContext.SaveChangesAsync();
-
-                // ==========================================================
-                // ✅ Sinkronisasi Billing Pemeriksaan Lab
-                // ==========================================================
-                if (vm.PemeriksaanLabId != null)
-                {
-                    var pemeriksaan = await _applicationDbContext.LabPemeriksaans
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(p => p.PemeriksaanLabId == vm.PemeriksaanLabId);
-
-                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
-                        vm.KunjunganId,
-                        "Pemeriksaan Lab",
-                        pemeriksaan.PemeriksaanLabId,
-                        ct);
-
-                    if (pemeriksaan != null)
-                    {
-                        // Cek apakah sudah ada billing untuk pemeriksaan ini
-                        var existingBilling = await _applicationDbContext.Billings
-                            .FirstOrDefaultAsync(b => b.ItemId == vm.PemeriksaanLabId
-                                                   && b.JenisBilling == "Pemeriksaan Lab"
-                                                   && (b.IsDelete == false || b.IsDelete == null));
-
-                        if (existingBilling == null)
-                        {
-                            // Tambah billing baru
-                            var billing = new Billing
-                            {
-                                BillingId = Guid.NewGuid(),
-                                KunjunganId = vm.KunjunganId ?? Guid.Empty,
-                                ItemId = pemeriksaan.PemeriksaanLabId,
-                                NamaItem = pemeriksaan.NamaPemeriksaan,
-                                HargaItem = pemeriksaan.HargaPemeriksaan ?? 0,
-                                InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-                                (Guid)vm.KunjunganId,
-                                DateTime.UtcNow),
-                                IsListWhiteOff = false,
-                                QtyItem = 1,
-                                SubTotalItem = pemeriksaan.HargaPemeriksaan ?? 0,
-                                BillingKode = "LAB",
-                                JenisBilling = "Pemeriksaan Lab",
-                                BillingDate = DateTime.UtcNow,
-                                TanggalInvoice = DateTime.UtcNow,
-                                TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                                StatusBilling = false,
-
-                                IsCovered = coverage?.IsCovered,
-                                IsCoveredExcess = coverage?.IsCoveredExcess,
-                                AsuransiId = coverage?.AsuransiId,
-                                AsuransiExcessId = coverage?.AsuransiExcessId,
-
-                                CreateBy = userActiveId,
-                                CreateDateTime = DateTimeOffset.UtcNow,
-                                StatusPengambilan = false,
-                            };
-
-                            _applicationDbContext.Billings.Add(billing);
-                        }
-                        else
-                        {
-                            // Update billing lama (jika harga atau nama berubah)
-                            existingBilling.NamaItem = pemeriksaan.NamaPemeriksaan;
-                            existingBilling.HargaItem = pemeriksaan.HargaPemeriksaan ?? existingBilling.HargaItem;
-                            existingBilling.SubTotalItem = existingBilling.HargaItem * (existingBilling.QtyItem ?? 1);
-                            existingBilling.UpdateBy = userActiveId;
-                            existingBilling.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                            _applicationDbContext.Billings.Update(existingBilling);
-                        }
-
-                        await _applicationDbContext.SaveChangesAsync();
-                    }
-                }
 
                 // ==========================================================
                 // ✅ RESPONSE

@@ -44,6 +44,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<LabBookingHub> _hubContext;
         private readonly INoPhotoGeneratorService _noPhotoGeneratorService;
+        private readonly ILabBillingService _labBillingService;
 
         public LabBookingController(
             ApplicationDbContext applicationDbContext,
@@ -54,7 +55,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             //IConfiguration configuration,
             ITTDService ttDService,
             IHubContext<LabBookingHub> hubContext,
-            INoPhotoGeneratorService noPhotoGeneratorService
+            INoPhotoGeneratorService noPhotoGeneratorService,
+            ILabBillingService labBillingService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -66,6 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _hubContext = hubContext;
             _ttdService = ttDService;
             _noPhotoGeneratorService = noPhotoGeneratorService;
+            _labBillingService = labBillingService;
         }
         private DateTime? TryParseTanggalToUtc(string tanggal)
         {
@@ -717,14 +720,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 await _applicationDbContext.SaveChangesAsync(ct);
 
                 // ======================================
-                // Generate NoPhoto hanya kalau sudah konfirmasi
+                // Generate NoPhoto dan billing hanya kalau sudah konfirmasi
                 // ======================================
                 var generatedCount = 0;
-
+                var labBillingCreated = 0;
                 if (entity.KonfirmatorId.HasValue)
                 {
                     generatedCount = await _noPhotoGeneratorService
                         .GenerateNoPhotosByLabBookingIdAsync(entity.BookingLabId, ct);
+
+                    labBillingCreated = await _labBillingService
+                    .EnsureLabBillingOnConfirmationAsync(
+                        entity.BookingLabId,
+                        userActiveId,
+                        ct);
                 }
 
                 await transaction.CommitAsync(ct);
@@ -742,6 +751,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     {
                         entity.BookingLabId,
                         totalNoPhotoGenerated = generatedCount,
+                        totalLabBillingCreated = labBillingCreated,
                         entity.NoOrder,
                         entity.NomorSuratJaminan,
                         entity.CatatanJaminan,
@@ -766,6 +776,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
         [HttpPut("StatusPemeriksaanLab/{id}")]
         public async Task<IActionResult> StatusPemeriksaanLab(Guid id, [FromBody] string status)
         {

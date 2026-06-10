@@ -341,6 +341,7 @@ builder.Services.AddScoped<INoBillService, NoBillService>();
 builder.Services.AddScoped<IObatUnitStockService, ObatUnitReserveService>();
 builder.Services.AddScoped<IResepStockService, ResepStockService>();
 builder.Services.AddScoped<INoPhotoGeneratorService, NoPhotoGeneratorService>();
+builder.Services.AddScoped<ILabBillingService, LabBillingService>();
 
 #endregion
 
