@@ -1,4 +1,5 @@
 ﻿using System;
+using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -31,43 +32,26 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
         // POST: api/purchaseorders
         // =========================
         [HttpPost]
-        public async Task<IActionResult> Create(PurchaseOrderViewModel dto)
+        public async Task<IActionResult> Create([FromBody] PurchaseOrderViewModel dto)
         {
-            // ===============================
-            // 1. Cek / Insert Supplier
-            // ===============================
-            var supplier = await _context.Suppliers
-                .FirstOrDefaultAsync(x => x.SupplierCode == dto.SupplierCode);
+            if (dto == null)
+                return BadRequest("Data tidak valid");
+            if (dto.Items == null || !dto.Items.Any())
+                return BadRequest("Detail item tidak boleh kosong");
 
-            if (supplier == null)
-            {
-                supplier = new Supplier
-                {
-                    SupplierId = Guid.NewGuid(),
-                    SupplierCode = dto.SupplierCode!,
-                    SupplierName = dto.SupplierName!,
-                    IsActive = true
-                };
-
-                _context.Suppliers.Add(supplier);
-                await _context.SaveChangesAsync(); // simpan supplier dulu
-            }
-
-            // ===============================
-            // 2. Insert Purchase Order
-            // ===============================
             var po = new PurchaseOrder
             {
                 PurchaseOrderId = Guid.NewGuid(),
-
-                SupplierCode = supplier.SupplierCode,
-                SupplierName = supplier.SupplierName,
 
                 PurchaseRequestNumber = dto.PurchaseRequestNumber,
                 PurchaseOrderNumber = dto.PurchaseOrderNumber,
                 InvoiceDate = dto.InvoiceDate,
                 InvoiceNumber = dto.InvoiceNumber,
                 RequestType = dto.RequestType,
+
+                SupplierId = dto.SupplierId,
+                SupplierCode = dto.SupplierCode,
+                SupplierName = dto.SupplierName,
 
                 TermOfPayment = dto.TermOfPayment,
                 ExpiredDate = dto.ExpiredDate,
@@ -99,11 +83,86 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
 
             return Ok(new
             {
-                message = "Purchase Order & Supplier berhasil disimpan",
-                purchaseOrderId = po.PurchaseOrderId,
-                supplierId = supplier.SupplierId
+                message = "Purchase Order berhasil disimpan",
+                purchaseOrderId = po.PurchaseOrderId
             });
+
         }
+
+        //[HttpPost]
+        //public async Task<IActionResult> Create(PurchaseOrderViewModel dto)
+        //{
+        //    // ===============================
+        //    // 1. Cek / Insert Supplier
+        //    // ===============================
+        //    var supplier = await _context.Suppliers
+        //        .FirstOrDefaultAsync(x => x.SupplierCode == dto.SupplierCode);
+
+        //    if (supplier == null)
+        //    {
+        //        supplier = new Supplier
+        //        {
+        //            SupplierId = Guid.NewGuid(),
+        //            SupplierCode = dto.SupplierCode!,
+        //            SupplierName = dto.SupplierName!,
+        //            IsActive = true
+        //        };
+
+        //        _context.Suppliers.Add(supplier);
+        //        await _context.SaveChangesAsync(); // simpan supplier dulu
+        //    }
+
+        //    // ===============================
+        //    // 2. Insert Purchase Order
+        //    // ===============================
+        //    var po = new PurchaseOrder
+        //    {
+        //        PurchaseOrderId = Guid.NewGuid(),
+
+        //        SupplierCode = supplier.SupplierCode,
+        //        SupplierName = supplier.SupplierName,
+
+        //        PurchaseRequestNumber = dto.PurchaseRequestNumber,
+        //        PurchaseOrderNumber = dto.PurchaseOrderNumber,
+        //        InvoiceDate = dto.InvoiceDate,
+        //        InvoiceNumber = dto.InvoiceNumber,
+        //        RequestType = dto.RequestType,
+
+        //        TermOfPayment = dto.TermOfPayment,
+        //        ExpiredDate = dto.ExpiredDate,
+
+        //        RemainingDay = dto.RemainingDay,
+        //        QtyTotal = dto.QtyTotal,
+        //        GrandTotal = dto.GrandTotal,
+
+        //        UserAccess = dto.UserAccess,
+        //        StatusPO = dto.StatusPO,
+        //        Keterangan = dto.Keterangan,
+
+        //        PurchaseOrderItems = dto.Items.Select(i => new PurchaseOrderItem
+        //        {
+        //            PurchaseOrderItemId = Guid.NewGuid(),
+        //            ProductName = i.ProductName,
+        //            Measurement = i.Measurement,
+        //            Category = i.Category,
+        //            Qty = i.Qty ?? 0,
+        //            Price = i.Price ?? 0,
+        //            Discount = i.Discount ?? 0,
+        //            SubTotal = i.SubTotal ?? 0,
+        //            Keterangan = i.Keterangan
+        //        }).ToList()
+        //    };
+
+        //    _context.PurchaseOrders.Add(po);
+        //    await _context.SaveChangesAsync();
+
+        //    return Ok(new
+        //    {
+        //        message = "Purchase Order & Supplier berhasil disimpan",
+        //        purchaseOrderId = po.PurchaseOrderId,
+        //        supplierId = supplier.SupplierId
+        //    });
+        //}
 
 
         [HttpGet]
@@ -120,6 +179,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     InvoiceNumber = po.InvoiceNumber,
                     RequestType = po.RequestType,
 
+                    SupplierId = po.SupplierId,
                     SupplierName = po.SupplierName,
                     SupplierCode = po.SupplierCode,
 
@@ -181,6 +241,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     {
                         PurchaseRequestNumber = po.PurchaseRequestNumber,
                         PurchaseOrderNumber = po.PurchaseOrderNumber,
+                        SupplierId = po.SupplierId,
                         InvoiceDate = po.InvoiceDate,
                         InvoiceNumber = po.InvoiceNumber,
                         RequestType = po.RequestType,
@@ -389,6 +450,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     InvoiceNumber = po.InvoiceNumber,
                     RequestType = po.RequestType,
 
+                    SupplierId = po.SupplierId,
                     SupplierName = po.SupplierName,
                     SupplierCode = po.SupplierCode,
 
