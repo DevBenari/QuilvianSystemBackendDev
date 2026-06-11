@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.AR.Models
 {
-    [Table("FIN_ARCanceled", Schema = "public")]
+    [Table("Fin_ARCanceled", Schema = "public")]
     public class ARCanceled : UserActivity
     {
         [Key]

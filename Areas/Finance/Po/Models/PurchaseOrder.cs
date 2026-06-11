@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
 {
-    [Table("PurchaseOrder", Schema = "public")]
+    [Table("Fin_PurchaseOrder", Schema = "public")]
     public class PurchaseOrder : UserActivity
     {
         [Key]

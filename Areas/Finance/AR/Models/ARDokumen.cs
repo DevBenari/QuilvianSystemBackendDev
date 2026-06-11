@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.AR.Models
 {
-    [Table("FIN_ARDokumen", Schema = "public")]
+    [Table("Fin_ARDokumen", Schema = "public")]
     public class ARDokumen : UserActivity
     {
         public Guid ARDokumenId { get; set; }

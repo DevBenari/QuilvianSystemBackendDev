@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611044732_Ap")]
+    partial class Ap
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -7958,189 +7960,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("VoucherPettyCashId");
 
                     b.ToTable("VoucherPettyCash", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.CetakFilm", b =>
-                {
-                    b.Property<Guid>("CetakFilmId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DokterPerujukId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("HasilLabId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid?>("KelasId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("LabBookingId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("LabHasilHasilLabId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("NoOrder")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("PasienId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateOnly?>("TglOrder")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime?>("TglSelesai")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("TotalCetakFilm")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<TimeOnly?>("WaktuOrder")
-                        .HasColumnType("time without time zone");
-
-                    b.HasKey("CetakFilmId");
-
-                    b.HasIndex("DokterPerujukId");
-
-                    b.HasIndex("KelasId");
-
-                    b.HasIndex("KunjunganId");
-
-                    b.HasIndex("LabBookingId");
-
-                    b.HasIndex("LabHasilHasilLabId");
-
-                    b.HasIndex("PasienId");
-
-                    b.ToTable("CetakFilm");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.CetakFilmDetail", b =>
-                {
-                    b.Property<Guid>("DetailCetakFilmId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("CetakFilmId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DetailHasilLabId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("DokterPemeriksaId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("FilmId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("HargaSatuanFilm")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("HasilLab")
-                        .HasColumnType("text");
-
-                    b.Property<string>("HasilLabAI")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("LabBookingDetailId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("LabHasilDetailDetailHasilLabId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("LabId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("NamaDokterPemeriksa")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NamaPemeriksaan")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoPhoto")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PathHasilPhoto")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("PemeriksaanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("QtyCetakFilm")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("TotalCetakFilm")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("DetailCetakFilmId");
-
-                    b.HasIndex("CetakFilmId");
-
-                    b.HasIndex("DokterPemeriksaId");
-
-                    b.HasIndex("FilmId");
-
-                    b.HasIndex("LabBookingDetailId");
-
-                    b.HasIndex("LabHasilDetailDetailHasilLabId");
-
-                    b.HasIndex("LabId");
-
-                    b.HasIndex("PemeriksaanId");
-
-                    b.ToTable("CetakFilmDetail");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.Darah", b =>
@@ -23086,90 +22905,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("Kunjungan");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.CetakFilm", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Dokter", "DokterPerujuk")
-                        .WithMany()
-                        .HasForeignKey("DokterPerujukId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kelas", "Kelas")
-                        .WithMany()
-                        .HasForeignKey("KelasId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.Kunjungan", "Kunjungan")
-                        .WithMany()
-                        .HasForeignKey("KunjunganId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabBooking", "LabBooking")
-                        .WithMany()
-                        .HasForeignKey("LabBookingId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabHasil", "LabHasil")
-                        .WithMany()
-                        .HasForeignKey("LabHasilHasilLabId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.PendaftaranPasienBaru", "Pasien")
-                        .WithMany()
-                        .HasForeignKey("PasienId");
-
-                    b.Navigation("DokterPerujuk");
-
-                    b.Navigation("Kelas");
-
-                    b.Navigation("Kunjungan");
-
-                    b.Navigation("LabBooking");
-
-                    b.Navigation("LabHasil");
-
-                    b.Navigation("Pasien");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.CetakFilmDetail", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.CetakFilm", "CetakFilm")
-                        .WithMany("Details")
-                        .HasForeignKey("CetakFilmId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Dokter", "DokterPemeriksa")
-                        .WithMany()
-                        .HasForeignKey("DokterPemeriksaId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Film", "Film")
-                        .WithMany()
-                        .HasForeignKey("FilmId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabBookingDetail", "LabBookingDetail")
-                        .WithMany()
-                        .HasForeignKey("LabBookingDetailId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabHasilDetail", "LabHasilDetail")
-                        .WithMany()
-                        .HasForeignKey("LabHasilDetailDetailHasilLabId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.Lab", "Lab")
-                        .WithMany()
-                        .HasForeignKey("LabId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabPemeriksaan", "Pemeriksaan")
-                        .WithMany()
-                        .HasForeignKey("PemeriksaanId");
-
-                    b.Navigation("CetakFilm");
-
-                    b.Navigation("DokterPemeriksa");
-
-                    b.Navigation("Film");
-
-                    b.Navigation("Lab");
-
-                    b.Navigation("LabBookingDetail");
-
-                    b.Navigation("LabHasilDetail");
-
-                    b.Navigation("Pemeriksaan");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabBooking", b =>
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Asuransi", "Asuransi")
@@ -23709,11 +23444,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("Racikans");
 
                     b.Navigation("ResepDetails");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.CetakFilm", b =>
-                {
-                    b.Navigation("Details");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabBooking", b =>
