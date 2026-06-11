@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611043841_AddTableBuatCetakFilms")]
+    partial class AddTableBuatCetakFilms
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -500,159 +502,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("MstUserActive", "public");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.AP.Models.ReceiveOrder", b =>
-                {
-                    b.Property<Guid>("ReceiveOrderId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("AdditionalDiscountRp")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DeliveryNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime?>("DueDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("InvoiceNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsInvoiceProvided")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<Guid?>("PurchaseOrderId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ReceiveOrderNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<decimal?>("StampDuty")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("Status")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<Guid?>("SupplierId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("TermOfPayment")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("ReceiveOrderId");
-
-                    b.ToTable("Fin_ReceiveOrder", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.AP.Models.ReceiveOrderItem", b =>
-                {
-                    b.Property<Guid>("ReceiveOrderItemId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Barcode")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("BatchNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Category")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("ExpiredDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Measure")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<Guid?>("ProductId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ProductName")
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
-
-                    b.Property<decimal?>("QtyOrder")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("QtyReceive")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid?>("ReceiveOrderId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Remarks")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<decimal?>("StampDuty")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("ReceiveOrderItemId");
-
-                    b.HasIndex("ReceiveOrderId");
-
-                    b.ToTable("Fin_ReceiveOrderItem", "public");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.AR.Models.ARCanceled", b =>
                 {
                     b.Property<Guid>("ARCanceledId")
@@ -703,7 +552,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ARCanceledId");
 
-                    b.ToTable("Fin_ARCanceled", "public");
+                    b.ToTable("FIN_ARCanceled", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.AR.Models.ARDetail", b =>
@@ -791,7 +640,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ARDetailId");
 
-                    b.ToTable("Fin_ARDetail", "public");
+                    b.ToTable("FIN_ARDetail", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.AR.Models.ARDokumen", b =>
@@ -855,7 +704,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ARDokumenId");
 
-                    b.ToTable("Fin_ARDokumen", "public");
+                    b.ToTable("FIN_ARDokumen", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.AR.Models.ARHeader", b =>
@@ -939,7 +788,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ARHeaderId");
 
-                    b.ToTable("Fin_ARHeader", "public");
+                    b.ToTable("FIN_ARHeader", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Models.AyatSilang", b =>
@@ -1794,7 +1643,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PurchaseOrderId");
 
-                    b.ToTable("Fin_PurchaseOrder", "public");
+                    b.ToTable("PurchaseOrder", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.Po.Models.PurchaseOrderItem", b =>
@@ -1861,7 +1710,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasIndex("PurchaseOrderId");
 
-                    b.ToTable("Fin_PurchaseOrderItem", "public");
+                    b.ToTable("PurchaseOrderItem", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.BankAccount", b =>
@@ -22763,15 +22612,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.AP.Models.ReceiveOrderItem", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.Finance.AP.Models.ReceiveOrder", "ReceiveOrder")
-                        .WithMany("ReceiveOrderItems")
-                        .HasForeignKey("ReceiveOrderId");
-
-                    b.Navigation("ReceiveOrder");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.Po.Models.PurchaseOrderItem", b =>
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.Finance.Po.Models.PurchaseOrder", "PurchaseOrder")
@@ -23639,11 +23479,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("Kunjungan");
 
                     b.Navigation("Poliklinik");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.AP.Models.ReceiveOrder", b =>
-                {
-                    b.Navigation("ReceiveOrderItems");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.Po.Models.PurchaseOrder", b =>
