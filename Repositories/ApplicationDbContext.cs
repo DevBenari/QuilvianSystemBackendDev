@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using NuGet.Configuration;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.Finance.AP.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AR.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Models;
 using QuilvianSystemBackendDev.Areas.Finance.COA.Models;
@@ -1309,6 +1310,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<MasterBank> MasterBanks { get; set; }
         public DbSet<TukarFaktur> TukarFakturs { get; set; }
         public DbSet<DetailTukarFaktur> DetailTukarFakturs { get; set; }
+        public DbSet<ReceiveOrder> ReceiveOrders { get; set; }
+        public DbSet<ReceiveOrderItem> ReceiveOrderItems { get; set; }
+
         #endregion
     }
 }
