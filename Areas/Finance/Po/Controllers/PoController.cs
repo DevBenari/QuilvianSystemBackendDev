@@ -1,12 +1,16 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Repositories;
-using System;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
 {
@@ -206,6 +210,229 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 .ToListAsync();
 
             return Ok(new { message = "Success", data });
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            string? PRNumber = null,
+            string? PONumber = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            page = page < 1 ? 1 : page;
+            perPage = perPage < 1 ? 10 : perPage;
+            perPage = perPage > 200 ? 200 : perPage;
+
+            var query = _context.PurchaseOrders
+                .AsNoTracking()
+                .Where(po => po.IsDelete == false || po.IsDelete == null);
+
+            // ======================================================
+            // Search
+            // ======================================================
+            if (!string.IsNullOrWhiteSpace(PRNumber))
+            {
+                var pattern = $"%{PRNumber.Trim()}%";
+
+                query = query.Where(po =>
+                    (po.PurchaseRequestNumber != null && EF.Functions.ILike(po.PurchaseRequestNumber, pattern))
+                );
+            }
+            if (!string.IsNullOrWhiteSpace(PONumber))
+            {
+                var pattern = $"%{PONumber.Trim()}%";
+
+                query = query.Where(po =>
+                    (po.PurchaseOrderNumber != null && EF.Functions.ILike(po.PurchaseOrderNumber, pattern)) 
+                );
+            }
+
+            // ======================================================
+            // Filter tanggal
+            // Pakai CreateDateTime. Kalau mau berdasarkan InvoiceDate,
+            // ganti po.CreateDateTime menjadi po.InvoiceDate.
+            // ======================================================
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var start = startDate.Value.Date;
+                var endExclusive = endDate.Value.Date.AddDays(1);
+
+                query = query.Where(po =>
+                    po.CreateDateTime >= start &&
+                    po.CreateDateTime < endExclusive);
+            }
+
+            // ======================================================
+            // Filter periode
+            // ======================================================
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode.Value)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(po =>
+                            po.CreateDateTime.Date == today);
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(po =>
+                            po.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            po.CreateDateTime.Date <= today);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(po =>
+                            po.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            po.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(po =>
+                            po.CreateDateTime.Month == today.Month &&
+                            po.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        {
+                            var lastMonth = today.AddMonths(-1);
+
+                            query = query.Where(po =>
+                                po.CreateDateTime.Month == lastMonth.Month &&
+                                po.CreateDateTime.Year == lastMonth.Year);
+                            break;
+                        }
+
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(po =>
+                            po.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(po =>
+                            po.CreateDateTime.Year == today.Year - 1);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(po =>
+                            po.CreateDateTime >= today.AddMonths(-3));
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(po =>
+                            po.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // ======================================================
+            // Sorting
+            // ======================================================
+            var isDesc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+            query = isDesc
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(po => po.CreateDateTime),
+                    _ => query.OrderByDescending(po => po.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderBy(po => po.CreateDateTime),
+                    _ => query.OrderBy(po => po.CreateDateTime)
+                };
+
+            // ======================================================
+            // Pagination
+            // ======================================================
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            if (totalRows == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "No data found",
+                    data = new
+                    {
+                        Rows = Array.Empty<object>(),
+                        TotalRows = 0,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = 0
+                    }
+                });
+            }
+
+            if (page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            var rows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .Select(po => new PurchaseOrderViewModel
+                {
+                    PurchaseRequestNumber = po.PurchaseRequestNumber,
+                    PurchaseOrderNumber = po.PurchaseOrderNumber,
+                    InvoiceDate = po.InvoiceDate,
+                    InvoiceNumber = po.InvoiceNumber,
+                    RequestType = po.RequestType,
+
+                    SupplierName = po.SupplierName,
+                    SupplierCode = po.SupplierCode,
+
+                    TermOfPayment = po.TermOfPayment,
+                    ExpiredDate = po.ExpiredDate,
+
+                    RemainingDay = po.RemainingDay,
+                    QtyTotal = po.QtyTotal,
+                    GrandTotal = po.GrandTotal,
+
+                    UserAccess = po.UserAccess,
+                    StatusPO = po.StatusPO,
+                    Keterangan = po.Keterangan,
+
+                    Items = po.PurchaseOrderItems
+                        .Where(i => i.IsDelete == false || i.IsDelete == null)
+                        .Select(i => new PurchaseOrderItemViewModel
+                        {
+                            ProductName = i.ProductName,
+                            Measurement = i.Measurement,
+                            Category = i.Category,
+                            Qty = i.Qty,
+                            Price = i.Price,
+                            Discount = i.Discount,
+                            SubTotal = i.SubTotal,
+                            Keterangan = i.Keterangan
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
         }
 
     }
