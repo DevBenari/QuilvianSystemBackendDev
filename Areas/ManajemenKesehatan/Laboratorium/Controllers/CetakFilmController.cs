@@ -144,64 +144,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             d.CetakFilmId,
                             d.DetailHasilLabId,
                             d.LabBookingDetailId,
-                            d.LabId,
-                            d.PemeriksaanId,
 
-                            d.NamaPemeriksaan,
-                            d.NoPhoto,
+                            LabId = d.LabBookingDetail != null ? d.LabBookingDetail.LabId : null,
+                            NamaLab = d.LabBookingDetail.Lab != null ? d.LabBookingDetail.Lab.NamaLab : null,
+
+                            PemeriksaanId = d.LabBookingDetail != null ? d.LabBookingDetail.PemeriksaanLabId : null,
+                            NamaPemeriksaan = d.LabBookingDetail.PemeriksaanLab != null ? d.LabBookingDetail.PemeriksaanLab.NamaPemeriksaan : null,
+                            NoPhoto = d.LabBookingDetail != null ? d.LabBookingDetail.NoPhoto : null,
 
                             d.DokterPemeriksaId,
-                            d.NamaDokterPemeriksa,
+                            NamaDokterPemeriksa = d.DokterPemeriksa != null ? d.DokterPemeriksa.NmDokter : null,
 
-                            d.PathHasilPhoto,
-                            d.HasilLab,
-                            d.HasilLabAI,
+                            PathHasilPhoto = d.LabHasilDetail != null ? d.LabHasilDetail.PhotoLabPath : null,
+                            HasilLab = d.LabHasilDetail != null ? d.LabHasilDetail.HasilLabManual : null,
+                            HasilLabAI = d.LabHasilDetail != null ? d.LabHasilDetail.HasilLabAI : null,
 
                             d.FilmId,
-                            d.HargaSatuanFilm,
+                            NamaFilm = d.Film != null ? d.Film.NamaFilm : null,
+                            UkuranFilm = d.Film != null ? d.Film.UkuranFilm : null,
                             d.QtyCetakFilm,
                             d.TotalCetakFilm,
                             d.Keterangan,
-
-                            // =========================
-                            // Data tambahan dari relasi detail
-                            // =========================
-
-                            NamaLab = d.Lab != null
-                                ? d.Lab.NamaLab
-                                : null,
-
-                            KodeLab = d.Lab != null
-                                ? d.Lab.KodeKategori
-                                : null,
-
-                            NamaFilm = d.Film != null
-                                ? d.Film.NamaFilm
-                                : null,
-
-                            UkuranFilm = d.Film != null
-                                ? d.Film.UkuranFilm
-                                : null,
-
-                            NamaPemeriksaanMaster = d.Pemeriksaan != null
-                                ? d.Pemeriksaan.NamaPemeriksaan
-                                : null,
-
-                            KodePemeriksaan = d.Pemeriksaan != null
-                                ? d.Pemeriksaan.KodePemeriksaan
-                                : null,
-
-                            NamaDokterPemeriksaRelasi = d.DokterPemeriksa != null
-                                ? d.DokterPemeriksa.NmDokter
-                                : null,
-
-                            NoPhotoBookingDetail = d.LabBookingDetail != null
-                                ? d.LabBookingDetail.NoPhoto
-                                : null,
-
-                            // =========================
-                            // Metadata detail
-                            // =========================
 
                             d.CreateDateTime,
                             d.CreateBy,
@@ -397,7 +360,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         return BadRequest(new { message = $"LabBookingDetailId {detailVm.LabBookingDetailId} tidak ditemukan." });
 
                     var hargaSatuanFilm =
-                        detailVm.HargaSatuanFilm ??
                         tarifFilm?.TarifTotal ??
                         0m;
 
@@ -431,33 +393,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         DetailHasilLabId = detailVm.DetailHasilLabId,
                         LabBookingDetailId = detailVm.LabBookingDetailId,
 
-                        LabId = detailVm.LabId ?? labBookingDetail.LabId,
-                        PemeriksaanId = detailVm.PemeriksaanId ?? labBookingDetail.PemeriksaanLabId,
-
-                        NamaPemeriksaan = !string.IsNullOrWhiteSpace(detailVm.NamaPemeriksaan)
-                            ? detailVm.NamaPemeriksaan
-                            : labBookingDetail.PemeriksaanLab != null
-                                ? labBookingDetail.PemeriksaanLab.NamaPemeriksaan
-                                : null,
-
-                        NoPhoto = !string.IsNullOrWhiteSpace(detailVm.NoPhoto)
-                            ? detailVm.NoPhoto
-                            : labBookingDetail.NoPhoto,
 
                         DokterPemeriksaId = detailVm.DokterPemeriksaId ?? labBookingDetail.DokterPemeriksaId,
 
-                        NamaDokterPemeriksa = !string.IsNullOrWhiteSpace(detailVm.NamaDokterPemeriksa)
-                            ? detailVm.NamaDokterPemeriksa
-                            : labBookingDetail.DokterPemeriksa != null
-                                ? labBookingDetail.DokterPemeriksa.NmDokter
-                                : null,
-
-                        PathHasilPhoto = detailVm.PathHasilPhoto,
-                        HasilLab = detailVm.HasilLab,
-                        HasilLabAI = detailVm.HasilLabAI,
-
                         FilmId = detailVm.FilmId,
-                        HargaSatuanFilm = hargaSatuanFilm,
                         QtyCetakFilm = qtyCetakFilm,
                         TotalCetakFilm = totalDetail,
 
@@ -485,10 +424,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         // ItemId dibuat per detail cetak film,
                         // karena billing juga per film/detail yang dicetak.
-                        ItemId = detailCetakFilmId,
+                        ItemId = film.FilmId,
 
                         NamaItem = !string.IsNullOrWhiteSpace(film.NamaFilm)
-                            ? $"Cetak Film - {film.NamaFilm}"
+                            ? $"{film.NamaFilm} - {labBookingDetail.PemeriksaanLab.NamaPemeriksaan}"
                             : "Cetak Film",
 
                         HargaItem = hargaSatuanFilm,
@@ -523,9 +462,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         film.NamaFilm,
                         film.UkuranFilm,
                         detail.LabBookingDetailId,
-                        detail.NamaPemeriksaan,
-                        detail.NoPhoto,
-                        detail.HargaSatuanFilm,
                         detail.QtyCetakFilm,
                         detail.TotalCetakFilm,
 
@@ -812,7 +748,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         return BadRequest(new { message = $"LabBookingDetailId {detailVm.LabBookingDetailId} tidak ditemukan." });
 
                     var hargaSatuanFilm =
-                        detailVm.HargaSatuanFilm ??
                         tarifFilm?.TarifTotal ??
                         0m;
 
@@ -846,33 +781,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         DetailHasilLabId = detailVm.DetailHasilLabId,
                         LabBookingDetailId = detailVm.LabBookingDetailId,
 
-                        LabId = detailVm.LabId ?? labBookingDetail.LabId,
-                        PemeriksaanId = detailVm.PemeriksaanId ?? labBookingDetail.PemeriksaanLabId,
-
-                        NamaPemeriksaan = !string.IsNullOrWhiteSpace(detailVm.NamaPemeriksaan)
-                            ? detailVm.NamaPemeriksaan
-                            : labBookingDetail.PemeriksaanLab != null
-                                ? labBookingDetail.PemeriksaanLab.NamaPemeriksaan
-                                : null,
-
-                        NoPhoto = !string.IsNullOrWhiteSpace(detailVm.NoPhoto)
-                            ? detailVm.NoPhoto
-                            : labBookingDetail.NoPhoto,
-
-                        DokterPemeriksaId = detailVm.DokterPemeriksaId ?? labBookingDetail.DokterPemeriksaId,
-
-                        NamaDokterPemeriksa = !string.IsNullOrWhiteSpace(detailVm.NamaDokterPemeriksa)
-                            ? detailVm.NamaDokterPemeriksa
-                            : labBookingDetail.DokterPemeriksa != null
-                                ? labBookingDetail.DokterPemeriksa.NmDokter
-                                : null,
-
-                        PathHasilPhoto = detailVm.PathHasilPhoto,
-                        HasilLab = detailVm.HasilLab,
-                        HasilLabAI = detailVm.HasilLabAI,
-
                         FilmId = detailVm.FilmId,
-                        HargaSatuanFilm = hargaSatuanFilm,
                         QtyCetakFilm = qtyCetakFilm,
                         TotalCetakFilm = totalDetail,
 
@@ -897,10 +806,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         KunjunganId = kunjunganId.Value,
 
                         // Billing per detail film
-                        ItemId = detailCetakFilmId,
+                        ItemId = film.FilmId,
 
                         NamaItem = !string.IsNullOrWhiteSpace(film.NamaFilm)
-                            ? $"Cetak Film - {film.NamaFilm}"
+                            ? $"{film.NamaFilm} - {labBookingDetail.PemeriksaanLab.NamaPemeriksaan}"
                             : "Cetak Film",
 
                         HargaItem = hargaSatuanFilm,
@@ -935,9 +844,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         film.NamaFilm,
                         film.UkuranFilm,
                         detail.LabBookingDetailId,
-                        detail.NamaPemeriksaan,
-                        detail.NoPhoto,
-                        detail.HargaSatuanFilm,
                         detail.QtyCetakFilm,
                         detail.TotalCetakFilm,
 
@@ -1149,59 +1055,107 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-    int page = 1,
-    int perPage = 10,
-    string? search = null,
-    string? orderBy = "CreateDateTime",
-    string? sortDirection = "desc",
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? startDate = null,
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? endDate = null,
-    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
-    CancellationToken ct = default)
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
         {
             page = page < 1 ? 1 : page;
             perPage = perPage < 1 ? 10 : perPage;
             perPage = perPage > 200 ? 200 : perPage;
 
             // ======================================================
-            // Query header CetakFilm
+            // Query Header CetakFilm
             // ======================================================
-            var query =
-                from a in _applicationDbContext.CetakFilms.AsNoTracking()
-
-                join creator in _applicationDbContext.UserActives.AsNoTracking()
-                    on a.CreateBy equals creator.UserActiveId into creatorJoin
-                from creator in creatorJoin.DefaultIfEmpty()
-
-                where a.IsDelete == false || a.IsDelete == null
-
-                select new
+            var query = _applicationDbContext.CetakFilms
+                .AsNoTracking()
+                .Where(x => x.IsDelete == false || x.IsDelete == null)
+                .Select(x => new
                 {
-                    a.CetakFilmId,
-                    a.KunjunganId,
-                    a.PasienId,
-                    a.DokterPerujukId,
-                    a.KelasId,
-                    a.LabBookingId,
-                    a.HasilLabId,
+                    x.CetakFilmId,
+                    x.KunjunganId,
+                    x.PasienId,
+                    x.DokterPerujukId,
+                    x.KelasId,
+                    x.LabBookingId,
+                    x.HasilLabId,
 
-                    a.NoOrder,
-                    a.TglOrder,
-                    a.WaktuOrder,
-                    a.TglSelesai,
-                    a.TotalCetakFilm,
-                    a.Keterangan,
+                    x.NoOrder,
+                    x.TglOrder,
+                    x.WaktuOrder,
+                    x.TglSelesai,
+                    x.TotalCetakFilm,
+                    x.Keterangan,
 
-                    a.CreateDateTime,
-                    a.CreateBy,
-                    CreateByName = creator != null ? creator.FullName : null,
+                    // =========================
+                    // Data tambahan dari relasi
+                    // =========================
 
-                    a.UpdateDateTime,
-                    a.UpdateBy,
-                    a.IsDelete
-                };
+                    NamaPasien = x.Pasien != null
+                        ? x.Pasien.NamaLengkap
+                        : null,
+
+                    NoRekamMedis = x.Pasien != null
+                        ? x.Pasien.NoRekamMedis
+                        : null,
+
+                    JenisKelamin = x.Pasien != null
+                        ? x.Pasien.JenisKelamin
+                        : null,
+
+                    NoRegistrasi = x.Kunjungan != null
+                        ? x.Kunjungan.NoRegistrasi
+                        : null,
+
+                    JenisKunjungan = x.Kunjungan != null
+                        ? x.Kunjungan.JenisKunjungan
+                        : null,
+
+                    NamaDokterPerujuk = x.DokterPerujuk != null
+                        ? x.DokterPerujuk.NmDokter
+                        : null,
+
+                    NamaKelas = x.Kelas != null
+                        ? x.Kelas.NamaKelas
+                        : null,
+
+                    NoOrderBooking = x.LabBooking != null
+                        ? x.LabBooking.NoOrder
+                        : null,
+
+                    NoLab = x.LabBooking != null
+                        ? x.LabBooking.NoLab
+                        : null,
+
+                    NoPA = x.LabBooking != null
+                        ? x.LabBooking.NoPA
+                        : null,
+
+                    // =========================
+                    // Metadata
+                    // =========================
+
+                    x.CreateDateTime,
+                    x.CreateBy,
+
+                    CreateByName = _applicationDbContext.UserActives
+                        .Where(u => u.UserActiveId == x.CreateBy)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault(),
+
+                    x.UpdateDateTime,
+                    x.UpdateBy,
+                    x.DeleteDateTime,
+                    x.DeleteBy,
+                    x.IsDelete
+                });
 
             // ======================================================
             // Search
@@ -1213,24 +1167,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 query = query.Where(x =>
                     EF.Functions.ILike(x.NoOrder ?? "", keyword) ||
                     EF.Functions.ILike(x.Keterangan ?? "", keyword) ||
+                    EF.Functions.ILike(x.NamaPasien ?? "", keyword) ||
+                    EF.Functions.ILike(x.NoRekamMedis ?? "", keyword) ||
+                    EF.Functions.ILike(x.NoRegistrasi ?? "", keyword) ||
+                    EF.Functions.ILike(x.NamaDokterPerujuk ?? "", keyword) ||
+                    EF.Functions.ILike(x.NamaKelas ?? "", keyword) ||
+                    EF.Functions.ILike(x.NoOrderBooking ?? "", keyword) ||
+                    EF.Functions.ILike(x.NoLab ?? "", keyword) ||
+                    EF.Functions.ILike(x.NoPA ?? "", keyword) ||
                     EF.Functions.ILike(x.CreateByName ?? "", keyword) ||
 
                     _applicationDbContext.CetakFilmDetails.Any(d =>
                         d.CetakFilmId == x.CetakFilmId &&
                         (d.IsDelete == false || d.IsDelete == null) &&
                         (
-                            EF.Functions.ILike(d.NamaPemeriksaan ?? "", keyword) ||
-                            EF.Functions.ILike(d.NoPhoto ?? "", keyword) ||
-                            EF.Functions.ILike(d.NamaDokterPemeriksa ?? "", keyword) ||
                             EF.Functions.ILike(d.Keterangan ?? "", keyword) ||
 
-                            _applicationDbContext.Films.Any(f =>
-                                f.FilmId == d.FilmId &&
-                                (f.IsDelete == false || f.IsDelete == null) &&
-                                (
-                                    EF.Functions.ILike(f.NamaFilm ?? "", keyword) ||
-                                    EF.Functions.ILike(f.UkuranFilm ?? "", keyword)
-                                )
+                            d.LabBookingDetail != null &&
+                            (
+                                EF.Functions.ILike(d.LabBookingDetail.NoPhoto ?? "", keyword) ||
+
+                                d.LabBookingDetail.PemeriksaanLab != null &&
+                                EF.Functions.ILike(d.LabBookingDetail.PemeriksaanLab.NamaPemeriksaan ?? "", keyword)
+                            ) ||
+
+                            d.DokterPemeriksa != null &&
+                            EF.Functions.ILike(d.DokterPemeriksa.NmDokter ?? "", keyword) ||
+
+                            d.Film != null &&
+                            (
+                                EF.Functions.ILike(d.Film.NamaFilm ?? "", keyword) ||
+                                EF.Functions.ILike(d.Film.UkuranFilm ?? "", keyword)
                             )
                         )
                     )
@@ -1242,12 +1209,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // ======================================================
             if (startDate.HasValue && endDate.HasValue)
             {
-                var startUtc = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
-                var endUtc = new DateTimeOffset(endDate.Value.Date.AddDays(1), TimeSpan.Zero);
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = startDate.Value.Date == endDate.Value.Date
+                    ? endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime()
+                    : endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
                 query = query.Where(x =>
                     x.CreateDateTime >= startUtc &&
-                    x.CreateDateTime < endUtc);
+                    x.CreateDateTime <= endUtc);
             }
 
             // ======================================================
@@ -1255,72 +1224,58 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // ======================================================
             if (periode.HasValue)
             {
-                var today = DateTime.UtcNow.Date;
-
-                DateTime periodStart;
-                DateTime periodEnd;
+                DateTime today = DateTime.UtcNow.Date;
 
                 switch (periode.Value)
                 {
                     case PeriodeFilter.Today:
-                        periodStart = today;
-                        periodEnd = today.AddDays(1);
+                        query = query.Where(x => x.CreateDateTime.Date == today);
                         break;
 
                     case PeriodeFilter.ThisWeek:
-                        periodStart = today.AddDays(-(int)today.DayOfWeek);
-                        periodEnd = today.AddDays(1);
+                        query = query.Where(x =>
+                            x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            x.CreateDateTime.Date <= today);
                         break;
 
                     case PeriodeFilter.LastWeek:
-                        var startThisWeek = today.AddDays(-(int)today.DayOfWeek);
-                        periodStart = startThisWeek.AddDays(-7);
-                        periodEnd = startThisWeek;
+                        query = query.Where(x =>
+                            x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
                         break;
 
                     case PeriodeFilter.ThisMonth:
-                        periodStart = new DateTime(today.Year, today.Month, 1);
-                        periodEnd = periodStart.AddMonths(1);
+                        query = query.Where(x =>
+                            x.CreateDateTime.Month == today.Month &&
+                            x.CreateDateTime.Year == today.Year);
                         break;
 
                     case PeriodeFilter.LastMonth:
-                        var startThisMonth = new DateTime(today.Year, today.Month, 1);
-                        periodStart = startThisMonth.AddMonths(-1);
-                        periodEnd = startThisMonth;
-                        break;
+                        {
+                            var lastMonth = today.AddMonths(-1);
+
+                            query = query.Where(x =>
+                                x.CreateDateTime.Month == lastMonth.Month &&
+                                x.CreateDateTime.Year == lastMonth.Year);
+                            break;
+                        }
 
                     case PeriodeFilter.ThisYear:
-                        periodStart = new DateTime(today.Year, 1, 1);
-                        periodEnd = periodStart.AddYears(1);
+                        query = query.Where(x => x.CreateDateTime.Year == today.Year);
                         break;
 
                     case PeriodeFilter.LastYear:
-                        periodStart = new DateTime(today.Year - 1, 1, 1);
-                        periodEnd = new DateTime(today.Year, 1, 1);
+                        query = query.Where(x => x.CreateDateTime.Year == today.Year - 1);
                         break;
 
                     case PeriodeFilter.Last3Months:
-                        periodStart = today.AddMonths(-3);
-                        periodEnd = today.AddDays(1);
+                        query = query.Where(x => x.CreateDateTime >= today.AddMonths(-3));
                         break;
 
                     case PeriodeFilter.Last6Months:
-                        periodStart = today.AddMonths(-6);
-                        periodEnd = today.AddDays(1);
-                        break;
-
-                    default:
-                        periodStart = today;
-                        periodEnd = today.AddDays(1);
+                        query = query.Where(x => x.CreateDateTime >= today.AddMonths(-6));
                         break;
                 }
-
-                var startOffset = new DateTimeOffset(periodStart, TimeSpan.Zero);
-                var endOffset = new DateTimeOffset(periodEnd, TimeSpan.Zero);
-
-                query = query.Where(x =>
-                    x.CreateDateTime >= startOffset &&
-                    x.CreateDateTime < endOffset);
             }
 
             // ======================================================
@@ -1338,6 +1293,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     "WaktuOrder" => query.OrderByDescending(x => x.WaktuOrder),
                     "TglSelesai" => query.OrderByDescending(x => x.TglSelesai),
                     "TotalCetakFilm" => query.OrderByDescending(x => x.TotalCetakFilm),
+                    "NamaPasien" => query.OrderByDescending(x => x.NamaPasien),
+                    "NoRekamMedis" => query.OrderByDescending(x => x.NoRekamMedis),
+                    "NoRegistrasi" => query.OrderByDescending(x => x.NoRegistrasi),
+                    "NamaDokterPerujuk" => query.OrderByDescending(x => x.NamaDokterPerujuk),
+                    "NamaKelas" => query.OrderByDescending(x => x.NamaKelas),
                     _ => query.OrderByDescending(x => x.CreateDateTime)
                 }
                 : orderBy switch
@@ -1349,11 +1309,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     "WaktuOrder" => query.OrderBy(x => x.WaktuOrder),
                     "TglSelesai" => query.OrderBy(x => x.TglSelesai),
                     "TotalCetakFilm" => query.OrderBy(x => x.TotalCetakFilm),
+                    "NamaPasien" => query.OrderBy(x => x.NamaPasien),
+                    "NoRekamMedis" => query.OrderBy(x => x.NoRekamMedis),
+                    "NoRegistrasi" => query.OrderBy(x => x.NoRegistrasi),
+                    "NamaDokterPerujuk" => query.OrderBy(x => x.NamaDokterPerujuk),
+                    "NamaKelas" => query.OrderBy(x => x.NamaKelas),
                     _ => query.OrderBy(x => x.CreateDateTime)
                 };
 
             // ======================================================
-            // Pagination header
+            // Pagination Header
             // ======================================================
             var totalRows = await query.CountAsync(ct);
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
@@ -1390,7 +1355,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 .ToList();
 
             // ======================================================
-            // Ambil detail berdasarkan header yang tampil
+            // Ambil Detail CetakFilm sesuai struktur GetById terbaru
             // ======================================================
             var detailRows = await _applicationDbContext.CetakFilmDetails
                 .AsNoTracking()
@@ -1406,39 +1371,66 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.DetailCetakFilmId,
                     d.DetailHasilLabId,
                     d.LabBookingDetailId,
-                    d.LabId,
-                    d.PemeriksaanId,
 
-                    d.NamaPemeriksaan,
-                    d.NoPhoto,
+                    LabId = d.LabBookingDetail != null
+                        ? d.LabBookingDetail.LabId
+                        : null,
+
+                    NamaLab = d.LabBookingDetail != null && d.LabBookingDetail.Lab != null
+                        ? d.LabBookingDetail.Lab.NamaLab
+                        : null,
+
+                    PemeriksaanId = d.LabBookingDetail != null
+                        ? d.LabBookingDetail.PemeriksaanLabId
+                        : null,
+
+                    NamaPemeriksaan = d.LabBookingDetail != null && d.LabBookingDetail.PemeriksaanLab != null
+                        ? d.LabBookingDetail.PemeriksaanLab.NamaPemeriksaan
+                        : null,
+
+                    NoPhoto = d.LabBookingDetail != null
+                        ? d.LabBookingDetail.NoPhoto
+                        : null,
+
                     d.DokterPemeriksaId,
-                    d.NamaDokterPemeriksa,
 
-                    d.PathHasilPhoto,
-                    d.HasilLab,
-                    d.HasilLabAI,
+                    NamaDokterPemeriksa = d.DokterPemeriksa != null
+                        ? d.DokterPemeriksa.NmDokter
+                        : null,
+
+                    PathHasilPhoto = d.LabHasilDetail != null
+                        ? d.LabHasilDetail.PhotoLabPath
+                        : null,
+
+                    HasilLab = d.LabHasilDetail != null
+                        ? d.LabHasilDetail.HasilLabManual
+                        : null,
+
+                    HasilLabAI = d.LabHasilDetail != null
+                        ? d.LabHasilDetail.HasilLabAI
+                        : null,
 
                     d.FilmId,
 
-                    NamaFilm = _applicationDbContext.Films
-                        .AsNoTracking()
-                        .Where(f => f.FilmId == d.FilmId)
-                        .Select(f => f.NamaFilm)
-                        .FirstOrDefault(),
+                    NamaFilm = d.Film != null
+                        ? d.Film.NamaFilm
+                        : null,
 
-                    UkuranFilm = _applicationDbContext.Films
-                        .AsNoTracking()
-                        .Where(f => f.FilmId == d.FilmId)
-                        .Select(f => f.UkuranFilm)
-                        .FirstOrDefault(),
+                    UkuranFilm = d.Film != null
+                        ? d.Film.UkuranFilm
+                        : null,
 
-                    d.HargaSatuanFilm,
                     d.QtyCetakFilm,
                     d.TotalCetakFilm,
                     d.Keterangan,
 
                     d.CreateDateTime,
                     d.CreateBy,
+                    d.UpdateDateTime,
+                    d.UpdateBy,
+                    d.DeleteDateTime,
+                    d.DeleteBy,
+                    d.IsDelete,
 
                     Billing = _applicationDbContext.Billings
                         .AsNoTracking()
@@ -1469,7 +1461,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 .ToListAsync(ct);
 
             // ======================================================
-            // Gabungkan header + detail
+            // Gabungkan Header + Detail
             // ======================================================
             var rows = headerRows.Select(h => new
             {
@@ -1488,12 +1480,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 h.TotalCetakFilm,
                 h.Keterangan,
 
+                h.NamaPasien,
+                h.NoRekamMedis,
+                h.JenisKelamin,
+                h.NoRegistrasi,
+                h.JenisKunjungan,
+                h.NamaDokterPerujuk,
+                h.NamaKelas,
+                h.NoOrderBooking,
+                h.NoLab,
+                h.NoPA,
+
                 h.CreateDateTime,
                 h.CreateBy,
                 h.CreateByName,
-
                 h.UpdateDateTime,
                 h.UpdateBy,
+                h.DeleteDateTime,
+                h.DeleteBy,
                 h.IsDelete,
 
                 Details = detailRows

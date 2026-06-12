@@ -9,7 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.ViewModels
         public DateTime? InvoiceDate { get; set; }
         public string? InvoiceNumber { get; set; }
         public string? RequestType { get; set; }
-        public string? SupplierId { get; set; }
+        public Guid? SupplierId { get; set; }
         public string SupplierName { get; set; }
         public string SupplierCode { get; set; }
         public string? TermOfPayment { get; set; }

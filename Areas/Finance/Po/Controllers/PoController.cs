@@ -279,6 +279,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
             int perPage = 10,
             string? PRNumber = null,
             string? PONumber = null,
+            Guid? supplierId = null,
+            Guid? poId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -314,6 +316,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     (po.PurchaseOrderNumber != null && EF.Functions.ILike(po.PurchaseOrderNumber, pattern)) 
                 );
             }
+
+            //if (supplierId.HasValue)
+            //{
+            //    query = query.Where(u=>u.SupplierId==supplierId.Value);
+            //}
 
             // ======================================================
             // Filter tanggal
@@ -442,8 +449,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
             var rows = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .Select(po => new PurchaseOrderViewModel
+                .Select(po => new 
                 {
+                    PurchaseOrderId = po.PurchaseOrderId,
                     PurchaseRequestNumber = po.PurchaseRequestNumber,
                     PurchaseOrderNumber = po.PurchaseOrderNumber,
                     InvoiceDate = po.InvoiceDate,
