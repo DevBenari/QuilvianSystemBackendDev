@@ -9,6 +9,7 @@ using QuilvianSystemBackendDev.Areas.Finance.AR.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Models;
 using QuilvianSystemBackendDev.Areas.Finance.COA.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Faktur.Models;
+using QuilvianSystemBackendDev.Areas.Finance.MasterFinance.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
@@ -1271,14 +1272,20 @@ namespace QuilvianSystemBackendDev.Repositories
         #region Finance
 
 
+            #region MasterFinance
+            public DbSet<MataUang> MataUangs { get; set; }
+            public DbSet<ExchangeRate> ExchangeRates { get; set; }
+            #endregion
+
+
             #region AR
             public DbSet<ARHeader> ARHeaders { get; set; }
-            public DbSet<ARDetail> ARDetails { get; set; }
-            public DbSet<ARDokumen> ARDokumens { get; set; }
-            //public DbSet<ARSettlement> ARSettlements { get; set; }
-            //public DbSet<ARSettlementDetail> ARSettlementDetails { get; set; }
-            public DbSet<ARCanceled> ARCanceleds { get; set; }
-            #endregion
+                    public DbSet<ARDetail> ARDetails { get; set; }
+                    public DbSet<ARDokumen> ARDokumens { get; set; }
+                    //public DbSet<ARSettlement> ARSettlements { get; set; }
+                    //public DbSet<ARSettlementDetail> ARSettlementDetails { get; set; }
+                    public DbSet<ARCanceled> ARCanceleds { get; set; }
+                    #endregion
 
             #region Po
             public DbSet<PurchaseOrder> PurchaseOrders { get; set; }

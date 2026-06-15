@@ -53,6 +53,7 @@
  
   <ItemGroup>
     <Folder Include=".github\workflows\" />
+    <Folder Include="Areas\Finance\MasterFinance\ViewModels\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatJalan\Controllers\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatJalan\Models\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatJalan\ViewModels\" />

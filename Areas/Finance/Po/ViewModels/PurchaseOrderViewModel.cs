@@ -1,6 +1,4 @@
-﻿using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
-
-namespace QuilvianSystemBackendDev.Areas.Finance.Po.ViewModels
+﻿namespace QuilvianSystemBackendDev.Areas.Finance.Po.ViewModels
 {
     public class PurchaseOrderViewModel
     {

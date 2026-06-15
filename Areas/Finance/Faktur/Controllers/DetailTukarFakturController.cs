@@ -8,6 +8,7 @@ using QuilvianSystemBackendDev.Areas.Finance.Faktur.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Data;
 using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
@@ -60,6 +61,121 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
             return getUserActive.UserActiveId;
         }
 
+        private async Task<string> GenerateKodePurchasingInvoiceAsync()
+        {
+            var prefix = $"AP-{DateTime.Now:yy}-";
+
+            var lastNo =
+                await _applicationDbContext.DetailTukarFakturs
+                .AsNoTracking()
+                .Where(x =>
+                    x.IsDelete == false &&
+                    x.KodePurchasingInvoice != null &&
+                    x.KodePurchasingInvoice.StartsWith(prefix))
+                .OrderByDescending(x => x.KodePurchasingInvoice)
+                .Select(x => x.KodePurchasingInvoice)
+                .FirstOrDefaultAsync();
+
+            var nextNumber = 1;
+
+            if (!string.IsNullOrWhiteSpace(lastNo) && lastNo.Length > prefix.Length)
+            {
+                var numberPart = lastNo.Substring(prefix.Length);
+
+                if (int.TryParse(numberPart, out var lastNumber))
+                {
+                    nextNumber = lastNumber + 1;
+                }
+            }
+
+            return $"{prefix}{nextNumber:D6}";
+        }
+
+        private async Task<string> GenerateNoInvoiceAsync()
+        {
+            var prefix = DateTime.Now.ToString("yyMMdd");
+
+            var lastNo =
+                await _applicationDbContext.DetailTukarFakturs
+                .AsNoTracking()
+                .Where(x =>
+                    x.IsDelete == false &&
+                    x.NoInvoice != null &&
+                    x.NoInvoice.StartsWith(prefix))
+                .OrderByDescending(x => x.NoInvoice)
+                .Select(x => x.NoInvoice)
+                .FirstOrDefaultAsync();
+
+            var nextNumber = 1;
+
+            if (!string.IsNullOrWhiteSpace(lastNo) && lastNo.Length > prefix.Length)
+            {
+                var numberPart = lastNo.Substring(prefix.Length);
+
+                if (int.TryParse(numberPart, out var lastNumber))
+                {
+                    nextNumber = lastNumber + 1;
+                }
+            }
+
+            return $"{prefix}{nextNumber:D6}";
+        }
+
+        private class POInfoDto
+        {
+            public Guid POId { get; set; }
+            public Guid SupplierId { get; set; }
+            public string NomorPO { get; set; } = string.Empty;
+            public string? SupplierName { get; set; }
+            public string? SupplierCode { get; set; }
+        }
+
+        private async Task<POInfoDto?> GetPOInfoByIdAsync(Guid poId)
+        {
+            var data =
+                await _applicationDbContext.PurchaseOrders
+                .AsNoTracking()
+                .Where(x =>
+                    x.PurchaseOrderId == poId &&
+                    x.IsDelete == false &&
+                    x.SupplierId != null)
+                .Select(x => new POInfoDto
+                {
+                    POId = x.PurchaseOrderId,
+                    SupplierId = x.SupplierId!.Value,
+                    NomorPO = x.PurchaseOrderNumber ?? string.Empty,
+                    SupplierName = x.SupplierName,
+                    SupplierCode = x.SupplierCode
+                })
+                .FirstOrDefaultAsync();
+
+            return data;
+        }
+
+        private async Task SyncTotalInvoiceAPAsync(Guid tukarFakturId)
+        {
+            var header =
+                await _applicationDbContext.TukarFakturs
+                .FirstOrDefaultAsync(x =>
+                    x.TukarFakturId == tukarFakturId &&
+                    x.IsDelete == false);
+
+            if (header == null)
+                return;
+
+            var totalAP =
+                await _applicationDbContext.DetailTukarFakturs
+                .Where(x =>
+                    x.TukarFakturId == tukarFakturId &&
+                    x.IsDelete == false)
+                .SumAsync(x => (decimal?)x.NilaiPurchasingInvoice) ?? 0;
+
+            header.TotalInvoiceAP = totalAP;
+            header.UpdateDateTime = DateTime.UtcNow;
+
+            _applicationDbContext.TukarFakturs.Update(header);
+        }
+
         // =====================================================
         // PAGED
         // =====================================================
@@ -69,10 +185,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
             int page = 1,
             int perPage = 10,
             string? search = null,
-            string? orderBy = "NoInvoice",
-            string? sortDirection = "asc",
+            string? orderBy = "TglPembuatanInvoice",
+            string? sortDirection = "desc",
             Guid? tukarFakturId = null,
             Guid? supplierId = null,
+            Guid? poId = null,
 
             [FromQuery, SwaggerSchema(Format = "date-time")]
             DateTime? startDate = null,
@@ -113,44 +230,67 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                         d.DetailTukarFakturId,
                         d.TukarFakturId,
 
+                        h.NoTukarFaktur,
+
+                        d.TglPembuatanInvoice,
+                        d.KodePurchasingInvoice,
+
+                        d.POId,
+                        d.SupplierId,
+
+                        NamaSupplier =
+                            _applicationDbContext.Suppliers
+                            .Where(s => s.SupplierId == d.SupplierId)
+                            .Select(s => s.SupplierName)
+                            .FirstOrDefault(),
+
                         d.NomorPO,
                         d.NoInvoice,
-                        d.TotalInvoice,
+                        d.NilaiPurchasingInvoice,
+
+                        h.TglJatuhTempo,
+
+                        d.StatusInvoice,
                         d.Keterangan,
 
-                        h.SupplierId,
+                        HeaderSupplierId = h.SupplierId,
                         h.TglRegistrasi,
-                        h.TglTerimaFaktur,
-                        h.TglJatuhTempo
+                        h.TglTerimaFaktur
                     };
 
-                // SEARCH
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     search = $"%{search.Trim().ToLower()}%";
 
                     query = query.Where(x =>
+                        EF.Functions.ILike(x.NoTukarFaktur ?? "", search) ||
+                        EF.Functions.ILike(x.KodePurchasingInvoice ?? "", search) ||
+                        EF.Functions.ILike(x.NamaSupplier ?? "", search) ||
                         EF.Functions.ILike(x.NomorPO ?? "", search) ||
                         EF.Functions.ILike(x.NoInvoice ?? "", search) ||
+                        EF.Functions.ILike(x.StatusInvoice ?? "", search) ||
                         EF.Functions.ILike(x.Keterangan ?? "", search)
                     );
                 }
 
-                // FILTER TUKAR FAKTUR ID
                 if (tukarFakturId.HasValue)
                 {
                     query = query.Where(x =>
                         x.TukarFakturId == tukarFakturId.Value);
                 }
 
-                // FILTER SUPPLIER ID
                 if (supplierId.HasValue)
                 {
                     query = query.Where(x =>
                         x.SupplierId == supplierId.Value);
                 }
 
-                // FILTER DATE BERDASARKAN TGL REGISTRASI HEADER
+                if (poId.HasValue)
+                {
+                    query = query.Where(x =>
+                        x.POId == poId.Value);
+                }
+
                 if (startDate.HasValue && endDate.HasValue)
                 {
                     DateTime startUtc =
@@ -163,19 +303,38 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                         .ToUniversalTime();
 
                     query = query.Where(x =>
-                        x.TglRegistrasi >= startUtc &&
-                        x.TglRegistrasi <= endUtc);
+                        x.TglPembuatanInvoice >= startUtc &&
+                        x.TglPembuatanInvoice <= endUtc);
                 }
 
-                // SORTING
                 var sortColumn =
-                    orderBy?.ToLower() ?? "noinvoice";
+                    orderBy?.ToLower() ?? "tglpembuataninvoice";
 
                 var isDescending =
                     sortDirection?.ToLower() == "desc";
 
                 query = sortColumn switch
                 {
+                    "notukarfaktur" =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.NoTukarFaktur)
+                            : query.OrderBy(x => x.NoTukarFaktur),
+
+                    "tglpembuataninvoice" =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.TglPembuatanInvoice)
+                            : query.OrderBy(x => x.TglPembuatanInvoice),
+
+                    "kodepurchasinginvoice" =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.KodePurchasingInvoice)
+                            : query.OrderBy(x => x.KodePurchasingInvoice),
+
+                    "namasupplier" =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.NamaSupplier)
+                            : query.OrderBy(x => x.NamaSupplier),
+
                     "nomorpo" =>
                         isDescending
                             ? query.OrderByDescending(x => x.NomorPO)
@@ -186,31 +345,25 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                             ? query.OrderByDescending(x => x.NoInvoice)
                             : query.OrderBy(x => x.NoInvoice),
 
-                    "totalinvoice" =>
+                    "nilaipurchasinginvoice" =>
                         isDescending
-                            ? query.OrderByDescending(x => x.TotalInvoice)
-                            : query.OrderBy(x => x.TotalInvoice),
-
-                    "tglregistrasi" =>
-                        isDescending
-                            ? query.OrderByDescending(x => x.TglRegistrasi)
-                            : query.OrderBy(x => x.TglRegistrasi),
-
-                    "tglterimafaktur" =>
-                        isDescending
-                            ? query.OrderByDescending(x => x.TglTerimaFaktur)
-                            : query.OrderBy(x => x.TglTerimaFaktur),
+                            ? query.OrderByDescending(x => x.NilaiPurchasingInvoice)
+                            : query.OrderBy(x => x.NilaiPurchasingInvoice),
 
                     "tgljatuhtempo" =>
                         isDescending
                             ? query.OrderByDescending(x => x.TglJatuhTempo)
                             : query.OrderBy(x => x.TglJatuhTempo),
 
+                    "statusinvoice" =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.StatusInvoice)
+                            : query.OrderBy(x => x.StatusInvoice),
+
                     _ =>
-                        query.OrderBy(x => x.NoInvoice)
+                        query.OrderByDescending(x => x.TglPembuatanInvoice)
                 };
 
-                // PAGINATION
                 int totalRows =
                     await query.CountAsync();
 
@@ -277,15 +430,31 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                             d.DetailTukarFakturId,
                             d.TukarFakturId,
 
+                            h.NoTukarFaktur,
+
+                            d.TglPembuatanInvoice,
+                            d.KodePurchasingInvoice,
+
+                            d.POId,
+                            d.SupplierId,
+
+                            NamaSupplier =
+                                _applicationDbContext.Suppliers
+                                .Where(s => s.SupplierId == d.SupplierId)
+                                .Select(s => s.SupplierName)
+                                .FirstOrDefault(),
+
                             d.NomorPO,
                             d.NoInvoice,
-                            d.TotalInvoice,
+                            d.NilaiPurchasingInvoice,
+
+                            h.TglJatuhTempo,
+
+                            d.StatusInvoice,
                             d.Keterangan,
 
-                            h.SupplierId,
                             h.TglRegistrasi,
-                            h.TglTerimaFaktur,
-                            h.TglJatuhTempo
+                            h.TglTerimaFaktur
                         }
                     )
                     .FirstOrDefaultAsync();
@@ -323,6 +492,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
         public async Task<IActionResult> Create(
             [FromBody] DetailTukarFakturViewModel vm)
         {
+            using var transaction =
+                await _applicationDbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             try
             {
                 if (!ModelState.IsValid)
@@ -330,17 +502,28 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                     return BadRequest(ModelState);
                 }
 
-                bool headerExists =
+                var header =
                     await _applicationDbContext.TukarFakturs
-                    .AnyAsync(x =>
+                    .FirstOrDefaultAsync(x =>
                         x.TukarFakturId == vm.TukarFakturId &&
                         x.IsDelete == false);
 
-                if (!headerExists)
+                if (header == null)
                 {
                     return NotFound(new
                     {
                         message = "Tukar Faktur tidak ditemukan."
+                    });
+                }
+
+                var poInfo =
+                    await GetPOInfoByIdAsync(vm.POId);
+
+                if (poInfo == null)
+                {
+                    return NotFound(new
+                    {
+                        message = "PO tidak ditemukan."
                     });
                 }
 
@@ -355,14 +538,31 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                     });
                 }
 
+                var kodePurchasingInvoice =
+                    await GenerateKodePurchasingInvoiceAsync();
+
+                var noInvoice =
+                    await GenerateNoInvoiceAsync();
+
                 var data = new DetailTukarFaktur
                 {
                     DetailTukarFakturId = Guid.NewGuid(),
                     TukarFakturId = vm.TukarFakturId,
 
-                    NomorPO = vm.NomorPO,
-                    NoInvoice = vm.NoInvoice,
-                    TotalInvoice = vm.TotalInvoice,
+                    TglPembuatanInvoice = vm.TglPembuatanInvoice,
+
+                    KodePurchasingInvoice = kodePurchasingInvoice,
+
+                    POId = vm.POId,
+                    SupplierId = poInfo.SupplierId,
+                    NomorPO = poInfo.NomorPO,
+
+                    NoInvoice = noInvoice,
+
+                    NilaiPurchasingInvoice = vm.NilaiPurchasingInvoice,
+
+                    StatusInvoice = "approved",
+
                     Keterangan = vm.Keterangan,
 
                     CreateDateTime = DateTime.UtcNow,
@@ -372,28 +572,38 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
 
                 _applicationDbContext.DetailTukarFakturs.Add(data);
 
-                int result =
-                    await _applicationDbContext.SaveChangesAsync();
+                await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
+                await SyncTotalInvoiceAPAsync(vm.TukarFakturId);
+
+                await _applicationDbContext.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return Created("", new
                 {
-                    return Created("", new
+                    message = "Tambah data berhasil.",
+                    data = new
                     {
-                        message = "Tambah data berhasil.",
-                        data = new
-                        {
-                            data.DetailTukarFakturId
-                        }
-                    });
-                }
-
-                return StatusCode(500, new
-                {
-                    message = "Gagal menyimpan data."
+                        data.DetailTukarFakturId,
+                        data.TukarFakturId,
+                        header.NoTukarFaktur,
+                        data.KodePurchasingInvoice,
+                        data.NoInvoice,
+                        data.POId,
+                        data.SupplierId,
+                        NamaSupplier = poInfo.SupplierName,
+                        data.NomorPO,
+                        data.NilaiPurchasingInvoice,
+                        header.TglJatuhTempo,
+                        data.StatusInvoice
+                    }
                 });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
+
                 _logger.LogError(ex, ex.Message);
 
                 return StatusCode(500, new
@@ -412,6 +622,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
             Guid id,
             [FromBody] DetailTukarFakturViewModel vm)
         {
+            using var transaction =
+                await _applicationDbContext.Database.BeginTransactionAsync();
+
             try
             {
                 var data =
@@ -428,17 +641,28 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                     });
                 }
 
-                bool headerExists =
+                var header =
                     await _applicationDbContext.TukarFakturs
-                    .AnyAsync(x =>
+                    .FirstOrDefaultAsync(x =>
                         x.TukarFakturId == vm.TukarFakturId &&
                         x.IsDelete == false);
 
-                if (!headerExists)
+                if (header == null)
                 {
                     return NotFound(new
                     {
                         message = "Tukar Faktur tidak ditemukan."
+                    });
+                }
+
+                var poInfo =
+                    await GetPOInfoByIdAsync(vm.POId);
+
+                if (poInfo == null)
+                {
+                    return NotFound(new
+                    {
+                        message = "PO tidak ditemukan."
                     });
                 }
 
@@ -453,11 +677,17 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                     });
                 }
 
-                data.TukarFakturId = vm.TukarFakturId;
+                var oldTukarFakturId =
+                    data.TukarFakturId;
 
-                data.NomorPO = vm.NomorPO;
-                data.NoInvoice = vm.NoInvoice;
-                data.TotalInvoice = vm.TotalInvoice;
+                data.TukarFakturId = vm.TukarFakturId;
+                data.TglPembuatanInvoice = vm.TglPembuatanInvoice;
+
+                data.POId = vm.POId;
+                data.SupplierId = poInfo.SupplierId;
+                data.NomorPO = poInfo.NomorPO;
+
+                data.NilaiPurchasingInvoice = vm.NilaiPurchasingInvoice;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateDateTime = DateTime.UtcNow;
@@ -465,24 +695,28 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
 
                 _applicationDbContext.DetailTukarFakturs.Update(data);
 
-                int result =
-                    await _applicationDbContext.SaveChangesAsync();
+                await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
+                await SyncTotalInvoiceAPAsync(vm.TukarFakturId);
+
+                if (oldTukarFakturId != vm.TukarFakturId)
                 {
-                    return Ok(new
-                    {
-                        message = "Update data berhasil."
-                    });
+                    await SyncTotalInvoiceAPAsync(oldTukarFakturId);
                 }
 
-                return StatusCode(500, new
+                await _applicationDbContext.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return Ok(new
                 {
-                    message = "Gagal update data."
+                    message = "Update data berhasil."
                 });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
+
                 _logger.LogError(ex, ex.Message);
 
                 return StatusCode(500, new
@@ -499,6 +733,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
+            using var transaction =
+                await _applicationDbContext.Database.BeginTransactionAsync();
+
             try
             {
                 var data =
@@ -526,30 +763,32 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                     });
                 }
 
+                var tukarFakturId =
+                    data.TukarFakturId;
+
                 data.IsDelete = true;
                 data.DeleteDateTime = DateTime.UtcNow;
                 data.DeleteBy = userActiveId.Value;
 
                 _applicationDbContext.DetailTukarFakturs.Update(data);
 
-                int result =
-                    await _applicationDbContext.SaveChangesAsync();
+                await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
-                {
-                    return Ok(new
-                    {
-                        message = "Delete berhasil."
-                    });
-                }
+                await SyncTotalInvoiceAPAsync(tukarFakturId);
 
-                return StatusCode(500, new
+                await _applicationDbContext.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return Ok(new
                 {
-                    message = "Gagal delete data."
+                    message = "Delete berhasil."
                 });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
+
                 _logger.LogError(ex, ex.Message);
 
                 return StatusCode(500, new
@@ -559,5 +798,4 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
             }
         }
     }
-
 }
