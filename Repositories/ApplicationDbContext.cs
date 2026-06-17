@@ -1287,14 +1287,21 @@ namespace QuilvianSystemBackendDev.Repositories
                     public DbSet<ARCanceled> ARCanceleds { get; set; }
                     #endregion
 
+
+
+
             #region Po
-            public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
+                public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
                 public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
+                public DbSet<PurchasingInvoice> PurchasingInvoices { get; set; }
+                public DbSet<ItemPurchasingInvoice> ItemPurchasingInvoices { get; set; }
 
-                #endregion
+            #endregion
 
-            #region COA
-            public DbSet<MasterCoa> MasterCoas { get; set; }
+
+
+        #region COA
+        public DbSet<MasterCoa> MasterCoas { get; set; }
             public DbSet<MasterGrup> MasterGrups { get; set; }
             public DbSet<TipeAkun> TipeAkuns { get; set; }
 
