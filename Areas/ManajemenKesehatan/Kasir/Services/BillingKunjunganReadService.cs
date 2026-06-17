@@ -330,7 +330,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             .Select(g =>
             {
                 var x = g.First();
-                var bill = FindBilling("Pemeriksaan Lab", x.DetailBookingLabId);
+                var bill = FindBilling("Pemeriksaan Lab", x.PemeriksaanLabId);
                 //var isCovered =
                 //    isAsuransiCase &&
                 //    x.PemeriksaanLabId != null &&
@@ -1265,7 +1265,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             .Select(g =>
             {
                 var x = g.First();
-                var bill = FindBilling("Pemeriksaan Lab", x.DetailBookingLabId);
+                var bill = FindBilling("Pemeriksaan Lab", x.PemeriksaanLabId);
                 //var isCovered =
                 //    isAsuransiCase &&
                 //    x.PemeriksaanLabId != null &&
@@ -1277,7 +1277,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 {
                     x.BookingLabId,
                     x.DetailBookingLabId,
-                    //x.NamaLab,
+                    x.NamaLab,
                     x.NamaPemeriksaan,
                     AsuransiId = bill?.AsuransiId,
                     IsCovered = bill?.IsCovered,
