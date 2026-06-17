@@ -180,6 +180,200 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
             return Ok(data);
         }
 
+        [HttpGet("paged")]
+        public async Task<IActionResult> Paged(
+    int page = 1,
+    int perPage = 10,
+    string? noPO = null,
+    string? noInvoice = null,
+    Guid? supplierId = null,
+    Guid? poId = null,
+    string? namaSupplier = null,
+    string? orderBy = "CreateDateTime",
+    string? sortDirection = "desc",
+    DateTime? startDate = null,
+    DateTime? endDate = null)
+        {
+            page = page < 1 ? 1 : page;
+            perPage = perPage < 1 ? 10 : perPage;
+            perPage = perPage > 200 ? 200 : perPage;
+
+            var query = _context.PurchasingInvoices
+                .AsNoTracking()
+                .Include(x => x.Items)
+                .Where(x => x.IsDelete == false || x.IsDelete == null);
+
+            if (!string.IsNullOrWhiteSpace(noPO))
+            {
+                var pattern = $"%{noPO.Trim()}%";
+                query = query.Where(x =>
+                    x.NoPO != null &&
+                    EF.Functions.ILike(x.NoPO, pattern));
+            }
+
+            if (!string.IsNullOrWhiteSpace(noInvoice))
+            {
+                var pattern = $"%{noInvoice.Trim()}%";
+                query = query.Where(x =>
+                    x.NoInvoice != null &&
+                    EF.Functions.ILike(x.NoInvoice, pattern));
+            }
+
+            if (!string.IsNullOrWhiteSpace(namaSupplier))
+            {
+                var pattern = $"%{namaSupplier.Trim()}%";
+                query = query.Where(x =>
+                    x.NamaSupplier != null &&
+                    EF.Functions.ILike(x.NamaSupplier, pattern));
+            }
+
+            if (supplierId.HasValue)
+            {
+                query = query.Where(x => x.SupplierId == supplierId.Value);
+            }
+
+            if (poId.HasValue)
+            {
+                query = query.Where(x => x.POId == poId.Value);
+            }
+
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var start = startDate.Value.Date;
+                var endExclusive = endDate.Value.Date.AddDays(1);
+
+                query = query.Where(x =>
+                    x.CreateDateTime >= start &&
+                    x.CreateDateTime < endExclusive);
+            }
+
+            var isDesc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+            query = isDesc
+                ? orderBy switch
+                {
+                    "NoPO" => query.OrderByDescending(x => x.NoPO),
+                    "NoInvoice" => query.OrderByDescending(x => x.NoInvoice),
+                    "NamaSupplier" => query.OrderByDescending(x => x.NamaSupplier),
+                    "TglPO" => query.OrderByDescending(x => x.TglPO),
+                    "TglPembuatanInvoice" => query.OrderByDescending(x => x.TglPembuatanInvoice),
+                    _ => query.OrderByDescending(x => x.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "NoPO" => query.OrderBy(x => x.NoPO),
+                    "NoInvoice" => query.OrderBy(x => x.NoInvoice),
+                    "NamaSupplier" => query.OrderBy(x => x.NamaSupplier),
+                    "TglPO" => query.OrderBy(x => x.TglPO),
+                    "TglPembuatanInvoice" => query.OrderBy(x => x.TglPembuatanInvoice),
+                    _ => query.OrderBy(x => x.CreateDateTime)
+                };
+
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            if (totalRows == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "No data found",
+                    data = new
+                    {
+                        Rows = Array.Empty<object>(),
+                        TotalRows = 0,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = 0
+                    }
+                });
+            }
+
+            if (page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            var rows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .Select(x => new
+                {
+                    x.PurchasingInvoiceId,
+                    x.POId,
+                    x.NoPO,
+                    x.TglPO,
+                    x.POAmount,
+                    x.SupplierId,
+                    x.NamaSupplier,
+                    x.DiskonSupplier,
+                    x.SupplierTermPayment,
+                    x.TglPembuatanInvoice,
+                    x.TglJatuhTempo,
+                    x.TipePembayaran,
+                    x.ReceiveOrderId,
+                    x.ReceiveOrderNumber,
+                    x.NoInvoice,
+                    x.DownPayment,
+                    x.DiskonPersen,
+                    x.DiskonNominal,
+                    x.PPNPersen,
+                    x.PPNNominal,
+                    x.OngkosKirim,
+                    x.Materai,
+                    x.Pembulatan,
+                    x.Potongan,
+                    x.Retur,
+                    x.OutstandingDP,
+                    x.COAId,
+                    x.NoFakturPajak,
+                    x.TglFaktur,
+                    x.MataUangId,
+                    x.NamaMataUang,
+                    x.RateToIdr,
+                    x.HasilKonversi,
+                    x.Keterangan,
+                    x.CreateDateTime,
+
+                    Items = x.Items
+                        .Where(i => i.IsDelete == false || i.IsDelete == null)
+                        .Select(i => new
+                        {
+                            i.ItemPurchasingInvoiceId,
+                            i.PurchasingInvoiceId,
+                            i.POId,
+                            i.ItemPOId,
+                            i.KodeProduk,
+                            i.NamaProduk,
+                            i.QtyProduk,
+                            i.SatuanProduk,
+                            i.HargaNormal,
+                            i.TipeTax,
+                            i.PajakPersen,
+                            i.PajakNominal,
+                            i.HargaAkhir,
+                            i.HargaTotal,
+                            i.Keterangan
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
