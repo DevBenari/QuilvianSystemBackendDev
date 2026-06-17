@@ -100,6 +100,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
             int perPage = 10,
             string? search = null,
             string? orderBy = "TglRegistrasi",
+            decimal? ppn = null,
             string? sortDirection = "desc",
             Guid? supplierId = null,
 
@@ -126,14 +127,20 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                 if (perPage < 1)
                     perPage = 10;
 
+                if (perPage > 200)
+                    perPage = 200;
+
                 var baseQuery =
                     _applicationDbContext.TukarFakturs
-                    .AsNoTracking()
-                    .Where(x => x.IsDelete == false);
+                        .AsNoTracking()
+                        .Where(x => x.IsDelete == false);
 
+                // =========================
+                // Search
+                // =========================
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    search = $"%{search.Trim().ToLower()}%";
+                    search = $"%{search.Trim()}%";
 
                     baseQuery = baseQuery.Where(x =>
                         EF.Functions.ILike(x.NoTukarFaktur ?? "", search) ||
@@ -158,12 +165,33 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                     );
                 }
 
+                // =========================
+                // Filter Supplier
+                // =========================
                 if (supplierId.HasValue)
                 {
                     baseQuery = baseQuery.Where(x =>
                         x.SupplierId == supplierId.Value);
                 }
 
+                // =========================
+                // Filter PPN
+                // Berdasarkan Supplier.PPN
+                // Contoh: ppn=11, ppn=0, ppn=10
+                // =========================
+                if (ppn.HasValue)
+                {
+                    baseQuery = baseQuery.Where(x =>
+                        _applicationDbContext.Suppliers.Any(s =>
+                            s.SupplierId == x.SupplierId &&
+                            s.PPN == ppn.Value
+                        )
+                    );
+                }
+
+                // =========================
+                // Filter Tanggal
+                // =========================
                 if (startDate.HasValue && endDate.HasValue)
                 {
                     DateTime startUtc =
@@ -171,15 +199,18 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
 
                     DateTime endUtc =
                         endDate.Value.Date
-                        .AddDays(1)
-                        .AddTicks(-1)
-                        .ToUniversalTime();
+                            .AddDays(1)
+                            .AddTicks(-1)
+                            .ToUniversalTime();
 
                     baseQuery = baseQuery.Where(x =>
                         x.TglRegistrasi >= startUtc &&
                         x.TglRegistrasi <= endUtc);
                 }
 
+                // =========================
+                // Select Data
+                // =========================
                 var query =
                     baseQuery.Select(x => new
                     {
@@ -188,37 +219,43 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
 
                         Supplier =
                             _applicationDbContext.Suppliers
-                            .Where(s => s.SupplierId == x.SupplierId)
-                            .Select(s => new
-                            {
-                                s.SupplierId,
-                                s.SupplierCode,
-                                s.SupplierName,
-                                s.ContactPerson,
-                                s.TermOfPayment,
-                                s.LeadTime,
-                                s.Address,
-                                s.City,
-                                s.PhoneNumber,
-                                s.Email,
-                                s.IsPKS,
-                                s.IsActive,
-                                s.BankId,
-                                s.NoRekening,
-                                s.AccountHolderName,
-                                s.IsFullPaid,
-                                s.IsBloodBankSupplier,
-                                s.PaymentMethod,
-                                s.PPN,
-                                s.Note
-                            })
-                            .FirstOrDefault(),
+                                .Where(s => s.SupplierId == x.SupplierId)
+                                .Select(s => new
+                                {
+                                    s.SupplierId,
+                                    s.SupplierCode,
+                                    s.SupplierName,
+                                    s.ContactPerson,
+                                    s.TermOfPayment,
+                                    s.LeadTime,
+                                    s.Address,
+                                    s.City,
+                                    s.PhoneNumber,
+                                    s.Email,
+                                    s.IsPKS,
+                                    s.IsActive,
+                                    s.BankId,
+                                    s.NoRekening,
+                                    s.AccountHolderName,
+                                    s.IsFullPaid,
+                                    s.IsBloodBankSupplier,
+                                    s.PaymentMethod,
+                                    s.PPN,
+                                    s.Note
+                                })
+                                .FirstOrDefault(),
 
                         NamaSupplier =
                             _applicationDbContext.Suppliers
-                            .Where(s => s.SupplierId == x.SupplierId)
-                            .Select(s => s.SupplierName)
-                            .FirstOrDefault(),
+                                .Where(s => s.SupplierId == x.SupplierId)
+                                .Select(s => s.SupplierName)
+                                .FirstOrDefault(),
+
+                        PPN =
+                            _applicationDbContext.Suppliers
+                                .Where(s => s.SupplierId == x.SupplierId)
+                                .Select(s => s.PPN)
+                                .FirstOrDefault(),
 
                         x.NoTukarFaktur,
                         x.TglRegistrasi,
@@ -230,18 +267,21 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
 
                         JumlahDetail =
                             _applicationDbContext.DetailTukarFakturs
-                            .Count(d =>
-                                d.TukarFakturId == x.TukarFakturId &&
-                                d.IsDelete == false),
+                                .Count(d =>
+                                    d.TukarFakturId == x.TukarFakturId &&
+                                    d.IsDelete == false),
 
                         TotalInvoiceDetail =
                             _applicationDbContext.DetailTukarFakturs
-                            .Where(d =>
-                                d.TukarFakturId == x.TukarFakturId &&
-                                d.IsDelete == false)
-                            .Sum(d => (decimal?)d.NilaiPurchasingInvoice) ?? 0
+                                .Where(d =>
+                                    d.TukarFakturId == x.TukarFakturId &&
+                                    d.IsDelete == false)
+                                .Sum(d => (decimal?)d.NilaiPurchasingInvoice) ?? 0
                     });
 
+                // =========================
+                // Sorting
+                // =========================
                 var sortColumn =
                     orderBy?.ToLower() ?? "tglregistrasi";
 
@@ -264,6 +304,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                         isDescending
                             ? query.OrderByDescending(x => x.NamaSupplier)
                             : query.OrderBy(x => x.NamaSupplier),
+
+                    "ppn" =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.PPN)
+                            : query.OrderBy(x => x.PPN),
 
                     "tglregistrasi" =>
                         isDescending
@@ -299,17 +344,45 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                         query.OrderByDescending(x => x.TglRegistrasi)
                 };
 
+                // =========================
+                // Pagination
+                // =========================
                 int totalRows =
                     await query.CountAsync();
 
                 int totalPages =
                     (int)Math.Ceiling(totalRows / (double)perPage);
 
+                if (totalRows == 0)
+                {
+                    return Ok(new
+                    {
+                        status = "success",
+                        message = "No data found",
+                        data = new
+                        {
+                            Rows = Array.Empty<object>(),
+                            TotalRows = 0,
+                            CurrentPage = page,
+                            PerPage = perPage,
+                            TotalPages = 0
+                        }
+                    });
+                }
+
+                if (page > totalPages)
+                {
+                    return NotFound(new
+                    {
+                        message = "Page not found."
+                    });
+                }
+
                 var rows =
                     await query
-                    .Skip((page - 1) * perPage)
-                    .Take(perPage)
-                    .ToListAsync();
+                        .Skip((page - 1) * perPage)
+                        .Take(perPage)
+                        .ToListAsync();
 
                 return Ok(new
                 {
@@ -335,7 +408,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                 });
             }
         }
-
         // =====================================================
         // GET BY ID HEADER + DETAIL
         // =====================================================
