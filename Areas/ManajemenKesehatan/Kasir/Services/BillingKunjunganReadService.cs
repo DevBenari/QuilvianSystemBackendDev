@@ -2534,7 +2534,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     .Select(g =>
                     {
                         var x = g.First();
-                        var bill = FindBilling(kid, "Pemeriksaan Lab", x.DetailBookingLabId);
+                        var bill = FindBilling(kid, "Pemeriksaan Lab", x.PemeriksaanLabId);
                         var qty = bill?.QtyItem ?? 1;
                         var subtotal = bill?.SubTotalItem ?? x.HargaPemeriksaan;
 
