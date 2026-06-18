@@ -40,135 +40,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             _asuransiCoverageService = asuransiCoverageService;
         }
 
+        public enum ApplyBiayaAdminStatus
+        {
+            Created,
+            UpdatedToIp,
+            SkippedAlreadyExists,
+            SkippedMasterNotFound
+        }
+
+        public sealed record ApplyBiayaAdminResult(
+            ApplyBiayaAdminStatus Status,
+            Guid? BillingId,
+            string Message
+        );
+
         // =====================================================
         // FUNCTION LAMA: BIAYA ADMIN
         // Dibiarkan tetap ada.
         // =====================================================
         public async Task ApplyBiayaAdminAsync(
             Guid? kunjunganId,
-            string kodeJenis,
+            string? jenisKunjungan,
+            string? asalKunjungan,
             Guid userActiveId,
             CancellationToken cancellationToken = default)
         {
-            if (!kunjunganId.HasValue || kunjunganId.Value == Guid.Empty)
-                throw new ArgumentException("KunjunganId tidak valid.");
-
-            kodeJenis = kodeJenis?.Trim().ToUpper();
-
-            if (kodeJenis != "OP" && kodeJenis != "IP")
-                throw new ArgumentException("Kode jenis kunjungan hanya boleh OP atau IP.");
-
-            var kunjungan = await _applicationDbContext.Kunjungans
-                .FirstOrDefaultAsync(x =>
-                    x.KunjunganID == kunjunganId.Value &&
-                    !x.IsDelete,
-                    cancellationToken);
-
-            if (kunjungan == null)
-                throw new InvalidOperationException("Data kunjungan tidak ditemukan.");
-
-            if (!kunjungan.PasienId.HasValue || kunjungan.PasienId == Guid.Empty)
-                throw new InvalidOperationException("PasienId pada kunjungan tidak valid.");
-
-            var today = DateTime.UtcNow.Date;
-            var tomorrow = today.AddDays(1);
-
-            var targetBiayaAdmin = await _applicationDbContext.BiayaAdministrasis
-                .FirstOrDefaultAsync(x =>
-                    x.BiayaAdministrasiKode == kodeJenis,
-                    cancellationToken);
-
-            if (targetBiayaAdmin == null)
-                return;
-
-            var biayaAdminIp = await _applicationDbContext.BiayaAdministrasis
-                .FirstOrDefaultAsync(x =>
-                    x.BiayaAdministrasiKode == "IP",
-                    cancellationToken);
-
-            var existingAdminBilling = await _applicationDbContext.Billings
-                .Include(b => b.Kunjungan)
-                .Where(b =>
-                    b.Kunjungan != null &&
-                    b.Kunjungan.PasienId == kunjungan.PasienId &&
-                    b.JenisBilling == JENIS_BILLING_BIAYA_ADMIN &&
-                    b.BillingKode == BILLING_KODE_BIAYA_ADMIN &&
-                    !b.Kunjungan.IsDelete &&
-                    b.BillingDate.HasValue &&
-                    b.BillingDate.Value >= today &&
-                    b.BillingDate.Value < tomorrow)
-                .OrderByDescending(b => b.CreateDateTime)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (existingAdminBilling != null)
-            {
-                var existingIsIpAdmin =
-                    biayaAdminIp != null &&
-                    existingAdminBilling.ItemId == biayaAdminIp.BiayaAdministrasiId;
-
-                if (existingIsIpAdmin)
-                    return;
-
-                if (kodeJenis == "OP")
-                    return;
-
-                if (kodeJenis == "IP")
-                {
-                    var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
-                        kunjunganId.Value,
-                        DateTime.UtcNow
-                    );
-
-                    existingAdminBilling.KunjunganId = kunjunganId.Value;
-                    existingAdminBilling.ItemId = targetBiayaAdmin.BiayaAdministrasiId;
-                    existingAdminBilling.NamaItem = targetBiayaAdmin.NamaBiayaAdministrasi;
-                    existingAdminBilling.HargaItem = targetBiayaAdmin.NominalBiayaAdministrasi;
-                    existingAdminBilling.QtyItem = 1;
-                    existingAdminBilling.SubTotalItem = targetBiayaAdmin.NominalBiayaAdministrasi;
-                    existingAdminBilling.InvoiceBilling = invoice;
-                    existingAdminBilling.BillingDate = DateTime.UtcNow;
-                    existingAdminBilling.TanggalInvoice = DateTime.UtcNow;
-                    existingAdminBilling.TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90);
-                    existingAdminBilling.UpdateDateTime = DateTimeOffset.UtcNow;
-                    existingAdminBilling.UpdateBy = userActiveId;
-
-                    return;
-                }
-            }
-
-            var newInvoice = await _generateInvoiceBillingService.GetOrCreateAsync(
-                kunjunganId.Value,
-                DateTime.UtcNow
+            var kodeJenis = ResolveKodeBiayaAdmin(
+                jenisKunjungan,
+                asalKunjungan
             );
 
-            var bill = new Billing
-            {
-                BillingId = Guid.NewGuid(),
-                KunjunganId = kunjunganId.Value,
-
-                ItemId = targetBiayaAdmin.BiayaAdministrasiId,
-                NamaItem = targetBiayaAdmin.NamaBiayaAdministrasi,
-                HargaItem = targetBiayaAdmin.NominalBiayaAdministrasi,
-                QtyItem = 1,
-                SubTotalItem = targetBiayaAdmin.NominalBiayaAdministrasi,
-
-                InvoiceBilling = newInvoice,
-                IsListWhiteOff = false,
-
-                BillingKode = BILLING_KODE_BIAYA_ADMIN,
-                JenisBilling = JENIS_BILLING_BIAYA_ADMIN,
-                StatusBilling = false,
-
-                BillingDate = DateTime.UtcNow,
-                TanggalInvoice = DateTime.UtcNow,
-                TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-
-                CreateDateTime = DateTimeOffset.UtcNow,
-                CreateBy = userActiveId,
-                IsDelete = false
-            };
-
-            _applicationDbContext.Billings.Add(bill);
+            await ApplyBiayaAdministrasiByKodeAsync(
+                kunjunganId: kunjunganId,
+                kodeJenis: kodeJenis,
+                userActiveId: userActiveId,
+                cancellationToken: cancellationToken
+            );
         }
 
         // =====================================================
@@ -325,15 +232,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             if (!kunjunganId.HasValue || kunjunganId.Value == Guid.Empty)
                 throw new ArgumentException("KunjunganId tidak valid.");
 
-            kodeJenis = kodeJenis?.Trim().ToUpper();
+            kodeJenis = kodeJenis?.Trim().ToUpperInvariant();
 
             if (string.IsNullOrWhiteSpace(kodeJenis))
                 throw new ArgumentException("Kode jenis biaya administrasi tidak valid.");
 
-            /*
-             * Wajib cek kunjungan sudah ada di tabel Kunjungan.
-             * Kalau belum SaveChanges / belum masuk DB, proses billing tidak boleh lanjut.
-             */
+            var now = DateTime.Now;
+            var startToday = now.Date;
+            var endToday = startToday.AddDays(1);
+            var dueDate = now.Date.AddDays(90);
+            var nowOffset = DateTimeOffset.Now;
+
             var kunjungan = await _applicationDbContext.Kunjungans
                 .FirstOrDefaultAsync(x =>
                     x.KunjunganID == kunjunganId.Value &&
@@ -341,18 +250,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
                     cancellationToken);
 
             if (kunjungan == null)
-                throw new InvalidOperationException("Data kunjungan tidak ditemukan. Pastikan kunjungan sudah tersimpan sebelum membuat billing biaya admin.");
+                throw new InvalidOperationException(
+                    "Data kunjungan tidak ditemukan. Pastikan kunjungan sudah tersimpan sebelum membuat billing biaya admin.");
 
             if (!kunjungan.PasienId.HasValue || kunjungan.PasienId.Value == Guid.Empty)
                 throw new InvalidOperationException("PasienId pada kunjungan tidak valid.");
 
-            /*
-             * Ambil master biaya admin target.
-             * Contoh kode:
-             * OP  = Rawat Jalan
-             * IGD = Instalasi Gawat Darurat
-             * IP  = Rawat Inap / Ranap
-             */
             var targetBiayaAdmin = await _applicationDbContext.BiayaAdministrasis
                 .FirstOrDefaultAsync(x =>
                     x.BiayaAdministrasiKode == kodeJenis &&
@@ -362,28 +265,87 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             if (targetBiayaAdmin == null)
                 return;
 
-            var (startToday, endToday, now) = GetTodayBillingRange();
-
-            /*
-             * Target ranap boleh mengganti biaya admin lama.
-             * Sesuaikan jika kode ranap kamu bukan IP.
-             */
-            bool targetIsRanap =
+            var targetIsRanap =
+                kodeJenis == ADMIN_RANAP_CODE ||
                 kodeJenis == "IP" ||
                 kodeJenis == "RANAP";
 
             /*
-             * Cek apakah pasien sudah memiliki biaya admin apapun pada hari ini.
-             *
-             * Cek berdasarkan:
-             * - PasienId dari tabel Kunjungan
-             * - JenisBilling = Biaya Admin
-             * - BillingKode = 001
-             * - BillingDate di antara jam 00:00 sampai sebelum 00:00 besok
-             *
-             * Ini membuat 1 pasien hanya punya 1 biaya admin per hari.
+             * =====================================================
+             * 1. Cek biaya admin pada KunjunganId yang sama.
+             * =====================================================
+             * Ini penting untuk rawat inap:
+             * SOAP ranap hari ke-1, ke-2, ke-3 tidak membuat admin IP berulang,
+             * selama KunjunganId rawat inap masih sama.
              */
-            var existingAdminBilling = await (
+            var existingSameKunjungan = await _applicationDbContext.Billings
+                .FirstOrDefaultAsync(b =>
+                    b.KunjunganId == kunjunganId.Value &&
+                    b.JenisBilling == JENIS_BILLING_BIAYA_ADMIN &&
+                    b.BillingKode == BILLING_KODE_BIAYA_ADMIN &&
+                    (b.IsDelete == false || b.IsDelete == null),
+                    cancellationToken);
+
+            var trackedSameKunjungan = _applicationDbContext.ChangeTracker
+                .Entries<Billing>()
+                .Where(e =>
+                    e.State != EntityState.Deleted &&
+                    e.Entity.KunjunganId == kunjunganId.Value &&
+                    e.Entity.JenisBilling == JENIS_BILLING_BIAYA_ADMIN &&
+                    e.Entity.BillingKode == BILLING_KODE_BIAYA_ADMIN &&
+                    (e.Entity.IsDelete == false || e.Entity.IsDelete == null))
+                .Select(e => e.Entity)
+                .FirstOrDefault();
+
+            var adminSameKunjungan = existingSameKunjungan ?? trackedSameKunjungan;
+
+            if (adminSameKunjungan != null)
+            {
+                // Kalau admin yang sama sudah ada, stop.
+                if (adminSameKunjungan.ItemId == targetBiayaAdmin.BiayaAdministrasiId)
+                    return;
+
+                // Kalau request OP/IGD tapi sudah ada admin lain di kunjungan ini, jangan timpa.
+                if (!targetIsRanap)
+                    return;
+
+                /*
+                 * Kalau target IP/RANAP dan billing lama belum dibayar,
+                 * boleh update OP/IGD menjadi IP.
+                 *
+                 * Kalau sudah dibayar, jangan diubah supaya invoice paid tidak berubah.
+                 */
+                if (adminSameKunjungan.StatusBilling == false)
+                {
+                    await UpdateBillingToBiayaAdminAsync(
+                        billing: adminSameKunjungan,
+                        targetBiayaAdmin: targetBiayaAdmin,
+                        kunjunganId: kunjunganId.Value,
+                        userActiveId: userActiveId,
+                        now: now,
+                        dueDate: dueDate,
+                        nowOffset: nowOffset,
+                        cancellationToken: cancellationToken
+                    );
+                }
+
+                return;
+            }
+
+            /*
+             * =====================================================
+             * 2. Cek biaya admin pasien pada hari yang sama.
+             * =====================================================
+             * Rule bisnis:
+             * 1 pasien hanya punya 1 biaya admin per hari untuk OP/IGD.
+             *
+             * Untuk IP/RANAP:
+             * - kalau ada admin OP/IGD hari ini dan belum dibayar,
+             *   ubah menjadi admin IP.
+             * - kalau sudah dibayar, jangan diubah dan jangan tambah
+             *   supaya tidak double.
+             */
+            var existingAdminSamePatientToday = await (
                 from b in _applicationDbContext.Billings
                 join k in _applicationDbContext.Kunjungans
                     on b.KunjunganId equals k.KunjunganID
@@ -399,12 +361,44 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
                 select b
             ).FirstOrDefaultAsync(cancellationToken);
 
+            if (existingAdminSamePatientToday != null)
+            {
+                // Kalau item admin sudah sama, stop.
+                if (existingAdminSamePatientToday.ItemId == targetBiayaAdmin.BiayaAdministrasiId)
+                    return;
+
+                // Untuk OP/IGD, jangan tambah dan jangan timpa.
+                if (!targetIsRanap)
+                    return;
+
+                /*
+                 * Untuk IP/RANAP:
+                 * OP/IGD boleh berubah menjadi IP hanya kalau belum dibayar.
+                 */
+                if (existingAdminSamePatientToday.StatusBilling == false)
+                {
+                    await UpdateBillingToBiayaAdminAsync(
+                        billing: existingAdminSamePatientToday,
+                        targetBiayaAdmin: targetBiayaAdmin,
+                        kunjunganId: kunjunganId.Value,
+                        userActiveId: userActiveId,
+                        now: now,
+                        dueDate: dueDate,
+                        nowOffset: nowOffset,
+                        cancellationToken: cancellationToken
+                    );
+                }
+
+                return;
+            }
+
             /*
-             * Cek juga entity Billing yang sudah di-Add di DbContext,
-             * tapi belum SaveChanges.
-             * Ini mencegah double insert dalam 1 request.
+             * =====================================================
+             * 3. Cek billing admin yang sudah di-Add tapi belum SaveChanges.
+             * =====================================================
+             * Ini mencegah double insert dalam 1 request yang sama.
              */
-            var trackedAdminBilling = _applicationDbContext.ChangeTracker
+            var trackedAdminTodaySameKunjungan = _applicationDbContext.ChangeTracker
                 .Entries<Billing>()
                 .Where(e =>
                     e.State != EntityState.Deleted &&
@@ -419,64 +413,35 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
                 .OrderByDescending(e => e.CreateDateTime)
                 .FirstOrDefault();
 
-            var adminBillingHariIni = existingAdminBilling ?? trackedAdminBilling;
-
-            /*
-             * Kalau sudah ada biaya admin hari ini.
-             */
-            if (adminBillingHariIni != null)
+            if (trackedAdminTodaySameKunjungan != null)
             {
-                /*
-                 * Kalau biaya admin yang sudah ada adalah item yang sama,
-                 * tidak perlu insert/update lagi.
-                 */
-                if (adminBillingHariIni.ItemId == targetBiayaAdmin.BiayaAdministrasiId)
+                if (trackedAdminTodaySameKunjungan.ItemId == targetBiayaAdmin.BiayaAdministrasiId)
                     return;
 
-                /*
-                 * Kalau target bukan ranap, jangan tambah dan jangan timpa.
-                 *
-                 * Contoh:
-                 * - Sudah ada OP, lalu request IGD pada hari yang sama -> tidak tambah
-                 * - Sudah ada IGD, lalu request OP pada hari yang sama -> tidak tambah
-                 *
-                 * Karena rule bisnis: 1 pasien hanya 1 biaya admin per hari.
-                 */
                 if (!targetIsRanap)
                     return;
 
-                /*
-                 * Kalau target adalah ranap, maka biaya admin lama boleh diganti.
-                 *
-                 * Contoh:
-                 * - OP  -> IP/RANAP
-                 * - IGD -> IP/RANAP
-                 */
-                var invoiceUpdate = await _generateInvoiceBillingService.GetOrCreateAsync(
-                    kunjunganId.Value,
-                    now
-                );
-
-                adminBillingHariIni.KunjunganId = kunjunganId.Value;
-                adminBillingHariIni.ItemId = targetBiayaAdmin.BiayaAdministrasiId;
-                adminBillingHariIni.NamaItem = targetBiayaAdmin.NamaBiayaAdministrasi;
-                adminBillingHariIni.HargaItem = targetBiayaAdmin.NominalBiayaAdministrasi;
-                adminBillingHariIni.QtyItem = 1;
-                adminBillingHariIni.SubTotalItem = targetBiayaAdmin.NominalBiayaAdministrasi;
-                adminBillingHariIni.InvoiceBilling = invoiceUpdate;
-                adminBillingHariIni.BillingDate = now;
-                adminBillingHariIni.TanggalInvoice = now;
-                adminBillingHariIni.TanggalJatuhTempo = now.Date.AddDays(90);
-                adminBillingHariIni.UpdateDateTime = DateTimeOffset.Now;
-                adminBillingHariIni.UpdateBy = userActiveId;
-                adminBillingHariIni.IsDelete = false;
+                if (trackedAdminTodaySameKunjungan.StatusBilling == false)
+                {
+                    await UpdateBillingToBiayaAdminAsync(
+                        billing: trackedAdminTodaySameKunjungan,
+                        targetBiayaAdmin: targetBiayaAdmin,
+                        kunjunganId: kunjunganId.Value,
+                        userActiveId: userActiveId,
+                        now: now,
+                        dueDate: dueDate,
+                        nowOffset: nowOffset,
+                        cancellationToken: cancellationToken
+                    );
+                }
 
                 return;
             }
 
             /*
-             * Kalau belum ada biaya admin hari ini,
-             * insert biaya admin baru.
+             * =====================================================
+             * 4. Kalau belum ada biaya admin, insert billing admin baru.
+             * =====================================================
              */
             var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
                 kunjunganId.Value,
@@ -503,9 +468,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
                 BillingDate = now,
                 TanggalInvoice = now,
-                TanggalJatuhTempo = now.Date.AddDays(90),
+                TanggalJatuhTempo = dueDate,
 
-                CreateDateTime = DateTimeOffset.Now,
+                CreateDateTime = nowOffset,
                 CreateBy = userActiveId,
                 IsDelete = false
             };
@@ -797,14 +762,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
         }
         #endregion
 
-        #region range billing date
-        private static (DateTime StartToday, DateTime EndToday, DateTime Now) GetTodayBillingRange()
+        #region Kode Biaya Admin
+        private static string ResolveKodeBiayaAdmin(
+            string? jenisKunjungan,
+            string? asalKunjungan)
         {
-            var now = DateTime.Now;
-            var startToday = now.Date;
-            var endToday = startToday.AddDays(1);
+            var jenis = (jenisKunjungan ?? "").Trim().ToUpperInvariant();
+            var asal = (asalKunjungan ?? "").Trim().ToUpperInvariant();
 
-            return (startToday, endToday, now);
+            /*
+             * Prioritas utama: JenisKunjungan.
+             * Karena JenisKunjungan biasanya menunjukkan episode aktual:
+             * OP = rawat jalan
+             * IGD = gawat darurat
+             * IP = rawat inap
+             */
+
+            if (IsRanap(jenis))
+                return ADMIN_RANAP_CODE; // IP
+
+            if (IsIgd(jenis))
+                return ADMIN_IGD_CODE; // IGD
+
+            if (IsRajal(jenis))
+                return ADMIN_RAJAL_CODE; // OP
+
+            /*
+             * Fallback: kalau JenisKunjungan kosong/tidak standar,
+             * baru lihat AsalKunjungan.
+             */
+
+            if (IsRanap(asal))
+                return ADMIN_RANAP_CODE; // IP
+
+            if (IsIgd(asal))
+                return ADMIN_IGD_CODE; // IGD
+
+            if (IsRajal(asal))
+                return ADMIN_RAJAL_CODE; // OP
+
+            throw new ArgumentException(
+                $"Jenis kunjungan tidak dikenali. JenisKunjungan={jenisKunjungan}, AsalKunjungan={asalKunjungan}");
+        }
+
+        private static bool IsRanap(string value)
+        {
+            return value == "IP" ||
+                   value == "RANAP" ||
+                   value == "RAWAT INAP";
+        }
+
+        private static bool IsIgd(string value)
+        {
+            return value == "IGD" ||
+                   value.Contains("GAWAT DARURAT");
+        }
+
+        private static bool IsRajal(string value)
+        {
+            return value == "OP" ||
+                   value == "RAJAL" ||
+                   value == "RAWAT JALAN";
         }
         #endregion
 
@@ -898,6 +916,53 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
         #endregion
 
+        #region Update billing bagian biaya admin
+        private async Task UpdateBillingToBiayaAdminAsync(
+            Billing billing,
+            BiayaAdministrasi targetBiayaAdmin,
+            Guid kunjunganId,
+            Guid userActiveId,
+            DateTime now,
+            DateTime dueDate,
+            DateTimeOffset nowOffset,
+            CancellationToken cancellationToken)
+        {
+            /*
+             * Safety:
+             * Billing yang sudah dibayar tidak boleh diubah.
+             */
+            if (billing.StatusBilling == true)
+                return;
+
+            var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
+                kunjunganId,
+                now
+            );
+
+            billing.KunjunganId = kunjunganId;
+
+            billing.ItemId = targetBiayaAdmin.BiayaAdministrasiId;
+            billing.NamaItem = targetBiayaAdmin.NamaBiayaAdministrasi;
+            billing.HargaItem = targetBiayaAdmin.NominalBiayaAdministrasi;
+            billing.QtyItem = 1;
+            billing.SubTotalItem = targetBiayaAdmin.NominalBiayaAdministrasi;
+
+            billing.InvoiceBilling = invoice;
+            billing.IsListWhiteOff = false;
+
+            billing.BillingKode = BILLING_KODE_BIAYA_ADMIN;
+            billing.JenisBilling = JENIS_BILLING_BIAYA_ADMIN;
+            billing.StatusBilling = false;
+
+            billing.BillingDate = now;
+            billing.TanggalInvoice = now;
+            billing.TanggalJatuhTempo = dueDate;
+
+            billing.UpdateDateTime = nowOffset;
+            billing.UpdateBy = userActiveId;
+            billing.IsDelete = false;
+        }
+        #endregion
         #endregion
     }
 }

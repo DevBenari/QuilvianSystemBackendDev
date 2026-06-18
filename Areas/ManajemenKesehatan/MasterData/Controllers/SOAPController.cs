@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Security.Claims;
+using System.Threading;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -13,6 +14,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -1168,50 +1170,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
-        //[HttpGet("SOAPDokter/{dokterid}")]
-        //public async Task<IActionResult> GetByDokterId(Guid dokterid)
-        //{
-        //    var data = (from a in _applicationDbContext.SOAPs
-        //                join u in _applicationDbContext.UserActives
-        //                    on a.CreateBy equals u.UserActiveId
-        //                join k in _applicationDbContext.Kunjungans
-        //                    on a.KunjunganId equals k.KunjunganID
-        //                join d in _applicationDbContext.Dokters
-        //                    on k.DokterId equals d.DokterId
-        //                where a.IsDelete == false && k.DokterId == dokterid
-        //                select new
-        //                {
-        //                    CreateDateTime = a.CreateDateTime,
-        //                    CreateBy = a.CreateBy,
-        //                    CreateByName = u.FullName,
-        //                    SOAPID = a.SOAPID,
-        //                    KunjunganId = a.KunjunganId,
-        //                    PasienId = k.PasienId,
-        //                    Subjective = a.Subjective,
-        //                    Objective = a.Objective,
-        //                    DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-        //                    Assessment = a.Assessment,
-        //                    Planning = a.Planning,
-        //                    Profesi = a.Profesi,
-        //                    RanapId = a.RanapId,
-        //                    NamaDokter = d.NmDokter,
-        //                }).ToListAsync(); // Fix: Use ToListAsync() on IQueryable, not on the anonymous type.  
-
-        //    var result = await data; // Await the ToListAsync() result.  
-
-        //    if (!result.Any())
-        //    {
-        //        return NotFound(new { message = "Data tidak ditemukan." });
-        //    }
-
-        //    return Ok(new
-        //    {
-        //        message = "Ditemukan || 200 OK",
-        //        data = result
-        //    });
-        //}
-
         [HttpPost("Rawat-Jalan")]
         public async Task<IActionResult> CreateSOAPRajal([FromBody] SOAPViewModel vm, CancellationToken ct)
         {
@@ -1384,34 +1342,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateSOAP([FromBody] SOAPViewModel vm)
+        public async Task<IActionResult> CreateSOAP([FromBody] SOAPViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
 
+            // **Cek koneksi ke database**
+            if (!_applicationDbContext.Database.CanConnect())
+            {
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+            }
+
+            // **Ambil User ID dari JWT Claims**
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+            {
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+            }
+
+            var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+            if (getUserActive == null)
+            {
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+            }
+            var userActiveId = getUserActive.UserActiveId;
+                
+            await using var transaction = await _applicationDbContext.Database
+                    .BeginTransactionAsync(ct);
             try
             {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
-
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
-                var userActiveId = getUserActive.UserActiveId;
+                var kunjungan = await _applicationDbContext.Kunjungans
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.KunjunganID == vm.KunjunganId.Value &&
+                        !x.IsDelete)
+                    .Select(x => new
+                    {
+                        x.KunjunganID,
+                        x.PasienId,
+                        x.JenisKunjungan,
+                        x.AsalKunjungan
+                    })
+                    .FirstOrDefaultAsync(ct);
 
                 // **Buat Data Baru**
                 var data = new SOAP
@@ -1433,7 +1407,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
                 // **Simpan ke Database**
                 _applicationDbContext.SOAPs.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+
+                await _kunjunganAdminBillingService.ApplyBiayaAdminAsync(
+                    data.KunjunganId,
+                    kunjungan.JenisKunjungan,
+                    kunjungan.AsalKunjungan,
+                    userActiveId,
+                    ct
+                );
+
+                await _applicationDbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
 
                 //Notifikasi ke SignalR Hub
                 await _hubContext.Clients.All.SendAsync("SOAP ditambah", new
@@ -1442,14 +1427,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     soapid = data.SOAPID,
                 });
 
-                if (result > 0)
-                {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
+                return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
             }
             catch (DbUpdateException dbEx)
             {

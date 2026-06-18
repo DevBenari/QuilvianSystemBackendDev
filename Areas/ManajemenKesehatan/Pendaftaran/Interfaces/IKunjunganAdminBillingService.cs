@@ -6,7 +6,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfac
     {
         Task ApplyBiayaAdminAsync(
             Guid? kunjunganId,
-            string kodeJenis,
+            string? jenisKunjungan,
+            string? asalKunjungan,
             Guid userActiveId,
             CancellationToken cancellationToken = default);
 
