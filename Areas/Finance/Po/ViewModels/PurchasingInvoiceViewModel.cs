@@ -69,6 +69,11 @@
         public decimal? HasilKonversi { get; set; }
 
         public string? Keterangan { get; set; }
+        public string? KodePurchasingInvoice { get; set; }
+
+        public Guid? CreateBy { get; set; }
+
+        public string? Status { get; set; }
 
         public List<ItemPurchasingInvoiceViewModel> Items { get; set; } = new();
     }

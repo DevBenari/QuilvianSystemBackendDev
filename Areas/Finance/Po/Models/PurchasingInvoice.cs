@@ -1,11 +1,12 @@
 ﻿
+using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
 {
     [Table("Fin_PurchasingInvoice", Schema = "public")]
-    public class PurchasingInvoice
+    public class PurchasingInvoice : UserActivity
     {
         [Key]
         public Guid PurchasingInvoiceId { get; set; }
@@ -96,6 +97,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
         public DateTime? UpdateDateTime { get; set; }
 
         public bool? IsDelete { get; set; } = false;
+        public string? Status { get; set; }
 
         public ICollection<ItemPurchasingInvoice> Items { get; set; } = new List<ItemPurchasingInvoice>();
     }

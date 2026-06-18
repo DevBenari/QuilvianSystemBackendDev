@@ -1,10 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using QuilvianSystemBackendDev.Models;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
 {
     [Table("Fin_ItemPurchasingInvoice", Schema = "public")]
-    public class ItemPurchasingInvoice
+    public class ItemPurchasingInvoice : UserActivity
     {
         [Key]
         public Guid ItemPurchasingInvoiceId { get; set; }

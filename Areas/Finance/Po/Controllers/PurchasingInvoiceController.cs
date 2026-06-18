@@ -114,26 +114,38 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
         {
             var data = await _context.PurchasingInvoices
                 .AsNoTracking()
-                .Include(x => x.Items)
                 .Where(x => x.IsDelete == false || x.IsDelete == null)
                 .OrderByDescending(x => x.CreateDateTime)
                 .Select(x => new PurchasingInvoiceViewModel
                 {
                     PurchasingInvoiceId = x.PurchasingInvoiceId,
+
+                    // Ambil dari DetailTukarFaktur berdasarkan POId
+                    KodePurchasingInvoice = _context.DetailTukarFakturs
+                        .Where(d =>
+                            d.POId == x.POId &&
+                            (d.IsDelete == false || d.IsDelete == null))
+                        .Select(d => d.KodePurchasingInvoice)
+                        .FirstOrDefault(),
+
                     POId = x.POId,
                     NoPO = x.NoPO,
                     TglPO = x.TglPO,
                     POAmount = x.POAmount,
+
                     SupplierId = x.SupplierId,
                     NamaSupplier = x.NamaSupplier,
                     DiskonSupplier = x.DiskonSupplier,
                     SupplierTermPayment = x.SupplierTermPayment,
+
                     TglPembuatanInvoice = x.TglPembuatanInvoice,
                     TglJatuhTempo = x.TglJatuhTempo,
                     TipePembayaran = x.TipePembayaran,
+
                     ReceiveOrderId = x.ReceiveOrderId,
                     ReceiveOrderNumber = x.ReceiveOrderNumber,
                     NoInvoice = x.NoInvoice,
+
                     DownPayment = x.DownPayment,
                     DiskonPersen = x.DiskonPersen,
                     DiskonNominal = x.DiskonNominal,
@@ -145,14 +157,23 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     Potongan = x.Potongan,
                     Retur = x.Retur,
                     OutstandingDP = x.OutstandingDP,
+
                     COAId = x.COAId,
                     NoFakturPajak = x.NoFakturPajak,
                     TglFaktur = x.TglFaktur,
+
                     MataUangId = x.MataUangId,
                     NamaMataUang = x.NamaMataUang,
                     RateToIdr = x.RateToIdr,
                     HasilKonversi = x.HasilKonversi,
+
                     Keterangan = x.Keterangan,
+
+                    // CreateBy dari UserActivity
+                    CreateBy = x.CreateBy,
+
+                    // Status dari model PurchasingInvoice
+                    Status = x.Status,
 
                     Items = x.Items
                         .Where(i => i.IsDelete == false || i.IsDelete == null)
@@ -173,7 +194,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                             HargaAkhir = i.HargaAkhir,
                             HargaTotal = i.HargaTotal,
                             Keterangan = i.Keterangan
-                        }).ToList()
+                        })
+                        .ToList()
                 })
                 .ToListAsync();
 
@@ -182,17 +204,18 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-    int page = 1,
-    int perPage = 10,
-    string? noPO = null,
-    string? noInvoice = null,
-    Guid? supplierId = null,
-    Guid? poId = null,
-    string? namaSupplier = null,
-    string? orderBy = "CreateDateTime",
-    string? sortDirection = "desc",
-    DateTime? startDate = null,
-    DateTime? endDate = null)
+        int page = 1,
+        int perPage = 10,
+        string? noPO = null,
+        string? noInvoice = null,
+        string? kodePurchasingInvoice = null,
+        Guid? supplierId = null,
+        Guid? poId = null,
+        string? namaSupplier = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        DateTime? startDate = null,
+        DateTime? endDate = null)
         {
             page = page < 1 ? 1 : page;
             perPage = perPage < 1 ? 10 : perPage;
@@ -206,6 +229,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
             if (!string.IsNullOrWhiteSpace(noPO))
             {
                 var pattern = $"%{noPO.Trim()}%";
+
                 query = query.Where(x =>
                     x.NoPO != null &&
                     EF.Functions.ILike(x.NoPO, pattern));
@@ -214,14 +238,34 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
             if (!string.IsNullOrWhiteSpace(noInvoice))
             {
                 var pattern = $"%{noInvoice.Trim()}%";
+
                 query = query.Where(x =>
                     x.NoInvoice != null &&
                     EF.Functions.ILike(x.NoInvoice, pattern));
             }
 
+            // =========================
+            // Filter KodePurchasingInvoice
+            // dari DetailTukarFaktur berdasarkan POId
+            // =========================
+            if (!string.IsNullOrWhiteSpace(kodePurchasingInvoice))
+            {
+                var pattern = $"%{kodePurchasingInvoice.Trim()}%";
+
+                query = query.Where(x =>
+                    _context.DetailTukarFakturs.Any(d =>
+                        d.POId == x.POId &&
+                        (d.IsDelete == false || d.IsDelete == null) &&
+                        d.KodePurchasingInvoice != null &&
+                        EF.Functions.ILike(d.KodePurchasingInvoice, pattern)
+                    )
+                );
+            }
+
             if (!string.IsNullOrWhiteSpace(namaSupplier))
             {
                 var pattern = $"%{namaSupplier.Trim()}%";
+
                 query = query.Where(x =>
                     x.NamaSupplier != null &&
                     EF.Functions.ILike(x.NamaSupplier, pattern));
@@ -253,19 +297,49 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 ? orderBy switch
                 {
                     "NoPO" => query.OrderByDescending(x => x.NoPO),
+
                     "NoInvoice" => query.OrderByDescending(x => x.NoInvoice),
+
+                    "KodePurchasingInvoice" => query.OrderByDescending(x =>
+                        _context.DetailTukarFakturs
+                            .Where(d =>
+                                d.POId == x.POId &&
+                                (d.IsDelete == false || d.IsDelete == null))
+                            .Select(d => d.KodePurchasingInvoice)
+                            .FirstOrDefault()),
+
                     "NamaSupplier" => query.OrderByDescending(x => x.NamaSupplier),
+
                     "TglPO" => query.OrderByDescending(x => x.TglPO),
+
                     "TglPembuatanInvoice" => query.OrderByDescending(x => x.TglPembuatanInvoice),
+
+                    "Status" => query.OrderByDescending(x => x.Status),
+
                     _ => query.OrderByDescending(x => x.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "NoPO" => query.OrderBy(x => x.NoPO),
+
                     "NoInvoice" => query.OrderBy(x => x.NoInvoice),
+
+                    "KodePurchasingInvoice" => query.OrderBy(x =>
+                        _context.DetailTukarFakturs
+                            .Where(d =>
+                                d.POId == x.POId &&
+                                (d.IsDelete == false || d.IsDelete == null))
+                            .Select(d => d.KodePurchasingInvoice)
+                            .FirstOrDefault()),
+
                     "NamaSupplier" => query.OrderBy(x => x.NamaSupplier),
+
                     "TglPO" => query.OrderBy(x => x.TglPO),
+
                     "TglPembuatanInvoice" => query.OrderBy(x => x.TglPembuatanInvoice),
+
+                    "Status" => query.OrderBy(x => x.Status),
+
                     _ => query.OrderBy(x => x.CreateDateTime)
                 };
 
@@ -291,7 +365,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
 
             if (page > totalPages)
             {
-                return NotFound(new { message = "Page not found." });
+                return NotFound(new
+                {
+                    message = "Page not found."
+                });
             }
 
             var rows = await query
@@ -300,20 +377,32 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 .Select(x => new
                 {
                     x.PurchasingInvoiceId,
+
+                    KodePurchasingInvoice = _context.DetailTukarFakturs
+                        .Where(d =>
+                            d.POId == x.POId &&
+                            (d.IsDelete == false || d.IsDelete == null))
+                        .Select(d => d.KodePurchasingInvoice)
+                        .FirstOrDefault(),
+
                     x.POId,
                     x.NoPO,
                     x.TglPO,
                     x.POAmount,
+
                     x.SupplierId,
                     x.NamaSupplier,
                     x.DiskonSupplier,
                     x.SupplierTermPayment,
+
                     x.TglPembuatanInvoice,
                     x.TglJatuhTempo,
                     x.TipePembayaran,
+
                     x.ReceiveOrderId,
                     x.ReceiveOrderNumber,
                     x.NoInvoice,
+
                     x.DownPayment,
                     x.DiskonPersen,
                     x.DiskonNominal,
@@ -325,14 +414,19 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     x.Potongan,
                     x.Retur,
                     x.OutstandingDP,
+
                     x.COAId,
                     x.NoFakturPajak,
                     x.TglFaktur,
+
                     x.MataUangId,
                     x.NamaMataUang,
                     x.RateToIdr,
                     x.HasilKonversi,
+
                     x.Keterangan,
+                    x.Status,
+                    x.CreateBy,
                     x.CreateDateTime,
 
                     Items = x.Items
