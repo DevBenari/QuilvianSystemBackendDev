@@ -402,29 +402,33 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
         //        });
         //    }
         //}
+
         [HttpGet("paged")]
         public async Task<IActionResult> PagedDetailTukarFaktur(
-            int page = 1,
-            int perPage = 10,
-            string? search = null,
-            string? orderBy = "TglPembuatanInvoice",
-            string? sortDirection = "desc",
-            Guid? tukarFakturId = null,
-            Guid? supplierId = null,
-            Guid? poId = null,
+    int page = 1,
+    int perPage = 10,
+    string? search = null,
+    string? orderBy = "TglPembuatanInvoice",
+    string? sortDirection = "desc",
+    Guid? tukarFakturId = null,
+    Guid? supplierId = null,
+    Guid? poId = null,
 
-            [FromQuery(Name = "KodePOInv")]
+    [FromQuery(Name = "NomorPO")]
+    string? nomorPO = null,
+
+    [FromQuery(Name = "KodePOInv")]
     string? kodePOInv = null,
 
-            [FromQuery(Name = "KodePurchasingInvoice")]
+    [FromQuery(Name = "KodePurchasingInvoice")]
     string? kodePurchasingInvoice = null,
 
-            [FromQuery, SwaggerSchema(Format = "date-time")]
+    [FromQuery, SwaggerSchema(Format = "date-time")]
     DateTime? startDate = null,
 
-            [FromQuery, SwaggerSchema(Format = "date-time")]
+    [FromQuery, SwaggerSchema(Format = "date-time")]
     DateTime? endDate = null
-        )
+)
         {
             try
             {
@@ -508,11 +512,22 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                 }
 
                 // =========================
+                // Filter khusus Nomor PO
+                // Query: ?NomorPO=PO-001
+                // =========================
+                if (!string.IsNullOrWhiteSpace(nomorPO))
+                {
+                    var pattern = $"%{nomorPO.Trim()}%";
+
+                    query = query.Where(x =>
+                        EF.Functions.ILike(x.NomorPO ?? "", pattern)
+                    );
+                }
+
+                // =========================
                 // Filter Kode PO Invoice
-                // Bisa pakai query:
-                // ?KodePOInv=xxx
-                // atau
-                // ?KodePurchasingInvoice=xxx
+                // Query: ?KodePOInv=xxx
+                // atau: ?KodePurchasingInvoice=xxx
                 // =========================
                 var kodePOInvFilter = !string.IsNullOrWhiteSpace(kodePOInv)
                     ? kodePOInv
@@ -685,6 +700,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                 });
             }
         }
+
         // =====================================================
         // GET BY ID
         // =====================================================

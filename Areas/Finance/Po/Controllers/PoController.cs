@@ -273,21 +273,95 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
             return Ok(new { message = "Success", data });
         }
 
+        [HttpGet("by-purchase-order/{purchaseOrderId:guid}")]
+        public async Task<IActionResult> GetByPurchaseOrderId(Guid purchaseOrderId)
+        {
+            var data = await _context.PurchaseOrders
+                .AsNoTracking()
+                .Where(po =>
+                    po.PurchaseOrderId == purchaseOrderId &&
+                    (po.IsDelete == false || po.IsDelete == null))
+                .Select(po => new
+                {
+                    PurchaseOrderId = po.PurchaseOrderId,
+                    PurchaseRequestNumber = po.PurchaseRequestNumber,
+                    PurchaseOrderNumber = po.PurchaseOrderNumber,
+                    InvoiceDate = po.InvoiceDate,
+                    InvoiceNumber = po.InvoiceNumber,
+                    RequestType = po.RequestType,
+
+                    SupplierId = po.SupplierId,
+                    SupplierName = po.SupplierName,
+                    SupplierCode = po.SupplierCode,
+
+                    TermOfPayment = po.TermOfPayment,
+                    ExpiredDate = po.ExpiredDate,
+
+                    RemainingDay = po.RemainingDay,
+                    QtyTotal = po.QtyTotal,
+                    GrandTotal = po.GrandTotal,
+
+                    UserAccess = po.UserAccess,
+                    StatusPO = po.StatusPO,
+                    Keterangan = po.Keterangan,
+                    CreateDateTime = po.CreateDateTime,
+
+                    Items = po.PurchaseOrderItems
+                        .Where(i => i.IsDelete == false || i.IsDelete == null)
+                        .Select(i => new PurchaseOrderItemViewModel
+                        {
+                            ProductName = i.ProductName,
+                            Measurement = i.Measurement,
+                            Category = i.Category,
+                            Qty = i.Qty,
+                            Price = i.Price,
+                            Discount = i.Discount,
+                            SubTotal = i.SubTotal,
+                            Keterangan = i.Keterangan
+                        })
+                        .ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            if (data == null)
+            {
+                return NotFound(new
+                {
+                    status = "failed",
+                    message = "Purchase Order tidak ditemukan"
+                });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data
+            });
+        }
+
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-            int page = 1,
-            int perPage = 10,
-            string? PRNumber = null,
-            string? PONumber = null,
-            Guid? supplierId = null,
-            Guid? poId = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? startDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        int page = 1,
+        int perPage = 10,
+        string? PRNumber = null,
+        string? PONumber = null,
+        Guid? supplierId = null,
+
+        [FromQuery(Name = "PurchaseOrderId")]
+        Guid? purchaseOrderId = null,
+
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))]
+        PeriodeFilter? periode = null)
         {
             page = page < 1 ? 1 : page;
             perPage = perPage < 1 ? 10 : perPage;
@@ -298,34 +372,51 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 .Where(po => po.IsDelete == false || po.IsDelete == null);
 
             // ======================================================
-            // Search
+            // Filter PurchaseOrderId
+            // ======================================================
+            if (purchaseOrderId.HasValue)
+            {
+                query = query.Where(po =>
+                    po.PurchaseOrderId == purchaseOrderId.Value);
+            }
+
+            // ======================================================
+            // Search PR Number
             // ======================================================
             if (!string.IsNullOrWhiteSpace(PRNumber))
             {
                 var pattern = $"%{PRNumber.Trim()}%";
 
                 query = query.Where(po =>
-                    (po.PurchaseRequestNumber != null && EF.Functions.ILike(po.PurchaseRequestNumber, pattern))
+                    po.PurchaseRequestNumber != null &&
+                    EF.Functions.ILike(po.PurchaseRequestNumber, pattern)
                 );
             }
+
+            // ======================================================
+            // Search PO Number
+            // ======================================================
             if (!string.IsNullOrWhiteSpace(PONumber))
             {
                 var pattern = $"%{PONumber.Trim()}%";
 
                 query = query.Where(po =>
-                    (po.PurchaseOrderNumber != null && EF.Functions.ILike(po.PurchaseOrderNumber, pattern)) 
+                    po.PurchaseOrderNumber != null &&
+                    EF.Functions.ILike(po.PurchaseOrderNumber, pattern)
                 );
             }
 
-            //if (supplierId.HasValue)
-            //{
-            //    query = query.Where(u=>u.SupplierId==supplierId.Value);
-            //}
+            // ======================================================
+            // Filter Supplier
+            // ======================================================
+            if (supplierId.HasValue)
+            {
+                query = query.Where(po =>
+                    po.SupplierId == supplierId.Value);
+            }
 
             // ======================================================
             // Filter tanggal
-            // Pakai CreateDateTime. Kalau mau berdasarkan InvoiceDate,
-            // ganti po.CreateDateTime menjadi po.InvoiceDate.
             // ======================================================
             if (startDate.HasValue && endDate.HasValue)
             {
@@ -348,46 +439,75 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 {
                     case PeriodeFilter.Today:
                         query = query.Where(po =>
-                            po.CreateDateTime.Date == today);
+                            po.CreateDateTime >= today &&
+                            po.CreateDateTime < today.AddDays(1));
                         break;
 
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(po =>
-                            po.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            po.CreateDateTime.Date <= today);
-                        break;
+                        {
+                            var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+                            var endOfWeek = today.AddDays(1);
+
+                            query = query.Where(po =>
+                                po.CreateDateTime >= startOfWeek &&
+                                po.CreateDateTime < endOfWeek);
+                            break;
+                        }
 
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(po =>
-                            po.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            po.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
-                        break;
+                        {
+                            var startOfThisWeek = today.AddDays(-(int)today.DayOfWeek);
+                            var startOfLastWeek = startOfThisWeek.AddDays(-7);
+
+                            query = query.Where(po =>
+                                po.CreateDateTime >= startOfLastWeek &&
+                                po.CreateDateTime < startOfThisWeek);
+                            break;
+                        }
 
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(po =>
-                            po.CreateDateTime.Month == today.Month &&
-                            po.CreateDateTime.Year == today.Year);
-                        break;
+                        {
+                            var startOfMonth = new DateTime(today.Year, today.Month, 1);
+                            var startOfNextMonth = startOfMonth.AddMonths(1);
+
+                            query = query.Where(po =>
+                                po.CreateDateTime >= startOfMonth &&
+                                po.CreateDateTime < startOfNextMonth);
+                            break;
+                        }
 
                     case PeriodeFilter.LastMonth:
                         {
-                            var lastMonth = today.AddMonths(-1);
+                            var startOfThisMonth = new DateTime(today.Year, today.Month, 1);
+                            var startOfLastMonth = startOfThisMonth.AddMonths(-1);
 
                             query = query.Where(po =>
-                                po.CreateDateTime.Month == lastMonth.Month &&
-                                po.CreateDateTime.Year == lastMonth.Year);
+                                po.CreateDateTime >= startOfLastMonth &&
+                                po.CreateDateTime < startOfThisMonth);
                             break;
                         }
 
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(po =>
-                            po.CreateDateTime.Year == today.Year);
-                        break;
+                        {
+                            var startOfYear = new DateTime(today.Year, 1, 1);
+                            var startOfNextYear = startOfYear.AddYears(1);
+
+                            query = query.Where(po =>
+                                po.CreateDateTime >= startOfYear &&
+                                po.CreateDateTime < startOfNextYear);
+                            break;
+                        }
 
                     case PeriodeFilter.LastYear:
-                        query = query.Where(po =>
-                            po.CreateDateTime.Year == today.Year - 1);
-                        break;
+                        {
+                            var startOfThisYear = new DateTime(today.Year, 1, 1);
+                            var startOfLastYear = startOfThisYear.AddYears(-1);
+
+                            query = query.Where(po =>
+                                po.CreateDateTime >= startOfLastYear &&
+                                po.CreateDateTime < startOfThisYear);
+                            break;
+                        }
 
                     case PeriodeFilter.Last3Months:
                         query = query.Where(po =>
@@ -404,19 +524,46 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
             // ======================================================
             // Sorting
             // ======================================================
+            var sortColumn = orderBy?.ToLower() ?? "createdatetime";
             var isDesc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
 
-            query = isDesc
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(po => po.CreateDateTime),
-                    _ => query.OrderByDescending(po => po.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(po => po.CreateDateTime),
-                    _ => query.OrderBy(po => po.CreateDateTime)
-                };
+            query = sortColumn switch
+            {
+                "purchaseorderid" =>
+                    isDesc
+                        ? query.OrderByDescending(po => po.PurchaseOrderId)
+                        : query.OrderBy(po => po.PurchaseOrderId),
+
+                "purchaserequestnumber" =>
+                    isDesc
+                        ? query.OrderByDescending(po => po.PurchaseRequestNumber)
+                        : query.OrderBy(po => po.PurchaseRequestNumber),
+
+                "purchaseordernumber" =>
+                    isDesc
+                        ? query.OrderByDescending(po => po.PurchaseOrderNumber)
+                        : query.OrderBy(po => po.PurchaseOrderNumber),
+
+                "suppliername" =>
+                    isDesc
+                        ? query.OrderByDescending(po => po.SupplierName)
+                        : query.OrderBy(po => po.SupplierName),
+
+                "grandtotal" =>
+                    isDesc
+                        ? query.OrderByDescending(po => po.GrandTotal)
+                        : query.OrderBy(po => po.GrandTotal),
+
+                "createdatetime" =>
+                    isDesc
+                        ? query.OrderByDescending(po => po.CreateDateTime)
+                        : query.OrderBy(po => po.CreateDateTime),
+
+                _ =>
+                    isDesc
+                        ? query.OrderByDescending(po => po.CreateDateTime)
+                        : query.OrderBy(po => po.CreateDateTime)
+            };
 
             // ======================================================
             // Pagination
@@ -443,13 +590,16 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
 
             if (page > totalPages)
             {
-                return NotFound(new { message = "Page not found." });
+                return NotFound(new
+                {
+                    message = "Page not found."
+                });
             }
 
             var rows = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .Select(po => new 
+                .Select(po => new
                 {
                     PurchaseOrderId = po.PurchaseOrderId,
                     PurchaseRequestNumber = po.PurchaseRequestNumber,
@@ -472,6 +622,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     UserAccess = po.UserAccess,
                     StatusPO = po.StatusPO,
                     Keterangan = po.Keterangan,
+                    CreateDateTime = po.CreateDateTime,
 
                     Items = po.PurchaseOrderItems
                         .Where(i => i.IsDelete == false || i.IsDelete == null)
@@ -504,6 +655,5 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 }
             });
         }
-
     }
 }
