@@ -317,12 +317,17 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 );
             }
 
-            //if (supplierId.HasValue)
-            //{
-            //    query = query.Where(u=>u.SupplierId==supplierId.Value);
-            //}
+            if (supplierId.HasValue)
+            {
+                query = query.Where(u => u.SupplierId == supplierId.Value);
+            }
 
-            // ======================================================
+            if (poId.HasValue)
+            {
+                query = query.Where(u => u.PurchaseOrderId == poId.Value);
+            }
+
+            // =====================================================
             // Filter tanggal
             // Pakai CreateDateTime. Kalau mau berdasarkan InvoiceDate,
             // ganti po.CreateDateTime menjadi po.InvoiceDate.
