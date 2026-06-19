@@ -3282,6 +3282,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NamaAsuransi = a != null ? a.NamaAsuransi : null,
 
                 x.InvoiceBilling,
+                x.IsSudahDibuatAR,
                 x.JumlahAngsuran,
                 x.StatusPembayaran,
                 x.IsVerified,
@@ -3446,6 +3447,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     h.AsuransiId,
                     h.NamaAsuransi,
                     h.InvoiceBilling,
+                    h.IsSudahDibuatAR,
                     JumlahAngsuran = jumlahAngsuranHitung,
                     SisaPembayaran = sisaPembayaranHitung,
                     h.StatusPembayaran,
@@ -3540,16 +3542,22 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         if (kunjungans.Count == 0)
             return Array.Empty<object>();
 
-        var kunjunganIds = kunjungans.Select(x => x.KunjunganID).ToList();
+        var kunjunganIds = kunjungans
+            .Where(x => x.KunjunganID.HasValue)
+            .Select(x => x.KunjunganID.Value)
+            .Distinct()
+            .ToList();
 
         // =========================
         // 2️⃣ Ambil semua Billing sekaligus
         // =========================
         var billings = await _db.Billings
             .AsNoTracking()
-            .Where(b => kunjunganIds.Contains((Guid)b.KunjunganId)
-                        && b.StatusBilling != true
-                        && (b.IsDelete == false || b.IsDelete == null))
+            .Where(b =>
+                b.KunjunganId.HasValue &&
+                kunjunganIds.Contains(b.KunjunganId.Value) &&
+                b.StatusBilling != true &&
+                (b.IsDelete == false || b.IsDelete == null))
             .ToListAsync(ct);
 
         var billingLookup = billings
@@ -3561,8 +3569,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         var mainKasirs = await _db.MainKasirs
             .AsNoTracking()
-            .Where(x => kunjunganIds.Contains((Guid)x.KunjunganId)
-                        && x.IsDelete != true)
+            .Where(x =>
+                x.KunjunganId.HasValue &&
+                kunjunganIds.Contains(x.KunjunganId.Value) &&
+                x.IsDelete != true)
             .ToListAsync(ct);
 
         var kasirLookup = mainKasirs
