@@ -1134,6 +1134,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         KunjunganId = newKunjungan.KunjunganID,
                         StatusPembayaran = "Belum Lunas",
                         NoBill = noBill,
+                        IsSudahDibuatAR = false,
                         CreateDateTime = DateTime.UtcNow
                     };
 
