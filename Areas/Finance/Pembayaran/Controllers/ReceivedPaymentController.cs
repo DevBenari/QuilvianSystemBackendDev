@@ -479,124 +479,137 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                 if (perPage < 1)
                     perPage = 10;
 
-                // DEFAULT TANGGAL HARI INI
-                startDate ??= DateTime.UtcNow.Date;
-                endDate ??= DateTime.UtcNow.Date;
-
                 var query =
-                   from rp in _applicationDbContext.ReceivedPayments.AsNoTracking()
+                    from rp in _applicationDbContext.ReceivedPayments.AsNoTracking()
 
-                   join u0 in _applicationDbContext.UserActives.AsNoTracking()
-                       on rp.CreateBy equals u0.UserActiveId into uu
-                   from u in uu.DefaultIfEmpty()
+                    join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                        on rp.CreateBy equals u0.UserActiveId into uu
+                    from u in uu.DefaultIfEmpty()
 
-                   join b0 in _applicationDbContext.MasterBanks.AsNoTracking()
-                       on rp.BankId equals b0.BankId into bb
-                   from b in bb.DefaultIfEmpty()
+                    join b0 in _applicationDbContext.MasterBanks.AsNoTracking()
+                        on rp.BankId equals b0.BankId into bb
+                    from b in bb.DefaultIfEmpty()
 
-                   join a0 in _applicationDbContext.AyatSilangs.AsNoTracking()
-                       on rp.AyatSilangId equals a0.AyatSilangId into aa
-                   from a in aa.DefaultIfEmpty()
+                    join a0 in _applicationDbContext.AyatSilangs.AsNoTracking()
+                        on rp.AyatSilangId equals a0.AyatSilangId into aa
+                    from a in aa.DefaultIfEmpty()
 
-                   join an in _applicationDbContext.Asuransis.AsNoTracking()
-                   on a.AsuransiId equals an.AsuransiId into anGroup
-                   from an in anGroup.DefaultIfEmpty()
+                    join an0 in _applicationDbContext.Asuransis.AsNoTracking()
+                        on a.AsuransiId equals an0.AsuransiId into anGroup
+                    from an in anGroup.DefaultIfEmpty()
 
-                   where rp.IsDelete == false || rp.IsDelete == null
+                    where rp.IsDelete == false || rp.IsDelete == null
 
-                   orderby rp.CreateDateTime descending
+                    select new
+                    {
+                        rp.ReceivedPaymentId,
+                        rp.BankId,
+                        BankName = b != null ? b.BankName : null,
 
-                   select new
-                   {
-                       rp.ReceivedPaymentId,
-                       rp.BankId,
-                       BankName = b != null ? b.BankName : null,              // sesuaikan nama field
-                       rp.AyatSilangId,
-                       NoAyatSilang = a != null ? a.NoAyatSilang : null,  // sesuaikan nama field
-                       NoReferensi = a != null ? a.NoReferensi : null,
-                       TotalPembayaran = a != null ? a.TotalPembayaran : 0,
-                       AsuransiId = a != null ? a.AsuransiId : (Guid?)null,
-                       NamaAsuransi = an != null ? an.NamaAsuransi : null,
-                       rp.NoInvoice,
-                       rp.TotalReceived,
-                       rp.TglPembayaran,
-                       rp.SisaPembayaran,
-                       rp.TotalTagihanPasien,
-                       rp.PembayaranKe,
-                       rp.IsCanceled,
-                       rp.Keterangan,
-                       rp.CreateDateTime,
-                       CreateByName = u != null ? u.FullName : null
-                   };
+                        rp.AyatSilangId,
+                        NoAyatSilang = a != null ? a.NoAyatSilang : null,
+                        NoReferensi = a != null ? a.NoReferensi : null,
+                        TotalPembayaran = a != null ? a.TotalPembayaran : 0,
+
+                        AsuransiId = a != null ? a.AsuransiId : (Guid?)null,
+                        NamaAsuransi = an != null ? an.NamaAsuransi : null,
+
+                        rp.NoInvoice,
+                        rp.TotalReceived,
+                        rp.TglPembayaran,
+                        rp.SisaPembayaran,
+                        rp.TotalTagihanPasien,
+                        rp.PembayaranKe,
+                        rp.IsCanceled,
+                        rp.Keterangan,
+                        rp.CreateDateTime,
+
+                        CreateByName = u != null ? u.FullName : null
+                    };
 
                 // SEARCH
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    var keyword = $"%{search.Trim().ToLower()}%";
+                    var keyword = search.Trim().ToLower();
 
                     query = query.Where(x =>
-                        EF.Functions.ILike(x.Keterangan ?? "", keyword)
+                        (x.Keterangan ?? "").ToLower().Contains(keyword) ||
+                        (x.NoInvoice ?? "").ToLower().Contains(keyword) ||
+                        (x.NoAyatSilang ?? "").ToLower().Contains(keyword) ||
+                        (x.NoReferensi ?? "").ToLower().Contains(keyword) ||
+                        (x.NamaAsuransi ?? "").ToLower().Contains(keyword) ||
+                        (x.BankName ?? "").ToLower().Contains(keyword)
                     );
                 }
 
                 // FILTER ISCANCELED
                 if (!string.IsNullOrWhiteSpace(isCanceled))
                 {
-                    bool parsedIsCanceled =
-                        bool.Parse(isCanceled);
-
-                    query = query.Where(x =>
-                        x.IsCanceled == parsedIsCanceled);
+                    if (bool.TryParse(isCanceled, out bool parsedIsCanceled))
+                    {
+                        query = query.Where(x =>
+                            x.IsCanceled == parsedIsCanceled);
+                    }
                 }
 
                 // FILTER DATE
-                if (startDate.HasValue && endDate.HasValue)
+                if (startDate.HasValue)
                 {
-                    var startUtc =
-                        startDate.Value.Date.ToUniversalTime();
-
-                    var endUtc =
-                        endDate.Value.Date
-                        .AddDays(1)
-                        .AddTicks(-1)
-                        .ToUniversalTime();
+                    var start = startDate.Value.Date;
 
                     query = query.Where(x =>
-                        x.CreateDateTime >= startUtc &&
-                        x.CreateDateTime <= endUtc);
+                        x.CreateDateTime >= start);
+                }
+
+                if (endDate.HasValue)
+                {
+                    var end = endDate.Value.Date.AddDays(1);
+
+                    query = query.Where(x =>
+                        x.CreateDateTime < end);
                 }
 
                 // SORTING
-                var sortColumn =
-                    orderBy?.ToLower() ?? "createdatetime";
-
-                var isDescending =
+                bool isDesc =
                     sortDirection?.ToLower() == "desc";
 
-                query = sortColumn switch
+                switch (orderBy?.ToLower())
                 {
-                    "tglpembayaran" =>
-                        isDescending
+                    case "tglpembayaran":
+                        query = isDesc
                             ? query.OrderByDescending(x => x.TglPembayaran)
-                            : query.OrderBy(x => x.TglPembayaran),
+                            : query.OrderBy(x => x.TglPembayaran);
+                        break;
 
-                    "totalreceived" =>
-                        isDescending
+                    case "totalreceived":
+                        query = isDesc
                             ? query.OrderByDescending(x => x.TotalReceived)
-                            : query.OrderBy(x => x.TotalReceived),
+                            : query.OrderBy(x => x.TotalReceived);
+                        break;
 
-                    _ =>
-                        isDescending
+                    case "noinvoice":
+                        query = isDesc
+                            ? query.OrderByDescending(x => x.NoInvoice)
+                            : query.OrderBy(x => x.NoInvoice);
+                        break;
+
+                    case "bankname":
+                        query = isDesc
+                            ? query.OrderByDescending(x => x.BankName)
+                            : query.OrderBy(x => x.BankName);
+                        break;
+
+                    default:
+                        query = isDesc
                             ? query.OrderByDescending(x => x.CreateDateTime)
-                            : query.OrderBy(x => x.CreateDateTime)
-                };
+                            : query.OrderBy(x => x.CreateDateTime);
+                        break;
+                }
 
-                // PAGINATION
-                int totalRows =
-                    await query.CountAsync();
+                var totalRows = await query.CountAsync();
 
-                int totalPages =
-                    (int)Math.Ceiling(totalRows / (double)perPage);
+                var totalPages =
+                    (int)Math.Ceiling((double)totalRows / perPage);
 
                 var rows = await query
                     .Skip((page - 1) * perPage)
@@ -607,22 +620,25 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                 {
                     status = "success",
                     message = "Data berhasil diambil",
-
                     data = new
                     {
                         Rows = rows,
-                        TotalRows = totalRows,
                         CurrentPage = page,
                         PerPage = perPage,
+                        TotalRows = totalRows,
                         TotalPages = totalPages
                     }
                 });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, ex.ToString());
+
                 return StatusCode(500, new
                 {
-                    message = ex.Message
+                    status = "error",
+                    message = ex.Message,
+                    detail = ex.InnerException?.Message
                 });
             }
         }
