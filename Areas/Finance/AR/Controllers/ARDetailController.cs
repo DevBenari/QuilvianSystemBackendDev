@@ -285,7 +285,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
 
         [HttpPost]
         public async Task<IActionResult> Create(
-            [FromBody] ARDetailViewModel vm)
+    [FromBody] ARDetailViewModel vm)
         {
             try
             {
@@ -340,6 +340,18 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
 
                 _applicationDbContext.ARDetails.Add(data);
 
+                // UPDATE MAIN KASIR BERDASARKAN KUNJUNGAN ID
+                var mainKasir = await _applicationDbContext.MainKasirs
+                    .FirstOrDefaultAsync(x =>
+                        x.KunjunganId == vm.KunjunganId);
+
+                if (mainKasir != null)
+                {
+                    mainKasir.IsSudahDibuatAR = true;
+
+                    _applicationDbContext.MainKasirs.Update(mainKasir);
+                }
+
                 int result =
                     await _applicationDbContext.SaveChangesAsync();
 
@@ -367,10 +379,94 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
             }
         }
 
+        //[HttpPost]
+        //public async Task<IActionResult> Create(
+        //    [FromBody] ARDetailViewModel vm)
+        //{
+        //    try
+        //    {
+        //        if (!ModelState.IsValid)
+        //        {
+        //            return BadRequest(ModelState);
+        //        }
+
+        //        bool headerExists =
+        //            await _applicationDbContext.ARHeaders
+        //            .AnyAsync(x =>
+        //                x.ARHeaderId == vm.ARHeaderId &&
+        //                x.IsDelete == false);
+
+        //        if (!headerExists)
+        //        {
+        //            return NotFound(new
+        //            {
+        //                message = "AR Header tidak ditemukan."
+        //            });
+        //        }
+
+        //        var data = new ARDetail
+        //        {
+        //            ARDetailId = Guid.NewGuid(),
+
+        //            AsuransiId = vm.AsuransiId,
+        //            ARHeaderId = vm.ARHeaderId,
+
+        //            KunjunganId = vm.KunjunganId,
+        //            PasienId = vm.PasienId,
+
+        //            NoRM = vm.NoRM,
+        //            NamaPasien = vm.NamaPasien,
+
+        //            NoBilling = vm.NoBilling,
+        //            NoRegistrasi = vm.NoRegistrasi,
+
+        //            TglKunjungan = vm.TglKunjungan,
+        //            TglKeluar = vm.TglKeluar,
+
+        //            TotalPiutang = vm.TotalPiutang,
+        //            TotalPembayaran = vm.TotalPembayaran,
+        //            DiskonTagihan = vm.DiskonTagihan,
+        //            SelisihTagihan = vm.SelisihTagihan,
+        //            TotalSetelahDiskon = vm.TotalSetelahDiskon,
+
+        //            IsCanceled = false,
+
+        //            Keterangan = vm.Keterangan
+        //        };
+
+        //        _applicationDbContext.ARDetails.Add(data);
+
+        //        int result =
+        //            await _applicationDbContext.SaveChangesAsync();
+
+        //        if (result > 0)
+        //        {
+        //            return Created("", new
+        //            {
+        //                message = "Tambah data berhasil."
+        //            });
+        //        }
+
+        //        return StatusCode(500, new
+        //        {
+        //            message = "Gagal menyimpan data."
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
+
+        //        return StatusCode(500, new
+        //        {
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
+
         // =====================================================
         // UPDATE
         // =====================================================
-        
+
         [HttpPut("cancel/{id}")]
         public async Task<IActionResult> CancelARDetail(
         Guid id,

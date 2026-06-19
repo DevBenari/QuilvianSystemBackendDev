@@ -43,35 +43,55 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from d in _context.DetailInvoiceReceiveds
-                        join dr in _context.DetailReceivedPayments
-                            on d.DetailReceivedPaymentId equals dr.DetailReceivedPaymentId
-                        join u in _context.UserActives
-                        on d.CreateBy equals u.UserActiveId
-                        where d.IsDelete == false
-                        select new
-                        {
-                            d.DetailInvoicePaymentId,
-                            d.DetailReceivedPaymentId,
-                            dr.NoInvoice, // tampilkan NoInvoice
-                            d.KunjunganId,
-                            d.PasiemId,
-                            d.NoRM,
-                            d.NamaPasien,
-                            d.NoBilling,
-                            d.TglTerima,
-                            d.TglKirim,
-                            d.TglTagihan,
-                            d.PiutangTerbayar,
-                            d.PembayaranKe,
-                            d.TotalPiutang,
-                            d.TglJaatuhTempo,
-                            d.IsTerbayar,
-                            d.SisaPembayaran,
-                            d.Keterangan,
-                            d.CreateDateTime,
-                            CreateByName = u.FullName
-                        };
+            var query =
+                 from d in _context.DetailInvoiceReceiveds
+
+                 join dr in _context.DetailReceivedPayments
+                     on d.DetailReceivedPaymentId equals dr.DetailReceivedPaymentId
+
+                 join k in _context.Kunjungans
+                     on d.KunjunganId equals k.KunjunganID into kk
+                 from k in kk.DefaultIfEmpty()
+
+                 join u in _context.UserActives
+                     on d.CreateBy equals u.UserActiveId
+
+                 where d.IsDelete == false
+
+                 select new
+                 {
+                     d.DetailInvoicePaymentId,
+                     d.DetailReceivedPaymentId,
+
+                     dr.NoInvoice,
+
+                     d.KunjunganId,
+                     d.PasiemId,
+                     d.NoRM,
+                     d.NamaPasien,
+                     d.NoBilling,
+
+                     // dari tabel Kunjungan
+                     TglRegistrasi = k != null ? k.TglMasuk : null,
+                     NoRegistrasi = k != null ? k.NoRegistrasi : null,
+
+                     d.TglTerima,
+                     d.TglKirim,
+                     d.TglTagihan,
+
+                     d.PiutangTerbayar,
+                     d.PembayaranKe,
+                     d.TotalPiutang,
+
+                     d.TglJaatuhTempo,
+                     d.IsTerbayar,
+                     d.SisaPembayaran,
+
+                     d.Keterangan,
+                     d.CreateDateTime,
+
+                     CreateByName = u.FullName
+                 };
 
             var totalRows = await query.CountAsync();
             var data = await query
@@ -218,35 +238,85 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
         int perPage = 10,
         string? search = null)
         {
-            var query = from d in _context.DetailInvoiceReceiveds
-                        join dr in _context.DetailReceivedPayments
-                            on d.DetailReceivedPaymentId equals dr.DetailReceivedPaymentId
-                        join u in _context.UserActives
-                            on d.CreateBy equals u.UserActiveId
-                        where d.IsDelete == false
-                        select new
-                        {
-                            d.DetailInvoicePaymentId,
-                            d.DetailReceivedPaymentId,
-                            dr.NoInvoice,
-                            d.KunjunganId,
-                            d.PasiemId,
-                            d.NoRM,
-                            d.NamaPasien,
-                            d.NoBilling,
-                            d.TglTerima,
-                            d.TglKirim,
-                            d.TglTagihan,
-                            d.PiutangTerbayar,
-                            d.PembayaranKe,
-                            d.TotalPiutang,
-                            d.TglJaatuhTempo,
-                            d.IsTerbayar,
-                            d.SisaPembayaran,
-                            d.Keterangan,
-                            d.CreateDateTime,
-                            CreateByName = u.FullName
-                        };
+            var query =
+                from d in _context.DetailInvoiceReceiveds
+
+                join dr in _context.DetailReceivedPayments
+                    on d.DetailReceivedPaymentId equals dr.DetailReceivedPaymentId
+
+                join k in _context.Kunjungans
+                    on d.KunjunganId equals k.KunjunganID into kk
+                from k in kk.DefaultIfEmpty()
+
+                join u in _context.UserActives
+                    on d.CreateBy equals u.UserActiveId
+
+                where d.IsDelete == false
+
+                select new
+                {
+                    d.DetailInvoicePaymentId,
+                    d.DetailReceivedPaymentId,
+
+                    dr.NoInvoice,
+
+                    d.KunjunganId,
+                    d.PasiemId,
+                    d.NoRM,
+                    d.NamaPasien,
+                    d.NoBilling,
+
+                    // dari tabel Kunjungan
+                    TglRegistrasi = k != null ? k.TglMasuk : null,
+                    NoRegistrasi = k != null ? k.NoRegistrasi : null,
+
+                    d.TglTerima,
+                    d.TglKirim,
+                    d.TglTagihan,
+
+                    d.PiutangTerbayar,
+                    d.PembayaranKe,
+                    d.TotalPiutang,
+
+                    d.TglJaatuhTempo,
+                    d.IsTerbayar,
+                    d.SisaPembayaran,
+
+                    d.Keterangan,
+                    d.CreateDateTime,
+
+                    CreateByName = u.FullName
+                };
+
+            //var query = from d in _context.DetailInvoiceReceiveds
+            //            join dr in _context.DetailReceivedPayments
+            //                on d.DetailReceivedPaymentId equals dr.DetailReceivedPaymentId
+            //            join u in _context.UserActives
+            //                on d.CreateBy equals u.UserActiveId
+            //            where d.IsDelete == false
+            //            select new
+            //            {
+            //                d.DetailInvoicePaymentId,
+            //                d.DetailReceivedPaymentId,
+            //                dr.NoInvoice,
+            //                d.KunjunganId,
+            //                d.PasiemId,
+            //                d.NoRM,
+            //                d.NamaPasien,
+            //                d.NoBilling,
+            //                d.TglTerima,
+            //                d.TglKirim,
+            //                d.TglTagihan,
+            //                d.PiutangTerbayar,
+            //                d.PembayaranKe,
+            //                d.TotalPiutang,
+            //                d.TglJaatuhTempo,
+            //                d.IsTerbayar,
+            //                d.SisaPembayaran,
+            //                d.Keterangan,
+            //                d.CreateDateTime,
+            //                CreateByName = u.FullName
+            //            };
 
             if (!string.IsNullOrWhiteSpace(search))
             {

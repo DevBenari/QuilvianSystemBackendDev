@@ -21,6 +21,7 @@
         public decimal SelisihTagihan { get; set; }
         public decimal TotalSetelahDiskon { get; set; }
         public bool IsCanceled { get; set; }
+        public bool? IsSudahDibuatAR { get; set; }
 
         public string Keterangan { get; set; }
     }
