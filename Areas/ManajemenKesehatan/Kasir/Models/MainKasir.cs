@@ -18,6 +18,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public int? JumlahAngsuran {  get; set; }
         public string? StatusPembayaran { get; set; }
         public bool? IsVerified { get; set; }
+        public bool? IsSudahDibuatAR { get; set; }
         public Guid? TTDUserVerfiedId { get; set; }
         public string? PathUserVerified { get; set; }
         public decimal? JumlahPajak {  get; set; }

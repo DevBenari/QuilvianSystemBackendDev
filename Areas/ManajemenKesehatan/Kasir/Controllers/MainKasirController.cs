@@ -1275,6 +1275,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 // 8) Update header (selalu)
                 headerEntity.PasienId = vm.PasienId ?? headerEntity.PasienId;
                 headerEntity.JumlahAngsuran = await _countAngsuran.CountAsync(kunjunganId);
+                headerEntity.IsSudahDibuatAR = false;
+
                 headerEntity.StatusPembayaran = finalStatus;
                 headerEntity.IsVerified = vm.IsVerified;
 
