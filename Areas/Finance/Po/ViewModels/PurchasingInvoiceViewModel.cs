@@ -75,6 +75,8 @@
 
         public string? Status { get; set; }
 
+        public string? NoTukarFaktur { get; set; }
+
         public List<ItemPurchasingInvoiceViewModel> Items { get; set; } = new();
     }
 
