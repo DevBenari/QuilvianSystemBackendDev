@@ -67,6 +67,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 NamaMataUang = dto.NamaMataUang,
                 RateToIdr = dto.RateToIdr,
                 HasilKonversi = dto.HasilKonversi,
+                Status = dto.Status,
                 Keterangan = dto.Keterangan,
                 CreateDateTime = DateTime.UtcNow,
                 IsDelete = false,
