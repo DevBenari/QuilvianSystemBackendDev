@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.Finance.Faktur.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.ViewModels;
 using QuilvianSystemBackendDev.Repositories;
@@ -61,6 +62,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 Retur = dto.Retur,
                 OutstandingDP = dto.OutstandingDP,
                 COAId = dto.COAId,
+                NoTukarFaktur = dto.NoTukarFaktur,
                 NoFakturPajak = dto.NoFakturPajak,
                 TglFaktur = dto.TglFaktur,
                 MataUangId = dto.MataUangId,
@@ -128,12 +130,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                             (d.IsDelete == false || d.IsDelete == null))
                         .Select(d => d.KodePurchasingInvoice)
                         .FirstOrDefault(),
-                    NoTukarFaktur = _context.DetailTukarFakturs
-                        .Where(d =>
-                            d.POId == x.POId &&
-                            (d.IsDelete == false || d.IsDelete == null))
-                        .Select(d => d.NoTukarFaktur)
-                        .FirstOrDefault(),
 
                     POId = x.POId,
                     NoPO = x.NoPO,
@@ -166,6 +162,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     OutstandingDP = x.OutstandingDP,
 
                     COAId = x.COAId,
+                    NoTukarFaktur = x.NoTukarFaktur,
                     NoFakturPajak = x.NoFakturPajak,
                     TglFaktur = x.TglFaktur,
 
@@ -500,12 +497,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                             (d.IsDelete == false || d.IsDelete == null))
                         .Select(d => d.KodePurchasingInvoice)
                         .FirstOrDefault(),
-                    NoTukarFaktur = _context.DetailTukarFakturs
-                        .Where(d =>
-                            d.POId == x.POId &&
-                            (d.IsDelete == false || d.IsDelete == null))
-                        .Select(d => d.NoTukarFaktur)
-                        .FirstOrDefault(),
 
                     POId = x.POId,
                     NoPO = x.NoPO,
@@ -538,6 +529,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     OutstandingDP = x.OutstandingDP,
 
                     COAId = x.COAId,
+                    NoTukarFaktur = x.NoTukarFaktur,
                     NoFakturPajak = x.NoFakturPajak,
                     TglFaktur = x.TglFaktur,
 
@@ -577,72 +569,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                         .ToList()
                 })
                 .ToListAsync();
-            //var data = await _context.PurchasingInvoices
-            //    .AsNoTracking()
-            //    .Include(x => x.Items)
-            //    .Where(x =>
-            //        x.PurchasingInvoiceId == id &&
-            //        (x.IsDelete == false || x.IsDelete == null))
-            //    .Select(x => new PurchasingInvoiceViewModel
-            //    {
-            //        PurchasingInvoiceId = x.PurchasingInvoiceId,
-            //        POId = x.POId,
-            //        NoPO = x.NoPO,
-            //        TglPO = x.TglPO,
-            //        POAmount = x.POAmount,
-            //        SupplierId = x.SupplierId,
-            //        NamaSupplier = x.NamaSupplier,
-            //        DiskonSupplier = x.DiskonSupplier,
-            //        SupplierTermPayment = x.SupplierTermPayment,
-            //        TglPembuatanInvoice = x.TglPembuatanInvoice,
-            //        TglJatuhTempo = x.TglJatuhTempo,
-            //        TipePembayaran = x.TipePembayaran,
-            //        ReceiveOrderId = x.ReceiveOrderId,
-            //        ReceiveOrderNumber = x.ReceiveOrderNumber,
-            //        NoInvoice = x.NoInvoice,
-            //        DownPayment = x.DownPayment,
-            //        DiskonPersen = x.DiskonPersen,
-            //        DiskonNominal = x.DiskonNominal,
-            //        PPNPersen = x.PPNPersen,
-            //        PPNNominal = x.PPNNominal,
-            //        OngkosKirim = x.OngkosKirim,
-            //        Materai = x.Materai,
-            //        Pembulatan = x.Pembulatan,
-            //        Potongan = x.Potongan,
-            //        Retur = x.Retur,
-            //        OutstandingDP = x.OutstandingDP,
-            //        COAId = x.COAId,
-            //        NoFakturPajak = x.NoFakturPajak,
-            //        TglFaktur = x.TglFaktur,
-            //        MataUangId = x.MataUangId,
-            //        NamaMataUang = x.NamaMataUang,
-            //        RateToIdr = x.RateToIdr,
-            //        HasilKonversi = x.HasilKonversi,
-            //        Keterangan = x.Keterangan,
-
-            //        Items = x.Items
-            //            .Where(i => i.IsDelete == false || i.IsDelete == null)
-            //            .Select(i => new ItemPurchasingInvoiceViewModel
-            //            {
-            //                ItemPurchasingInvoiceId = i.ItemPurchasingInvoiceId,
-            //                PurchasingInvoiceId = i.PurchasingInvoiceId,
-            //                POId = i.POId,
-            //                ItemPOId = i.ItemPOId,
-            //                KodeProduk = i.KodeProduk,
-            //                NamaProduk = i.NamaProduk,
-            //                QtyProduk = i.QtyProduk,
-            //                SatuanProduk = i.SatuanProduk,
-            //                HargaNormal = i.HargaNormal,
-            //                TipeTax = i.TipeTax,
-            //                PajakPersen = i.PajakPersen,
-            //                PajakNominal = i.PajakNominal,
-            //                HargaAkhir = i.HargaAkhir,
-            //                HargaTotal = i.HargaTotal,
-            //                Keterangan = i.Keterangan
-            //            }).ToList()
-            //    })
-            //    .FirstOrDefaultAsync();
-
             if (data == null)
                 return NotFound("Data Purchasing Invoice tidak ditemukan");
 
@@ -687,6 +613,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
             invoice.Retur = dto.Retur;
             invoice.OutstandingDP = dto.OutstandingDP;
             invoice.COAId = dto.COAId;
+            invoice.NoTukarFaktur = dto.NoTukarFaktur;
             invoice.NoFakturPajak = dto.NoFakturPajak;
             invoice.TglFaktur = dto.TglFaktur;
             invoice.MataUangId = dto.MataUangId;

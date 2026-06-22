@@ -53,6 +53,13 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                      on d.KunjunganId equals k.KunjunganID into kk
                  from k in kk.DefaultIfEmpty()
 
+
+                 join ap in _context.AsuransiPasiens
+                     on d.PasienId equals ap.PasienId
+
+                 join a in _context.Asuransis
+                     on ap.AsuransiId equals a.AsuransiId
+
                  join u in _context.UserActives
                      on d.CreateBy equals u.UserActiveId
 
@@ -66,7 +73,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                      dr.NoInvoice,
 
                      d.KunjunganId,
-                     d.PasiemId,
+                     d.PasienId,
                      d.NoRM,
                      d.NamaPasien,
                      d.NoBilling,
@@ -74,6 +81,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                      // dari tabel Kunjungan
                      TglRegistrasi =k.CreateDateTime ,
                      NoRegistrasi =k.NoRegistrasi ,
+
+                     // dari tabel Asuransi
+                     a.AsuransiId,
+                     a.NamaAsuransi,
 
                      d.TglTerima,
                      d.TglKirim,
@@ -184,7 +195,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
 
             data.DetailReceivedPaymentId = model.DetailReceivedPaymentId;
             data.KunjunganId = model.KunjunganId;
-            data.PasiemId = model.PasiemId;
+            data.PasienId = model.PasienId;
             data.NoRM = model.NoRM;
             data.NamaPasien = model.NamaPasien;
             data.NoBilling = model.NoBilling;
@@ -261,7 +272,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                     dr.NoInvoice,
 
                     d.KunjunganId,
-                    d.PasiemId,
+                    d.PasienId,
                     d.NoRM,
                     d.NamaPasien,
                     d.NoBilling,

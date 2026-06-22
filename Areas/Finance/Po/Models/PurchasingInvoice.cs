@@ -96,6 +96,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
 
         public DateTime? UpdateDateTime { get; set; }
 
+        public string NoTukarFaktur { get; set; } = string.Empty;
         public bool? IsDelete { get; set; } = false;
         public string? Status { get; set; }
 

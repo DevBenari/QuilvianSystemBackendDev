@@ -14,7 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models
 
         public Guid? KunjunganId { get; set; }
 
-        public Guid? PasiemId { get; set; }
+        public Guid? PasienId { get; set; }
 
         [MaxLength(50)]
         public string? NoRM { get; set; }
