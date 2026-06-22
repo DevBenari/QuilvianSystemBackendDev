@@ -17,7 +17,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? TipePembayaran { get; set; }
         public string? JenisKunjungan { get; set; }
         public string? AsalKunjungan { get; set; }
-        public DateTime? TglMasuk { get; set; }
         public string? CaraMasukRS { get; set; }
         public string? KondisiKeluar { get; set; }
         public bool? IsTriage { get; set; }

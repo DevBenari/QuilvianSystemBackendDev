@@ -89,38 +89,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             _asuransiCoverageService = asuransiCoverageService;
 
         }
-        private DateTime? TryParseTanggalLahir(string dateString)
-        {
-            if (DateTime.TryParseExact(
-                dateString,
-                "yyyy-MM-dd",
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None,
-                out DateTime parsedDate))
-            {
-                return DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
-            }
-
-            return null;
-        }
-
-        private static DateTime? GetTanggalKunjungan(Kunjungan kunjungan)
-        {
-            if (kunjungan == null)
-                return null;
-
-            if (kunjungan.TglMasuk.HasValue)
-            {
-                return kunjungan.TglMasuk.Value;
-            }
-
-            if (kunjungan.CreateDateTime != default)
-            {
-                return kunjungan.CreateDateTime.LocalDateTime;
-            }
-
-            return null;
-        }
 
         private static string? HitungUmurLengkap(DateTime? tanggalLahir)
         {
@@ -326,7 +294,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.IsTriage,
                         a.IsCTTPasienIGD,
 
-                        TglMasukKunjungan = a.TglMasuk,
+                        TglMasukKunjungan = a.CreateDateTime,
 
                         a.CaraMasukRS,
                         a.KondisiKeluar,
@@ -761,7 +729,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.IsCTTPasienIGD,
                         a.Antrian,
 
-                        TglMasukKunjungan = a.TglMasuk,
+                        TglMasukKunjungan = a.CreateDateTime,
 
                         a.CaraMasukRS,
                         a.KondisiKeluar,
@@ -1083,7 +1051,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         IsClosed = false,
                         Antrian = nomorAntrianFormatted,
                         AsalKunjungan = request.AsalKunjungan,
-                        TglMasuk = request.TglMasuk,
                         CaraMasukRS = request.CaraMasukRS,
                         KondisiKeluar = request.KondisiKeluar,
                         CreateDateTime = DateTimeOffset.UtcNow,
@@ -1482,7 +1449,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 existing.TipePembayaran = request.TipePembayaran;
                 existing.AsalKunjungan = request.AsalKunjungan;
                 existing.Antrian = nomorAntrianFormatted;
-                existing.TglMasuk = request.TglMasuk;
                 existing.CaraMasukRS = request.CaraMasukRS;
                 existing.KondisiKeluar = request.KondisiKeluar;
 
@@ -2760,7 +2726,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.IsCTTPasienIGD,
                         a.Antrian,
 
-                        TglMasukKunjungan = a.TglMasuk,
+                        TglMasukKunjungan = a.CreateDateTime,
 
                         a.CaraMasukRS,
                         a.KondisiKeluar,

@@ -68,7 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     JenisKunjungan = a.Kunjungan != null ? a.Kunjungan.JenisKunjungan : null,
                     TipePasien = a.Kunjungan != null ? a.Kunjungan.TipePasien : null,
                     Antrian = a.Kunjungan != null ? a.Kunjungan.Antrian : null,
-                    TglMasuk = a.Kunjungan != null ? a.Kunjungan.TglMasuk : null,
+                    TglMasuk = a.Kunjungan.CreateDateTime ,
                     IsFinished = a.Kunjungan != null ? a.Kunjungan.IsFinished : null,
                     IsClosed = a.Kunjungan != null ? a.Kunjungan.IsClosed : null,
 
@@ -137,7 +137,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     JenisKunjungan = a.Kunjungan != null ? a.Kunjungan.JenisKunjungan : null,
                     TipePasien = a.Kunjungan != null ? a.Kunjungan.TipePasien : null,
                     Antrian = a.Kunjungan != null ? a.Kunjungan.Antrian : null,
-                    TglMasuk = a.Kunjungan != null ? a.Kunjungan.TglMasuk : null,
+                    TglMasuk = a.Kunjungan.CreateDateTime,
                     IsFinished = a.Kunjungan != null ? a.Kunjungan.IsFinished : null,
                     IsClosed = a.Kunjungan != null ? a.Kunjungan.IsClosed : null,
 
