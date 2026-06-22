@@ -1300,12 +1300,14 @@ namespace QuilvianSystemBackendDev.Repositories
 
 
 
-        #region COA
-        public DbSet<MasterCoa> MasterCoas { get; set; }
+            #region COA
+            public DbSet<MasterCoa> MasterCoas { get; set; }
             public DbSet<MasterGrup> MasterGrups { get; set; }
             public DbSet<TipeAkun> TipeAkuns { get; set; }
 
             #endregion
+
+
 
             #region Pembayaran
             public DbSet<DetailDokumenReceived> DetailDokumenReceiveds { get; set; }
@@ -1315,19 +1317,37 @@ namespace QuilvianSystemBackendDev.Repositories
 
         #endregion
 
+
+
             #region AyatSilang
             public DbSet<AyatSilang> AyatSilangs { get; set; }
             public DbSet<DokAyatSilang> DokAyatSilangs { get; set; }
             public DbSet<TransaksiAyatSilang> TransaksiAyatSilangs { get; set; }
             public DbSet<CanceledReceivedPayment> CanceledReceivedPayments { get; set; }
 
+        #endregion
+
+
+
+
+            #region Ap
+            public DbSet<ReceiveOrder> ReceiveOrders { get; set; }
+            public DbSet<ReceiveOrderItem> ReceiveOrderItems { get; set; }
+            public DbSet<PembayaranAP> PembayaranAPs { get; set; }
+            public DbSet<DetailPembayaranAP> DetailPembayaranAPs { get; set; }
+
             #endregion
 
+
+
+            #region Faktur
+            public DbSet<TukarFaktur> TukarFakturs { get; set; }
+            public DbSet<DetailTukarFaktur> DetailTukarFakturs { get; set; }
+
+            #endregion
+        
+        
         public DbSet<MasterBank> MasterBanks { get; set; }
-        public DbSet<TukarFaktur> TukarFakturs { get; set; }
-        public DbSet<DetailTukarFaktur> DetailTukarFakturs { get; set; }
-        public DbSet<ReceiveOrder> ReceiveOrders { get; set; }
-        public DbSet<ReceiveOrderItem> ReceiveOrderItems { get; set; }
 
         #endregion
     }
