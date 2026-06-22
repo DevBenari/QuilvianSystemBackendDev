@@ -2,6 +2,7 @@
 {
     public class PurchasingInvoiceViewModel
     {
+
         public Guid? PurchasingInvoiceId { get; set; }
 
         public Guid? POId { get; set; }
@@ -76,6 +77,10 @@
         public string? Status { get; set; }
 
         public string? NoTukarFaktur { get; set; }
+
+        public string? BankName { get; set; }
+        public Guid? BankId { get; set; }
+        public int? NoRekening { get; set; }
 
         public List<ItemPurchasingInvoiceViewModel> Items { get; set; } = new();
     }

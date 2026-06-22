@@ -131,6 +131,24 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                         .Select(d => d.KodePurchasingInvoice)
                         .FirstOrDefault(),
 
+                    BankId = _context.Suppliers
+                        .Where(s => s.SupplierId == x.SupplierId)
+                        .Select(s => s.BankId)
+                        .FirstOrDefault(),
+
+                    NoRekening = _context.Suppliers
+                        .Where(s => s.SupplierId == x.SupplierId)
+                        .Select(s => s.NoRekening)
+                        .FirstOrDefault(),
+
+                    BankName = (
+                        from s in _context.Suppliers
+                        join b in _context.MasterBanks
+                            on s.BankId equals b.BankId
+                        where s.SupplierId == x.SupplierId
+                        select b.BankName
+                    ).FirstOrDefault(),
+
                     POId = x.POId,
                     NoPO = x.NoPO,
                     TglPO = x.TglPO,
@@ -497,6 +515,24 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                             (d.IsDelete == false || d.IsDelete == null))
                         .Select(d => d.KodePurchasingInvoice)
                         .FirstOrDefault(),
+
+                    BankId = _context.Suppliers
+                        .Where(s => s.SupplierId == x.SupplierId)
+                        .Select(s => s.BankId)
+                        .FirstOrDefault(),
+
+                    NoRekening = _context.Suppliers
+                        .Where(s => s.SupplierId == x.SupplierId)
+                        .Select(s => s.NoRekening)
+                        .FirstOrDefault(),
+
+                    BankName = (
+                        from s in _context.Suppliers
+                        join b in _context.MasterBanks
+                            on s.BankId equals b.BankId
+                        where s.SupplierId == x.SupplierId
+                        select b.BankName
+                    ).FirstOrDefault(),
 
                     POId = x.POId,
                     NoPO = x.NoPO,
