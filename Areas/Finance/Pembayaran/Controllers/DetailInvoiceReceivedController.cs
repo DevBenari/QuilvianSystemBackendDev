@@ -72,7 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                      d.NoBilling,
 
                      // dari tabel Kunjungan
-                     TglRegistrasi =k.TglMasuk ,
+                     TglRegistrasi =k.CreateDateTime ,
                      NoRegistrasi =k.NoRegistrasi ,
 
                      d.TglTerima,
