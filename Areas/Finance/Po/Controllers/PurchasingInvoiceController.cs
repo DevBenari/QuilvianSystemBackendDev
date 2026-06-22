@@ -406,13 +406,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                             (d.IsDelete == false || d.IsDelete == null))
                         .Select(d => d.KodePurchasingInvoice)
                         .FirstOrDefault(),
-                    NoTukarFaktur = _context.DetailTukarFakturs
-                        .Where(d =>
-                            d.POId == x.POId &&
-                            (d.IsDelete == false || d.IsDelete == null))
-                        .Select(d => d.NoTukarFaktur)
-                        .FirstOrDefault(),
-
                     x.POId,
                     x.NoPO,
                     x.TglPO,
@@ -445,6 +438,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
 
                     x.COAId,
                     x.NoFakturPajak,
+                    x.NoTukarFaktur,
                     x.TglFaktur,
 
                     x.MataUangId,
