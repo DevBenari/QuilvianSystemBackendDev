@@ -72,8 +72,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                      d.NoBilling,
 
                      // dari tabel Kunjungan
-                     TglRegistrasi = k != null ? k.TglMasuk : null,
-                     NoRegistrasi = k != null ? k.NoRegistrasi : null,
+                     TglRegistrasi =k.TglMasuk ,
+                     NoRegistrasi =k.NoRegistrasi ,
 
                      d.TglTerima,
                      d.TglKirim,
