@@ -22,6 +22,9 @@
         public string? StatusPO { get; set; }
         public string? Keterangan { get; set; }
 
+
+        public string? ProdukId { get; set; }
+
         // 🔑 INIT supaya tidak null
         public List<PurchaseOrderItemViewModel> Items { get; set; } = new();
     }
