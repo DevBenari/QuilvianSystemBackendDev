@@ -29,6 +29,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.ViewModels
         [Column(TypeName = "numeric(18,2)")]
         public decimal TotalInvoiceAP { get; set; }
 
+        public string? StatusTagihan { get; set; }
+
         public string? Keterangan { get; set; }
     }
 }

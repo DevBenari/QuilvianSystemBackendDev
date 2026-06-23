@@ -19,6 +19,9 @@
         public int? NoRekening { get; set; }
         public string? AccountHolderName { get; set; }
 
+
+        public Guid MataUangId { get; set; }
+
         public bool? IsFullPaid { get; set; }
         public bool? IsBloodBankSupplier { get; set; }
 
