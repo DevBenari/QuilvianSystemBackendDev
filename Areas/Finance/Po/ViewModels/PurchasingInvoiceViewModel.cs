@@ -82,6 +82,9 @@
         public Guid? BankId { get; set; }
         public int? NoRekening { get; set; }
 
+
+        public string? RequestType { get; set; }
+
         public List<ItemPurchasingInvoiceViewModel> Items { get; set; } = new();
     }
 

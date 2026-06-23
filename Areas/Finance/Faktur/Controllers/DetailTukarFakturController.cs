@@ -176,259 +176,33 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
             _applicationDbContext.TukarFakturs.Update(header);
         }
 
-        // =====================================================
-        // PAGED
-        // =====================================================
-
-        //[HttpGet("paged")]
-        //public async Task<IActionResult> PagedDetailTukarFaktur(
-        //    int page = 1,
-        //    int perPage = 10,
-        //    string? search = null,
-        //    string? orderBy = "TglPembuatanInvoice",
-        //    string? sortDirection = "desc",
-        //    Guid? tukarFakturId = null,
-        //    Guid? supplierId = null,
-        //    Guid? poId = null,
-        //    string? KodePurchasingInvoice = null,
-
-        //    [FromQuery, SwaggerSchema(Format = "date-time")]
-        //    DateTime? startDate = null,
-
-        //    [FromQuery, SwaggerSchema(Format = "date-time")]
-        //    DateTime? endDate = null
-        //)
-        //{
-        //    try
-        //    {
-        //        if (!await _applicationDbContext.Database.CanConnectAsync())
-        //        {
-        //            return StatusCode(500, new
-        //            {
-        //                message = "Tidak dapat terhubung ke database."
-        //            });
-        //        }
-
-        //        if (page < 1)
-        //            page = 1;
-
-        //        if (perPage < 1)
-        //            perPage = 10;
-
-        //        var query =
-        //            from d in _applicationDbContext.DetailTukarFakturs
-        //                .AsNoTracking()
-
-        //            join h in _applicationDbContext.TukarFakturs
-        //                .AsNoTracking()
-        //            on d.TukarFakturId equals h.TukarFakturId
-
-        //            where d.IsDelete == false &&
-        //                  h.IsDelete == false
-
-        //            select new
-        //            {
-        //                d.DetailTukarFakturId,
-        //                d.TukarFakturId,
-
-        //                h.NoTukarFaktur,
-
-        //                d.TglPembuatanInvoice,
-        //                d.KodePurchasingInvoice,
-
-        //                d.POId,
-        //                d.SupplierId,
-
-        //                NamaSupplier =
-        //                    _applicationDbContext.Suppliers
-        //                    .Where(s => s.SupplierId == d.SupplierId)
-        //                    .Select(s => s.SupplierName)
-        //                    .FirstOrDefault(),
-
-        //                d.NomorPO,
-        //                d.NoInvoice,
-        //                d.NilaiPurchasingInvoice,
-
-        //                h.TglJatuhTempo,
-
-        //                d.StatusInvoice,
-        //                d.Keterangan,
-
-        //                HeaderSupplierId = h.SupplierId,
-        //                h.TglRegistrasi,
-        //                h.TglTerimaFaktur
-        //            };
-
-        //        if (!string.IsNullOrWhiteSpace(search))
-        //        {
-        //            search = $"%{search.Trim().ToLower()}%";
-
-        //            query = query.Where(x =>
-        //                EF.Functions.ILike(x.NoTukarFaktur ?? "", search) ||
-        //                EF.Functions.ILike(x.KodePurchasingInvoice ?? "", search) ||
-        //                EF.Functions.ILike(x.NamaSupplier ?? "", search) ||
-        //                EF.Functions.ILike(x.NomorPO ?? "", search) ||
-        //                EF.Functions.ILike(x.NoInvoice ?? "", search) ||
-        //                EF.Functions.ILike(x.StatusInvoice ?? "", search) ||
-        //                EF.Functions.ILike(x.Keterangan ?? "", search)
-        //            );
-        //        }
-
-        //        if (tukarFakturId.HasValue)
-        //        {
-        //            query = query.Where(x =>
-        //                x.TukarFakturId == tukarFakturId.Value);
-        //        }
-
-        //        if (supplierId.HasValue)
-        //        {
-        //            query = query.Where(x =>
-        //                x.SupplierId == supplierId.Value);
-        //        }
-
-        //        if (poId.HasValue)
-        //        {
-        //            query = query.Where(x =>
-        //                x.POId == poId.Value);
-        //        }
-
-        //        if (startDate.HasValue && endDate.HasValue)
-        //        {
-        //            DateTime startUtc =
-        //                startDate.Value.Date.ToUniversalTime();
-
-        //            DateTime endUtc =
-        //                endDate.Value.Date
-        //                .AddDays(1)
-        //                .AddTicks(-1)
-        //                .ToUniversalTime();
-
-        //            query = query.Where(x =>
-        //                x.TglPembuatanInvoice >= startUtc &&
-        //                x.TglPembuatanInvoice <= endUtc);
-        //        }
-
-        //        var sortColumn =
-        //            orderBy?.ToLower() ?? "tglpembuataninvoice";
-
-        //        var isDescending =
-        //            sortDirection?.ToLower() == "desc";
-
-        //        query = sortColumn switch
-        //        {
-        //            "notukarfaktur" =>
-        //                isDescending
-        //                    ? query.OrderByDescending(x => x.NoTukarFaktur)
-        //                    : query.OrderBy(x => x.NoTukarFaktur),
-
-        //            "tglpembuataninvoice" =>
-        //                isDescending
-        //                    ? query.OrderByDescending(x => x.TglPembuatanInvoice)
-        //                    : query.OrderBy(x => x.TglPembuatanInvoice),
-
-        //            "kodepurchasinginvoice" =>
-        //                isDescending
-        //                    ? query.OrderByDescending(x => x.KodePurchasingInvoice)
-        //                    : query.OrderBy(x => x.KodePurchasingInvoice),
-
-        //            "namasupplier" =>
-        //                isDescending
-        //                    ? query.OrderByDescending(x => x.NamaSupplier)
-        //                    : query.OrderBy(x => x.NamaSupplier),
-
-        //            "nomorpo" =>
-        //                isDescending
-        //                    ? query.OrderByDescending(x => x.NomorPO)
-        //                    : query.OrderBy(x => x.NomorPO),
-
-        //            "noinvoice" =>
-        //                isDescending
-        //                    ? query.OrderByDescending(x => x.NoInvoice)
-        //                    : query.OrderBy(x => x.NoInvoice),
-
-        //            "nilaipurchasinginvoice" =>
-        //                isDescending
-        //                    ? query.OrderByDescending(x => x.NilaiPurchasingInvoice)
-        //                    : query.OrderBy(x => x.NilaiPurchasingInvoice),
-
-        //            "tgljatuhtempo" =>
-        //                isDescending
-        //                    ? query.OrderByDescending(x => x.TglJatuhTempo)
-        //                    : query.OrderBy(x => x.TglJatuhTempo),
-
-        //            "statusinvoice" =>
-        //                isDescending
-        //                    ? query.OrderByDescending(x => x.StatusInvoice)
-        //                    : query.OrderBy(x => x.StatusInvoice),
-
-        //            _ =>
-        //                query.OrderByDescending(x => x.TglPembuatanInvoice)
-        //        };
-
-        //        int totalRows =
-        //            await query.CountAsync();
-
-        //        int totalPages =
-        //            (int)Math.Ceiling(totalRows / (double)perPage);
-
-        //        var rows =
-        //            await query
-        //            .Skip((page - 1) * perPage)
-        //            .Take(perPage)
-        //            .ToListAsync();
-
-        //        return Ok(new
-        //        {
-        //            status = "success",
-        //            message = "Data berhasil diambil",
-
-        //            data = new
-        //            {
-        //                Rows = rows,
-        //                TotalRows = totalRows,
-        //                CurrentPage = page,
-        //                PerPage = perPage,
-        //                TotalPages = totalPages
-        //            }
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, ex.Message);
-
-        //        return StatusCode(500, new
-        //        {
-        //            message = ex.Message
-        //        });
-        //    }
-        //}
 
         [HttpGet("paged")]
         public async Task<IActionResult> PagedDetailTukarFaktur(
-    int page = 1,
-    int perPage = 10,
-    string? search = null,
-    string? orderBy = "TglPembuatanInvoice",
-    string? sortDirection = "desc",
-    Guid? tukarFakturId = null,
-    Guid? supplierId = null,
-    Guid? poId = null,
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "TglPembuatanInvoice",
+        string? sortDirection = "desc",
+        Guid? tukarFakturId = null,
+        Guid? supplierId = null,
+        Guid? poId = null,
 
-    [FromQuery(Name = "NomorPO")]
-    string? nomorPO = null,
+        [FromQuery(Name = "NomorPO")]
+        string? nomorPO = null,
 
-    [FromQuery(Name = "KodePOInv")]
-    string? kodePOInv = null,
+        [FromQuery(Name = "KodePOInv")]
+        string? kodePOInv = null,
 
-    [FromQuery(Name = "KodePurchasingInvoice")]
-    string? kodePurchasingInvoice = null,
+        [FromQuery(Name = "KodePurchasingInvoice")]
+        string? kodePurchasingInvoice = null,
 
-    [FromQuery, SwaggerSchema(Format = "date-time")]
-    DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time")]
+        DateTime? startDate = null,
 
-    [FromQuery, SwaggerSchema(Format = "date-time")]
-    DateTime? endDate = null
-)
+        [FromQuery, SwaggerSchema(Format = "date-time")]
+        DateTime? endDate = null
+    )
         {
             try
             {
@@ -452,6 +226,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                 var query =
                     from d in _applicationDbContext.DetailTukarFakturs
                         .AsNoTracking()
+
+                    join po in _applicationDbContext.PurchaseOrders.AsNoTracking()
+                        on d.POId equals (Guid?)po.PurchaseOrderId into poJoin
+                    from po in poJoin.DefaultIfEmpty()
 
                     join h in _applicationDbContext.TukarFakturs
                         .AsNoTracking()
@@ -490,7 +268,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
 
                         HeaderSupplierId = h.SupplierId,
                         h.TglRegistrasi,
-                        h.TglTerimaFaktur
+                        h.TglTerimaFaktur,
+                        po.RequestType
                     };
 
                 // =========================
@@ -716,6 +495,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                         from d in _applicationDbContext.DetailTukarFakturs
                             .AsNoTracking()
 
+
+                        join po in _applicationDbContext.PurchaseOrders.AsNoTracking()
+                            on d.POId equals (Guid?)po.PurchaseOrderId into poJoin
+                        from po in poJoin.DefaultIfEmpty()
+
                         join h in _applicationDbContext.TukarFakturs
                             .AsNoTracking()
                         on d.TukarFakturId equals h.TukarFakturId
@@ -753,7 +537,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                             d.Keterangan,
 
                             h.TglRegistrasi,
-                            h.TglTerimaFaktur
+                            h.TglTerimaFaktur,
+                            po.RequestType
                         }
                     )
                     .FirstOrDefaultAsync();

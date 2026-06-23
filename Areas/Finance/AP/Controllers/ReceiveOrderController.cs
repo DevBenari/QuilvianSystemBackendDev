@@ -100,6 +100,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
 
                     from u in userJoin.DefaultIfEmpty()
 
+                    join po in _applicationDbContext.PurchaseOrders.AsNoTracking()
+                        on ro.PurchaseOrderId equals (Guid?)po.PurchaseOrderId into poJoin
+                    from po in poJoin.DefaultIfEmpty()
+
                     where ro.IsDelete == false
 
                     select new
@@ -118,6 +122,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                         ro.Status,
                         ro.Keterangan,
                         ro.CreateDateTime,
+
+                        po.RequestType,
 
                         CreateByName = u != null ? u.FullName : null,
 

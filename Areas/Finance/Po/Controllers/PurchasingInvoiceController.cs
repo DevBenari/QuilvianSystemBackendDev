@@ -149,6 +149,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                         select b.BankName
                     ).FirstOrDefault(),
 
+                    RequestType = _context.PurchaseOrders
+                        .Where(s => s.PurchaseOrderId == x.POId)
+                        .Select(s => s.RequestType)
+                        .FirstOrDefault(),
+
                     POId = x.POId,
                     NoPO = x.NoPO,
                     TglPO = x.TglPO,
@@ -527,6 +532,12 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                         where s.SupplierId == x.SupplierId
                         select b.BankName
                     ).FirstOrDefault(),
+
+
+                    RequestType = _context.PurchaseOrders
+                        .Where(s => s.PurchaseOrderId == x.POId)
+                        .Select(s => s.RequestType)
+                        .FirstOrDefault(),
 
                     POId = x.POId,
                     NoPO = x.NoPO,
