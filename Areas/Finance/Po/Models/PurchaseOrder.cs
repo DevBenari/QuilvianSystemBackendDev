@@ -30,8 +30,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
         public string? StatusPO { get; set; }
 
         // app.clickup.com/t/86ey1c1jk
-        public string? LayananId { get; set; }
-        public string? ProdukId { get; set; }
+        public Guid? LayananId { get; set; }
+        public Guid? ProdukId { get; set; }
 
         public string? Keterangan { get; set; }
 
