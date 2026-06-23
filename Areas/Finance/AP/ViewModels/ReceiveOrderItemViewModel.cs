@@ -43,6 +43,5 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.ViewModels
         [MaxLength(500)]
         public string? Keterangan { get; set; }
 
-        public ReceiveOrder? ReceiveOrder { get; set; }
     }
 }
