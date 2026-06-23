@@ -28,7 +28,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
 
         public string? UserAccess { get; set; }
         public string? StatusPO { get; set; }
-        public string? ProdukId { get; set; }
+        //public string? ProdukId { get; set; }
         public string? Keterangan { get; set; }
 
         // Navigation Property
