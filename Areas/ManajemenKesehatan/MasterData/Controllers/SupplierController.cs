@@ -40,12 +40,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var data = await _context.Suppliers
-                .Where(x => !x.IsDelete)
-                .OrderByDescending(x => x.CreateDateTime)
-                .ToListAsync();
+            var data = await (
+                from s in _context.Suppliers
+                join m in _context.MataUangs
+                    on s.MataUangId equals m.MataUangId
+                where !s.IsDelete
+                orderby s.CreateDateTime descending
+                select new
+                {
+                    Supplier = s,
+                    MataUang = m
+                }
+            ).ToListAsync();
 
-            return Ok(new { message = "OK", data });
+            return Ok(new
+            {
+                message = "OK",
+                data
+            });
         }
 
         // ========================= GET BY ID =========================

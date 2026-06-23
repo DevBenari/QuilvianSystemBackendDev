@@ -263,6 +263,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                         x.TglJatuhTempo,
                         x.TotalInvoiceGRN,
                         x.TotalInvoiceAP,
+                        x.StatusTagihan,
                         x.Keterangan,
 
                         JumlahDetail =
