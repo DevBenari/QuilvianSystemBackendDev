@@ -2,11 +2,11 @@
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Repositories;
 using System.Security.Claims;
 
-namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

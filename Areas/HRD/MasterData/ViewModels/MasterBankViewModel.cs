@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.ViewModels
+namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels
 {
     public class MasterBankViewModel
     {
