@@ -64,7 +64,6 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 
 builder.Services.Configure<AutoLoginDTO>(builder.Configuration.GetSection("AutoLogin"));
 
-
 #region CORS
 
 var allowedOrigins = builder.Configuration
