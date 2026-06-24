@@ -82,6 +82,8 @@
         public Guid? BankId { get; set; }
         public int? NoRekening { get; set; }
 
+        public Guid? LayananId { get; set; }
+        public string? NamaLayanan { get; set; }
 
         public string? RequestType { get; set; }
 

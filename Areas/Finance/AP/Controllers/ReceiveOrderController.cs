@@ -104,6 +104,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                         on ro.PurchaseOrderId equals (Guid?)po.PurchaseOrderId into poJoin
                     from po in poJoin.DefaultIfEmpty()
 
+
+                    join l in _applicationDbContext.Layanans.AsNoTracking()
+                        on po.LayananId equals l.LayananId into layananJoin
+                    from l in layananJoin.DefaultIfEmpty()
+
                     where ro.IsDelete == false
 
                     select new
@@ -124,6 +129,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                         ro.CreateDateTime,
 
                         po.RequestType,
+
+
+                        LayananId = l != null ? l.LayananId : (Guid?)null,
+                        NamaLayanan = l != null ? l.NamaLayanan : null,
 
                         CreateByName = u != null ? u.FullName : null,
 

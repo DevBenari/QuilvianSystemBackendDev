@@ -23,7 +23,8 @@
         public string? Keterangan { get; set; }
 
 
-        public string? ProdukId { get; set; }
+        public Guid? LayananId { get; set; }
+        public Guid? ProdukId { get; set; }
 
         // 🔑 INIT supaya tidak null
         public List<PurchaseOrderItemViewModel> Items { get; set; } = new();

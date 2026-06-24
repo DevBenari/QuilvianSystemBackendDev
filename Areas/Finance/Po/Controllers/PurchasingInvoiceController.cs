@@ -149,6 +149,20 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                         select b.BankName
                     ).FirstOrDefault(),
 
+                    LayananId =
+                        (from po in _context.PurchaseOrders
+                         where po.PurchaseOrderId == x.POId
+                         select po.LayananId)
+                        .FirstOrDefault(),
+
+                    NamaLayanan =
+                        (from po in _context.PurchaseOrders
+                         join l in _context.Layanans
+                             on po.LayananId equals l.LayananId
+                         where po.PurchaseOrderId == x.POId
+                         select l.NamaLayanan)
+                        .FirstOrDefault(),
+
                     RequestType = _context.PurchaseOrders
                         .Where(s => s.PurchaseOrderId == x.POId)
                         .Select(s => s.RequestType)
@@ -411,6 +425,44 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                             (d.IsDelete == false || d.IsDelete == null))
                         .Select(d => d.KodePurchasingInvoice)
                         .FirstOrDefault(),
+
+                    BankId = _context.Suppliers
+                        .Where(s => s.SupplierId == x.SupplierId)
+                        .Select(s => s.BankId)
+                        .FirstOrDefault(),
+
+                    NoRekening = _context.Suppliers
+                        .Where(s => s.SupplierId == x.SupplierId)
+                        .Select(s => s.NoRekening)
+                        .FirstOrDefault(),
+
+                    BankName = (
+                        from s in _context.Suppliers
+                        join b in _context.MasterBanks
+                            on s.BankId equals b.BankId
+                        where s.SupplierId == x.SupplierId
+                        select b.BankName
+                    ).FirstOrDefault(),
+
+                    LayananId =
+                        (from po in _context.PurchaseOrders
+                         where po.PurchaseOrderId == x.POId
+                         select po.LayananId)
+                        .FirstOrDefault(),
+
+                    NamaLayanan =
+                        (from po in _context.PurchaseOrders
+                         join l in _context.Layanans
+                             on po.LayananId equals l.LayananId
+                         where po.PurchaseOrderId == x.POId
+                         select l.NamaLayanan)
+                        .FirstOrDefault(),
+
+                    RequestType = _context.PurchaseOrders
+                        .Where(s => s.PurchaseOrderId == x.POId)
+                        .Select(s => s.RequestType)
+                        .FirstOrDefault(),
+
                     x.POId,
                     x.NoPO,
                     x.TglPO,
@@ -533,6 +585,19 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                         select b.BankName
                     ).FirstOrDefault(),
 
+                    LayananId =
+                        (from po in _context.PurchaseOrders
+                         where po.PurchaseOrderId == x.POId
+                         select po.LayananId)
+                        .FirstOrDefault(),
+
+                    NamaLayanan =
+                        (from po in _context.PurchaseOrders
+                         join l in _context.Layanans
+                             on po.LayananId equals l.LayananId
+                         where po.PurchaseOrderId == x.POId
+                         select l.NamaLayanan)
+                        .FirstOrDefault(),
 
                     RequestType = _context.PurchaseOrders
                         .Where(s => s.PurchaseOrderId == x.POId)

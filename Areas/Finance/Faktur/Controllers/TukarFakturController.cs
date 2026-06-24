@@ -257,6 +257,21 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                                 .Select(s => s.PPN)
                                 .FirstOrDefault(),
 
+
+                        MataUang =
+                            (
+                                from s in _applicationDbContext.Suppliers
+                                join m in _applicationDbContext.MataUangs
+                                    on s.MataUangId equals m.MataUangId
+                                where s.SupplierId == x.SupplierId
+                                select new
+                                {
+                                    m.MataUangId,
+                                    m.SimbolMataUang,
+                                    m.NamaMataUang
+                                }
+                            ).FirstOrDefault(),
+
                         x.NoTukarFaktur,
                         x.TglRegistrasi,
                         x.TglTerimaFaktur,

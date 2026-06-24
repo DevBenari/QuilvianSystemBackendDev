@@ -7,6 +7,7 @@ using QuilvianSystemBackendDev.Areas.Finance.Faktur.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Faktur.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using SkiaSharp;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Data;
 using System.Security.Claims;
@@ -231,6 +232,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                         on d.POId equals (Guid?)po.PurchaseOrderId into poJoin
                     from po in poJoin.DefaultIfEmpty()
 
+                    join l in _applicationDbContext.Layanans.AsNoTracking()
+                        on po.LayananId equals l.LayananId into layananJoin
+                    from l in layananJoin.DefaultIfEmpty()
+
                     join h in _applicationDbContext.TukarFakturs
                         .AsNoTracking()
                     on d.TukarFakturId equals h.TukarFakturId
@@ -269,7 +274,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                         HeaderSupplierId = h.SupplierId,
                         h.TglRegistrasi,
                         h.TglTerimaFaktur,
-                        po.RequestType
+                        po.RequestType,
+
+                        LayananId = po.LayananId,
+                        NamaLayanan = l.NamaLayanan,
                     };
 
                 // =========================
@@ -500,6 +508,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
                             on d.POId equals (Guid?)po.PurchaseOrderId into poJoin
                         from po in poJoin.DefaultIfEmpty()
 
+
+                        join l in _applicationDbContext.Layanans.AsNoTracking()
+                            on po.LayananId equals l.LayananId into layananJoin
+                        from l in layananJoin.DefaultIfEmpty()
+
                         join h in _applicationDbContext.TukarFakturs
                             .AsNoTracking()
                         on d.TukarFakturId equals h.TukarFakturId
@@ -535,6 +548,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Controllers
 
                             d.StatusInvoice,
                             d.Keterangan,
+
+                            LayananId = po.LayananId,
+                            NamaLayanan = l.NamaLayanan,
 
                             h.TglRegistrasi,
                             h.TglTerimaFaktur,
