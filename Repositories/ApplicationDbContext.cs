@@ -1011,7 +1011,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<KunjunganLayanan> KunjunganLayanans { get; set; }
         public DbSet<Film> Films { get; set; }
         public DbSet<TarifFilm> TarifFilms { get; set; }
-
+        public DbSet<FaskesRujukan> FaskesRujukans { get; set; }
 
         #endregion
 
@@ -1216,7 +1216,7 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<RiwayatOperasiPasien> RiwayatOperasiPasiens { get; set; }
             public DbSet<CetakFilm> CetakFilms { get; set; }
             public DbSet<CetakFilmDetail> CetakFilmDetails { get; set; }
-
+            public DbSet<LabRujukan> LabRujukans { get; set; }
 
         #endregion
 
