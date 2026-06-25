@@ -1263,6 +1263,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         k.CreateDateTime < tomorrow,
                         ct);
                 }
+                else if (kodeJenis == "OPLab" || kodeJenis == "OPRad")
+                {
+                    isAlreadyRegistered = await _applicationDbContext.Kunjungans.AnyAsync(k =>
+                        k.PasienId == request.PasienId &&
+                        !k.IsDelete &&
+                        (k.IsFinished == false || k.IsFinishedKasir == false) &&
+                        k.JenisKunjungan == kodeJenis &&
+                        k.CreateDateTime >= today &&
+                        k.CreateDateTime < tomorrow,
+                        ct);
+                }
                 else
                 {
                     isAlreadyRegistered = await _applicationDbContext.Kunjungans.AnyAsync(k =>
