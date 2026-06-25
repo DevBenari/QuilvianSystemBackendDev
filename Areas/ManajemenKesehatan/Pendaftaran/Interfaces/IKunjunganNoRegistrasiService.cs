@@ -4,5 +4,15 @@
     {
         Task<string> GenerateNoRegistrasiAsync(
             CancellationToken cancellationToken = default);
+
+        Task<string?> GenerateNoAntrianAsync(
+            string kodeJenis,
+            Guid? poliklinikId,
+            CancellationToken cancellationToken = default);
+
+        string ValidasiJenisKunjungan(
+            string? jenisKunjungan,
+            Guid? poliklinikId,
+            decimal? depositRanap);
     }
 }

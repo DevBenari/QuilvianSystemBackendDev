@@ -117,6 +117,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 data
             });
         }
+
+
         [HttpGet("ByKunjungan/{kunjunganId}")]
         public async Task<IActionResult> GetByKunjunganId(Guid kunjunganId)
         {
