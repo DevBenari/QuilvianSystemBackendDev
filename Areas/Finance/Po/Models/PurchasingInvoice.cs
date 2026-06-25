@@ -100,6 +100,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
         public bool? IsDelete { get; set; } = false;
         public string? Status { get; set; }
 
+        //public decimal? SisaPembayaran { get; set; }
+        //public bool? IsClosed { get; set; } = false;
+
         public ICollection<ItemPurchasingInvoice> Items { get; set; } = new List<ItemPurchasingInvoice>();
     }
 

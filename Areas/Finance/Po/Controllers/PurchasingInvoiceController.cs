@@ -6,6 +6,7 @@ using QuilvianSystemBackendDev.Areas.Finance.Faktur.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.ViewModels;
 using QuilvianSystemBackendDev.Repositories;
+using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
 {
@@ -31,6 +32,26 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
             if (dto.Items == null || !dto.Items.Any())
                 return BadRequest("Detail item tidak boleh kosong");
 
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(emailLogin))
+            {
+                return Unauthorized(new
+                {
+                    message = "User tidak terautentikasi."
+                });
+            }
+
+            var getUserActive = await _context.UserActives
+                .FirstOrDefaultAsync(x => x.Email == emailLogin);
+
+            if (getUserActive == null)
+            {
+                return Unauthorized(new
+                {
+                    message = "User aktif tidak ditemukan."
+                });
+            }
             var purchasingInvoiceId = Guid.NewGuid();
 
             var invoice = new Models.PurchasingInvoice
@@ -73,6 +94,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 Keterangan = dto.Keterangan,
                 CreateDateTime = DateTime.UtcNow,
                 IsDelete = false,
+                CreateBy = getUserActive.UserActiveId,
 
                 Items = dto.Items.Select(i =>
                 {
@@ -97,6 +119,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                         HargaTotal = i.HargaTotal ?? hargaAkhir * qty,
                         Keterangan = i.Keterangan,
                         CreateDateTime = DateTime.UtcNow,
+                        CreateBy = getUserActive.UserActiveId,
                         IsDelete = false
                     };
                 }).ToList()
@@ -208,6 +231,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     RateToIdr = x.RateToIdr,
                     HasilKonversi = x.HasilKonversi,
 
+                    SisaPembayaran = x.SisaPembayaran,
+                    IsClosed = x.IsClosed,
                     Keterangan = x.Keterangan,
 
                     // CreateBy dari UserActivity
@@ -503,6 +528,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     x.RateToIdr,
                     x.HasilKonversi,
 
+
+                    SisaPembayaran = x.SisaPembayaran,
+                    IsClosed = x.IsClosed,
+
+
                     x.Keterangan,
                     x.Status,
                     x.CreateBy,
@@ -643,6 +673,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     NamaMataUang = x.NamaMataUang,
                     RateToIdr = x.RateToIdr,
                     HasilKonversi = x.HasilKonversi,
+
+
+                    SisaPembayaran = x.SisaPembayaran,
+                    IsClosed = x.IsClosed,
 
                     Keterangan = x.Keterangan,
 

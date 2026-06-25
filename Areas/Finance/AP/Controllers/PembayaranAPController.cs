@@ -176,6 +176,17 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                         ap.TglPembayaranAP,
                         ap.BankId,
 
+                        BankPBF =
+                            (
+                                from s in _applicationDbContext.Suppliers
+                                join m in _applicationDbContext.MasterBanks
+                                    on s.BankId equals m.BankId
+                                select new
+                                {
+                                    m.BankName
+                                }
+                            ).FirstOrDefault(),
+
                         NamaBank =
                             _applicationDbContext.MasterBanks
                                 .Where(b => b.BankId == ap.BankId)

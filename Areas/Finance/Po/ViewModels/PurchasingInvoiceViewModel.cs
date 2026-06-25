@@ -87,6 +87,9 @@
 
         public string? RequestType { get; set; }
 
+        public decimal? SisaPembayaran { get; set; }
+        public bool? IsClosed { get; set; } = false;
+
         public List<ItemPurchasingInvoiceViewModel> Items { get; set; } = new();
     }
 
