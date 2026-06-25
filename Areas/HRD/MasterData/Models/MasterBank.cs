@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
+namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Models
 {
     [Table("Hrd_MasterBank", Schema = "public")]
     public class MasterBank : UserActivity
