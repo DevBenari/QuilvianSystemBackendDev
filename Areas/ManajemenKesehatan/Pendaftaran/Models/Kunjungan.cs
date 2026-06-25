@@ -26,6 +26,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? TipePembayaran { get; set; }
         public bool? IsFinished { get; set; } = false;
         public string JenisKunjungan { get; set; }
+        public string? DokterPerujuk { get; set; }
+        public string? RSPerujuk { get; set; }
         public string? Antrian { get; set; }
         public bool? IsScreening { get; set; }
         public bool? IsPresent { get; set; }

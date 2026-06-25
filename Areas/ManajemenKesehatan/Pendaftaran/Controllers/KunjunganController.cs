@@ -381,7 +381,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         AsalUnit = sp != null
                             ? sp.AsalUnit
-                            : null
+                            : null,
+
+                        // rujukan
+                        a.DokterPerujuk,
+                        a.RSPerujuk
                     };
 
                 // Eksekusi query & urutkan berdasarkan tanggal
@@ -467,7 +471,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.NomorSuratPengantar,
                         r.Diagnosa,
                         r.AsalUnit,
-
+                        r.DokterPerujuk,
+                        r.RSPerujuk,
                         Alergic = alergi?.Alergic ?? ""
                     };
                 }).ToList();
@@ -815,7 +820,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         AsalUnit = sp != null
                             ? sp.AsalUnit
-                            : null
+                            : null,
+                        
+                        // rujukan
+                        a.DokterPerujuk,
+                        a.RSPerujuk
                     }
                 ).FirstOrDefaultAsync();
 
@@ -1153,7 +1162,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         AsalUnit = sp != null
                             ? sp.AsalUnit
-                            : null
+                            : null,
+
+                        // rujukan
+                        a.DokterPerujuk,
+                        a.RSPerujuk
                     }
                 ).FirstOrDefaultAsync();
 
@@ -1223,32 +1236,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 }
 
                 // Validasi jenis kunjungan
-                var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) ||
-                                 request.JenisKunjungan.Equals("string", StringComparison.OrdinalIgnoreCase)
-                    ? "Rawat Jalan"
-                    : request.JenisKunjungan;
-
-                if (!new[] { "Rawat Inap", "Rawat Jalan" }
-                    .Contains(inputJenis, StringComparer.OrdinalIgnoreCase))
-                {
-                    return BadRequest(new
-                    {
-                        message = "Jenis kunjungan tidak valid. Gunakan hanya 'Rawat Inap' atau 'Rawat Jalan'."
-                    });
-                }
-
-                string kodeJenis = inputJenis.Equals("Rawat Inap", StringComparison.OrdinalIgnoreCase)
-                    ? "IP"
-                    : "OP";
-
-                if (kodeJenis == "IP" &&
-                    (request.DepositRanap == null || request.DepositRanap <= 0))
-                {
-                    return BadRequest(new
-                    {
-                        message = "Kunjungan IP (rawat inap) wajib mengisi nominal deposit."
-                    });
-                }
+                var kodeJenis = _kunjunganNoRegistrasiService.ValidasiJenisKunjungan(
+                    request.JenisKunjungan,
+                    request.PoliklinikId,
+                    request.DepositRanap
+                );
 
                 var today = DateTime.UtcNow.Date;
                 var tomorrow = today.AddDays(1);
@@ -1271,6 +1263,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         k.CreateDateTime < tomorrow,
                         ct);
                 }
+                else if (kodeJenis == "OPLab" || kodeJenis == "OPRad")
+                {
+                    isAlreadyRegistered = await _applicationDbContext.Kunjungans.AnyAsync(k =>
+                        k.PasienId == request.PasienId &&
+                        !k.IsDelete &&
+                        (k.IsFinished == false || k.IsFinishedKasir == false) &&
+                        k.JenisKunjungan == kodeJenis &&
+                        k.CreateDateTime >= today &&
+                        k.CreateDateTime < tomorrow,
+                        ct);
+                }
                 else
                 {
                     isAlreadyRegistered = await _applicationDbContext.Kunjungans.AnyAsync(k =>
@@ -1288,47 +1291,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     {
                         message = "Pasien sudah terdaftar untuk kunjungan aktif yang belum selesai."
                     });
-                }
-
-                // =============================
-                // Penentuan Nomor Antrean
-                // =============================
-                string? nomorAntrianFormatted = null;
-                string? kodePoli = null;
-
-                if (!string.Equals(request.AsalKunjungan?.Trim(), "igd", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (request.PoliklinikId == null || request.PoliklinikId == Guid.Empty)
-                    {
-                        return BadRequest(new
-                        {
-                            message = "Poliklinik wajib dipilih untuk kunjungan non-IGD."
-                        });
-                    }
-
-                    kodePoli = await _applicationDbContext.Polikliniks
-                        .Where(p => p.PoliklinikId == request.PoliklinikId)
-                        .Select(p => p.KodeAntreanPoli)
-                        .FirstOrDefaultAsync(ct);
-
-                    if (string.IsNullOrEmpty(kodePoli))
-                    {
-                        return BadRequest(new
-                        {
-                            message = "Kode antrean poli tidak ditemukan untuk poliklinik ini!"
-                        });
-                    }
-
-                    var jumlahAntrianHariIni = await _applicationDbContext.Kunjungans
-                        .CountAsync(k =>
-                            k.PoliklinikId == request.PoliklinikId &&
-                            k.CreateDateTime >= today &&
-                            k.CreateDateTime < tomorrow &&
-                            !k.IsDelete,
-                            ct);
-
-                    int nomorAntrian = jumlahAntrianHariIni + 1;
-                    nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}";
                 }
 
                 // =============================
@@ -1362,6 +1324,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 {
                     var noRegistrasi = await _kunjunganNoRegistrasiService
                         .GenerateNoRegistrasiAsync(ct);
+
+                    var nomorAntrianFormatted = await _kunjunganNoRegistrasiService
+                        .GenerateNoAntrianAsync(
+                            kodeJenis: kodeJenis,
+                            poliklinikId: request.PoliklinikId,
+                            cancellationToken: ct
+                        );
+
                     // =============================
                     // Simpan data kunjungan
                     // =============================
@@ -1391,6 +1361,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         AsalKunjungan = request.AsalKunjungan,
                         CaraMasukRS = request.CaraMasukRS,
                         KondisiKeluar = request.KondisiKeluar,
+                        DokterPerujuk = request.DokterPerujuk,
+                        RSPerujuk = request.RSPerujuk,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = userActiveId,
                     };
@@ -1469,7 +1441,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             request.PasienId,
                             request.DokterId,
                             newKunjungan.KunjunganID,
-                            JenisKunjungan = inputJenis,
+                            JenisKunjungan = kodeJenis,
                             NomorAntrian = nomorAntrianFormatted ?? "Tanpa antrean (IGD)",
                             kasirId = kasir.KasirId
                         }
@@ -1626,6 +1598,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 existing.JenisKunjungan = kodeJenis;
                 existing.NoRekamMedis = request.NoRekamMedis;
                 existing.TipePasien = request.TipePasien;
+                existing.DokterPerujuk = request.DokterPerujuk;
+                existing.RSPerujuk = request.RSPerujuk;
                 existing.TipePembayaran = request.TipePembayaran;
                 existing.AsalKunjungan = request.AsalKunjungan;
                 existing.Antrian = nomorAntrianFormatted;
@@ -2650,7 +2624,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         AsalUnit = sp != null
                             ? sp.AsalUnit
-                            : null
+                            : null,
+
+                        // rujukan
+                        a.DokterPerujuk,
+                        a.RSPerujuk
                     };
 
                 // =====================================================
@@ -2964,6 +2942,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.NomorSuratPengantar,
                         r.Diagnosa,
                         r.AsalUnit,
+                        r.DokterPerujuk,
+                        r.RSPerujuk,
 
                         Alergic = al ?? new List<string>()
                     };

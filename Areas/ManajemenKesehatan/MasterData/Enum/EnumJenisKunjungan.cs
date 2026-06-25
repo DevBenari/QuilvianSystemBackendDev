@@ -12,5 +12,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum
 
         [Display(Name = "OP")]
         OP = 1,
+
+        [Display(Name = "OPLab")]
+        OPLab = 2,
+
+        [Display(Name = "OPRad")]
+        OPRad = 3,
     }
 }
