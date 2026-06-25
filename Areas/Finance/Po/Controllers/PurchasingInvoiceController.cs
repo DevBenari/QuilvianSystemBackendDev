@@ -231,8 +231,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     RateToIdr = x.RateToIdr,
                     HasilKonversi = x.HasilKonversi,
 
-                    SisaPembayaran = x.SisaPembayaran,
-                    IsClosed = x.IsClosed,
+                    //SisaPembayaran = x.SisaPembayaran,
+                    //IsClosed = x.IsClosed,
                     Keterangan = x.Keterangan,
 
                     // CreateBy dari UserActivity
@@ -529,8 +529,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     x.HasilKonversi,
 
 
-                    SisaPembayaran = x.SisaPembayaran,
-                    IsClosed = x.IsClosed,
+                    //SisaPembayaran = x.SisaPembayaran,
+                    //IsClosed = x.IsClosed,
 
 
                     x.Keterangan,
@@ -675,8 +675,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     HasilKonversi = x.HasilKonversi,
 
 
-                    SisaPembayaran = x.SisaPembayaran,
-                    IsClosed = x.IsClosed,
+                    //SisaPembayaran = x.SisaPembayaran,
+                    //IsClosed = x.IsClosed,
 
                     Keterangan = x.Keterangan,
 
