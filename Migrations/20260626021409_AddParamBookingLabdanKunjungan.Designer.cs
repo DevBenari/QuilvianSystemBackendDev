@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260626021409_AddParamBookingLabdanKunjungan")]
+    partial class AddParamBookingLabdanKunjungan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1392,7 +1394,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailTukarFakturId");
 
-                    b.ToTable("Fin_DetailTukarFaktur", "public");
+                    b.ToTable("FIN_DetailTukarFaktur", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.Faktur.Models.TukarFaktur", b =>
@@ -1453,7 +1455,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TukarFakturId");
 
-                    b.ToTable("Fin_TukarFaktur", "public");
+                    b.ToTable("FIN_TukarFaktur", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.MasterFinance.Models.ExchangeRate", b =>
@@ -1497,7 +1499,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ExchangeRateId");
 
-                    b.ToTable("Fin_ExchangeRate", "public");
+                    b.ToTable("FIN_ExchangeRate", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.MasterFinance.Models.MataUang", b =>
@@ -1549,7 +1551,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("MataUangId");
 
-                    b.ToTable("Fin_MataUang", "public");
+                    b.ToTable("FIN_MataUang", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models.CanceledReceivedPayment", b =>
@@ -2282,212 +2284,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("PurchasingInvoiceId");
 
                     b.ToTable("Fin_PurchasingInvoice", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.Retur.Models.DepositRetur", b =>
-                {
-                    b.Property<Guid>("DepositReturId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("HeaderReturId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal>("JumlahDeposit")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("PoId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ReceiveOrderId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("StatusDeposit")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("SupplierId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("TglInsertDeposit")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("DepositReturId");
-
-                    b.ToTable("Fin_DepositRetur", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.Retur.Models.HeaderRetur", b =>
-                {
-                    b.Property<Guid>("HeaderReturId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("GudangId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsTerkonfirmasi")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<string>("KodeRetur")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("StatusRetur")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("SupplierId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("TglRetur")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("HeaderReturId");
-
-                    b.ToTable("Fin_HeaderRetur", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.Retur.Models.ItemRetur", b =>
-                {
-                    b.Property<Guid>("ItemReturId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("HargaSatuan")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid>("HeaderReturId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsTerkonfirmasi")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoBatch")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("NoFakturInvoice")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("NoPO")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<Guid>("POId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ProdukId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("QtyDiterima")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("QtyRetur")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("QtyTelahDiretur")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid>("ReceiveOrderId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Satuan")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("StatusRetur")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<decimal>("SubtotalHarga")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime>("TglPenerimaanPO")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("TglRetur")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("TglTukarFaktur")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("ItemReturId");
-
-                    b.ToTable("Fin_ItemRetur", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.BankAccount", b =>

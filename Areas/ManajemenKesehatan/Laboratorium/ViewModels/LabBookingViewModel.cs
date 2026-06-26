@@ -9,6 +9,7 @@
         public DateTime? TglBooking { get; set; } // Tanggal booking lab
         public DateTime? TglPemeriksaan { get; set; }
         public Guid? KelasId { get; set; } // Relasi ke tabel Kelas
+        public Guid? DiskonId { get; set; }
 
         // dokter
         public Guid? DokterKonsulenId { get; set; }
@@ -34,5 +35,6 @@
         public string? TindakLanjut { get; set; }
         public string? HasilPenunjangLab { get; set; }
         public string? AnjuranDiet { get; set; }
+        public bool? SuratRujukan { get; set; }
     }
 }

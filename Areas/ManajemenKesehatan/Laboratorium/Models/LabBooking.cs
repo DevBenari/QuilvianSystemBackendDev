@@ -18,6 +18,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public DateTime? TglBooking { get; set; } // Tanggal booking lab
         public DateTime? TglPemeriksaan { get; set; }
         public Guid? KelasId { get; set; } // Relasi ke tabel Kelas
+        public Guid? DiskonId { get; set; } 
 
         // Dokter
         public Guid? DokterKonsulenId { get; set; }
@@ -38,6 +39,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public bool? StatusBookingLab { get; set; }
         public string? IsLunas { get; set; }
         public bool? IsPasienPersiapan { get; set; }
+        public bool? SuratRujukan { get; set; }
         public string? AlasanPembatalan { get; set; }
         public string? TTDPathPembatalan { get; set; }
         public string? PetugasPembatalan { get; set; }
@@ -58,6 +60,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Dokter? DokterKonsulen { get; set; }
         public Dokter? DokterPerujuk { get; set; }
         public UserActive? Konfirmator { get; set; }
+        public Diskon? Diskon { get; set; }
 
 
         // Relasi paling penting
