@@ -13,6 +13,7 @@ using QuilvianSystemBackendDev.Areas.Finance.MasterFinance.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
+using QuilvianSystemBackendDev.Areas.Finance.Retur.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan;
@@ -1344,9 +1345,20 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<TukarFaktur> TukarFakturs { get; set; }
             public DbSet<DetailTukarFaktur> DetailTukarFakturs { get; set; }
 
+        #endregion
+
+
+
+
+            #region Retur
+            public DbSet<DepositRetur> DepositReturs { get; set; }
+            public DbSet<HeaderRetur> HeaderReturs { get; set; }
+            public DbSet<ItemRetur> ItemReturs { get; set; }
+
             #endregion
-        
-        
+
+
+
         public DbSet<MasterBank> MasterBanks { get; set; }
 
         #endregion

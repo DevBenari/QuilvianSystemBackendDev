@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.MasterFinance.Models
 {
-    [Table("FIN_ExchangeRate", Schema = "public")]
+    [Table("Fin_ExchangeRate", Schema = "public")]
     public class ExchangeRate : UserActivity
     {
         [Key]

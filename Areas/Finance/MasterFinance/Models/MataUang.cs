@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.MasterFinance.Models
 {
-    [Table("FIN_MataUang", Schema = "public")]
+    [Table("Fin_MataUang", Schema = "public")]
     public class MataUang : UserActivity
     {
         [Key]

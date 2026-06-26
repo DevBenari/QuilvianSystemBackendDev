@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.Faktur.Models
 {
-    [Table("FIN_DetailTukarFaktur", Schema = "public")]
+    [Table("Fin_DetailTukarFaktur", Schema = "public")]
     public class DetailTukarFaktur : UserActivity
     {
         [Key]
