@@ -293,6 +293,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.IsFinishedKasir,
                         a.IsTriage,
                         a.IsCTTPasienIGD,
+                        a.KunjunganLab,
 
                         TglMasukKunjungan = a.CreateDateTime,
 
@@ -443,6 +444,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.IsPresent,
                         r.IsTriage,
                         r.IsCTTPasienIGD,
+                        r.KunjunganLab,
                         r.Antrian,
 
                         TglMasukKunjungan = r.TglMasukKunjungan,
@@ -732,6 +734,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.IsTriage,
                         a.IsClosed,
                         a.IsCTTPasienIGD,
+                        a.KunjunganLab,
                         a.Antrian,
 
                         TglMasukKunjungan = a.CreateDateTime,
@@ -1357,6 +1360,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         IsTriage = false,
                         IsCTTPasienIGD = false,
                         IsClosed = false,
+                        KunjunganLab = false,
                         Antrian = nomorAntrianFormatted,
                         AsalKunjungan = request.AsalKunjungan,
                         CaraMasukRS = request.CaraMasukRS,
@@ -1963,6 +1967,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             return Ok(new { message = "Status TransferPasien berhasil diperbarui." });
         }
 
+
+        [HttpPut("{id}/Status-KunjunganLab")]
+        public async Task<IActionResult> UpdateKunjunganLab(Guid id, [FromBody] UpdateStatusKunjungan request)
+        {
+            var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.KunjunganLab = request.Status;
+
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("Status-KunjunganLab Changed", new
+            {
+                action = "updateStatus-KunjunganLab",
+                kunjunganId = kunjungan.KunjunganID,
+            });
+
+            return Ok(new { message = "Status KunjunganLab berhasil diperbarui." });
+        }
+
         [HttpPut("{id}/Ubah-Asuransi")]
         public async Task<IActionResult> UpdateAsuransiKunjungan(
             Guid id,
@@ -2187,7 +2223,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             }
         }
 
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -2259,6 +2294,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             [FromQuery] bool? isPresent = null,
             [FromQuery] bool? isFinishedKasir = null,
             [FromQuery] bool? isClosed = null,
+            [FromQuery] bool? isKunjunganLab = null,
             [FromQuery] TipePasienFilter? TipePasien = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             [FromQuery] string? AsalKunjungan = null,
@@ -2544,6 +2580,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.IsTriage,
                         a.IsClosed,
                         a.IsCTTPasienIGD,
+                        a.KunjunganLab,
                         a.Antrian,
 
                         TglMasukKunjungan = a.CreateDateTime,
@@ -2663,6 +2700,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                 if (isClosed.HasValue)
                     baseQuery = baseQuery.Where(x => x.IsClosed == isClosed.Value);
+
+                if (isKunjunganLab.HasValue)
+                    baseQuery = baseQuery.Where(x => x.KunjunganLab == isKunjunganLab.Value);
 
                 if (TipePasien.HasValue)
                     baseQuery = baseQuery.Where(x => x.TipePasien == TipePasien.Value.ToString());
@@ -2912,6 +2952,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.IsTriage,
                         r.IsClosed,
                         r.IsCTTPasienIGD,
+                        r.KunjunganLab,
                         r.Antrian,
                         r.TglMasukKunjungan,
                         r.CaraMasukRS,

@@ -41,7 +41,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public bool? IsCTTPasienIGD { get; set; }
         public Guid? KelasId { get; set; }
         public bool? IsClosed { get; set; }
-
+        public bool? KunjunganLab { get; set; }
 
         // Navigation
         public Poliklinik? Poliklinik { get; set; }

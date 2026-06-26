@@ -70,30 +70,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _noPhotoGeneratorService = noPhotoGeneratorService;
             _labBillingService = labBillingService;
         }
-        private DateTime? TryParseTanggalToUtc(string tanggal)
-        {
-            if (DateTime.TryParseExact(
-                    tanggal,
-                    "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out var parsedDate))
-            {
-                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
-                var finalDateTime = new DateTime(
-                    parsedDate.Year,
-                    parsedDate.Month,
-                    parsedDate.Day,
-                    now.Hour,
-                    now.Minute,
-                    now.Second,
-                    DateTimeKind.Local
-                ); // atau Utc jika perlu
-
-                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
-            }
-            return null;
-        }
 
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
@@ -148,6 +124,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         NamaLengkap = x.Booking.Pasien != null ? x.Booking.Pasien.NamaLengkap : null,
                         NoRekamMedis = x.Booking.Pasien != null ? x.Booking.Pasien.NoRekamMedis : null,
 
+                        x.Booking.DiskonId,
+                        NamaDiskon = x.Booking.Diskon != null ? x.Booking.Diskon.NamaDiskon : null,
+
                         x.Booking.TglPemeriksaan,
                         x.Booking.TglPenyerahanSampling,
                         x.Booking.TglBooking,
@@ -168,7 +147,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         x.Booking.WaktuPemeriksaan,
                         x.Booking.WaktuPemeriksaanPersiapan,
-
+                        x.Booking.SuratRujukan,
                         x.Booking.HemodialisaKe,
                         x.Booking.NoLab,
                         x.Booking.NoPA,
@@ -254,6 +233,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.CreateByName,
 
                         b.BookingLabId,
+                        b.SuratRujukan,
                         b.NomorSuratJaminan,
 
                         b.KunjunganId,
@@ -265,6 +245,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.PasienId,
                         b.NamaLengkap,
                         b.NoRekamMedis,
+
+                        b.DiskonId,
+                        b.NamaDiskon,
 
                         b.TglPemeriksaan,
                         b.TglPenyerahanSampling,
@@ -343,7 +326,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     select new
                     {
                         b.BookingLabId,
-
+                        b.SuratRujukan,
 
                         KunjunganId = b.KunjunganId,
                         AsalKunjungan = b.Kunjungan != null ? b.Kunjungan.AsalKunjungan : null,
@@ -361,6 +344,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         PasienNama = b.Pasien != null ? b.Pasien.NamaLengkap : null,
                         NoRekamMedis = b.Pasien != null ? b.Pasien.NoRekamMedis : null,
                         JenisKelamin = b.Pasien != null ? b.Pasien.JenisKelamin : null,
+
+                        b.DiskonId,
+                        NamaDiskon = b.Diskon != null ? b.Diskon.NamaDiskon : null,
 
                         b.NomorSuratJaminan,
                         b.StatusBookingLab,
@@ -471,6 +457,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var result = new
                 {
                     header.BookingLabId,
+                    header.SuratRujukan,
                     header.KunjunganId,
                     header.AsalKunjungan,
                     header.TipePasien,
@@ -485,6 +472,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.PasienNama,
                     header.NoRekamMedis,
                     header.JenisKelamin,
+
+                    header.DiskonId,
+                    header.NamaDiskon,
 
                     header.NomorSuratJaminan,
                     header.TglPemeriksaan,
@@ -579,6 +569,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     AsuransiId = vm.AsuransiId,
+                    DiskonId = vm.DiskonId,
                     TglPenyerahanSampling = vm.TglPenyerahanSampling,
                     TglBooking = vm.TglBooking,
                     TglPemeriksaan = vm.TglPemeriksaan,
@@ -599,6 +590,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     WaktuPemeriksaan = vm.WaktuPemeriksaan,
                     WaktuPemeriksaanPersiapan = vm.WaktuPemeriksaanPersiapan,
                     StatusBookingLab = false,
+                    SuratRujukan = vm.SuratRujukan,
                     AlasanPembatalan = vm.AlasanPembatalan,
                     ProsesBooking = vm.ProsesBooking,
                     TindakLanjut = vm.TindakLanjut,
@@ -689,12 +681,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.KunjunganId = vm.KunjunganId;
                 entity.PasienId = vm.PasienId;
                 entity.AsuransiId = vm.AsuransiId;
+                entity.DiskonId = vm.DiskonId;
                 entity.TglPenyerahanSampling = vm.TglPenyerahanSampling;
                 entity.TglBooking = vm.TglBooking;
                 entity.TglPemeriksaan = vm.TglPemeriksaan;
                 entity.KelasId = vm.KelasId;
                 entity.DokterPerujukId = vm.DokterPerujukId;
-
+                entity.SuratRujukan = vm.SuratRujukan;
                 entity.KonfirmatorId = vm.KonfirmatorId;
                 entity.TglKonfirmasi = DateTime.UtcNow;
                 entity.Keterangan = vm.Keterangan;
@@ -1525,6 +1518,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 select new
                 {
                     b.BookingLabId,
+                    b.SuratRujukan,
                     b.NoOrder,
                     b.NoLab,
                     b.NoPA,
@@ -1546,6 +1540,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaPoli = b.Kunjungan != null && b.Kunjungan.Poliklinik != null
                             ? b.Kunjungan.Poliklinik.NamaPoliklinik
                             : null,
+
+                    b.DiskonId,
+                    NamaDiskon = b.Diskon != null ? b.Diskon.NamaDiskon : null,
 
                     b.AsuransiId,
                     AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
@@ -1931,6 +1928,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 select new
                 {
                     b.BookingLabId,
+                    b.SuratRujukan,
                     b.NoOrder,
 
                     KunjunganId = b.KunjunganId,
@@ -1949,6 +1947,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaPoli = b.Kunjungan != null && b.Kunjungan.Poliklinik != null
                         ? b.Kunjungan.Poliklinik.NamaPoliklinik
                         : null,
+
+                    b.DiskonId,
+                    NamaDiskon = b.Diskon != null ? b.Diskon.NamaDiskon : null,
 
                     b.AsuransiId,
                     AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
@@ -2410,6 +2411,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 select new
                 {
                     b.BookingLabId,
+                    b.SuratRujukan,
                     b.NoOrder,
 
                     KunjunganId = b.KunjunganId,
@@ -2427,6 +2429,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaPoli = b.Kunjungan != null && b.Kunjungan.Poliklinik != null
                         ? b.Kunjungan.Poliklinik.NamaPoliklinik
                         : null,
+
+                    b.DiskonId,
+                    NamaDiskon = b.Diskon != null ? b.Diskon.NamaDiskon : null,
 
                     b.AsuransiId,
                     AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
@@ -2817,7 +2822,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 select new
                 {
                     b.BookingLabId,
-
+                    b.SuratRujukan,
                     b.NoOrder,
 
                     KunjunganId = b.KunjunganId,
@@ -2835,6 +2840,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaPoli = b.Kunjungan != null && b.Kunjungan.Poliklinik != null
                         ? b.Kunjungan.Poliklinik.NamaPoliklinik
                         : null,
+
+                    b.DiskonId,
+                    NamaDiskon = b.Diskon != null ? b.Diskon.NamaDiskon : null,
 
                     b.AsuransiId,
                     AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
@@ -3208,6 +3216,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 select new
                 {
                     b.BookingLabId,
+                    b.SuratRujukan,
                     b.NoOrder,
 
                     KunjunganId = b.KunjunganId,
@@ -3225,6 +3234,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaPoli = b.Kunjungan != null && b.Kunjungan.Poliklinik != null
                         ? b.Kunjungan.Poliklinik.NamaPoliklinik
                         : null,
+
+                    b.DiskonId,
+                    NamaDiskon = b.Diskon != null ? b.Diskon.NamaDiskon : null,
 
                     b.AsuransiId,
                     AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
