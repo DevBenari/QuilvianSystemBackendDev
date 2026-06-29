@@ -16,6 +16,7 @@
         public Guid? KasirId { get; set; }
 
         public string? NamaLengkap { get; set; }
+        public string? JenisKelamin { get; set; }
         public string? NoKaryawan { get; set; }
         public string? NoHP { get; set; }
         public string? NoRekamMedis { get; set; }
