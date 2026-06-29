@@ -24,6 +24,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
         public decimal? Discount { get; set; }
         public decimal? SubTotal { get; set; }
 
+        // app.clickup.com/t/86ey1c1jk produkid di pindah ke child dari head
+        public Guid? ProdukId { get; set; }
         public string? Keterangan { get; set; }
 
         // Navigation Property

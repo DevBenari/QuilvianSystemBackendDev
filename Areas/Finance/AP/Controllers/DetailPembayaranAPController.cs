@@ -118,6 +118,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                         det.DetailPembayaranAPId,
                         det.PembayaranAPId,
                         det.PurchasingInvoiceId,
+                        ap.SupplierId,
+                        ap.NamaSupplier,
 
                         KodePembayaranAP = ap != null ? ap.KodePembayaranAP : null,
 
@@ -153,6 +155,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
 
                         det.SisaTagihan,
                         det.PembayaranTagihan,
+
+                        det.DPPo,
+
                         det.Keterangan,
                         det.CreateDateTime,
 
@@ -385,6 +390,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
 
                             det.SisaTagihan,
                             det.PembayaranTagihan,
+
+                            det.DPPo,
+
                             det.Keterangan,
                             det.CreateDateTime
                         }
@@ -473,6 +481,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
 
                             det.SisaTagihan,
                             det.PembayaranTagihan,
+
+                            det.DPPo,
+
                             det.Keterangan,
                             det.CreateDateTime
                         }
@@ -548,6 +559,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                     PurchasingInvoiceId = vm.PurchasingInvoiceId,
                     SisaTagihan = vm.SisaTagihan,
                     PembayaranTagihan = vm.PembayaranTagihan,
+                    DPPo = vm.DPPo ?? 0m,
                     Keterangan = vm.Keterangan,
 
                     CreateDateTime = DateTime.UtcNow,

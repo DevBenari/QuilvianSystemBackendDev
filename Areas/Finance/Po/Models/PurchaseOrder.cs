@@ -29,9 +29,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
         public string? UserAccess { get; set; }
         public string? StatusPO { get; set; }
 
-        // app.clickup.com/t/86ey1c1jk
+        // app.clickup.com/t/86ey1c1jk produkid di pindah ke child
         public Guid? LayananId { get; set; }
-        public Guid? ProdukId { get; set; }
 
         public string? Keterangan { get; set; }
 

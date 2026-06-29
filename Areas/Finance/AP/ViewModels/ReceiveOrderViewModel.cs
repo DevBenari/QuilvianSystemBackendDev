@@ -35,6 +35,18 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.ViewModels
         [MaxLength(100)]
         public string? Status { get; set; }
 
+        // Tambahan
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal HargaTotalPO { get; set; }
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal NominalPPN { get; set; }
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal TotalDiskon { get; set; }
+
+
         [MaxLength(500)]
         public string? Keterangan { get; set; }
     }

@@ -50,6 +50,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Models
         [Column(TypeName = "numeric")]
         public decimal? Potongan { get; set; }
 
+        public string? ReceiveOrderNumber { get; set; }
+
+        public decimal? DPPo { get; set; }
+
         [MaxLength(500)]
         public string? Keterangan { get; set; }
 

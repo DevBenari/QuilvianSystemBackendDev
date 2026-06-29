@@ -61,7 +61,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 GrandTotal = dto.GrandTotal,
 
                 UserAccess = dto.UserAccess,
-                ProdukId = dto.ProdukId,
+                //ProdukId = dto.ProdukId,
                 LayananId = dto.LayananId,
                 StatusPO = dto.StatusPO,
                 Keterangan = dto.Keterangan,
@@ -76,6 +76,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     Price = i.Price ?? 0,
                     Discount = i.Discount ?? 0,
                     SubTotal = i.SubTotal ?? 0,
+                    ProdukId = i.ProdukId,
                     Keterangan = i.Keterangan
                 }).ToList()
             };
@@ -117,7 +118,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     QtyTotal = po.QtyTotal,
                     GrandTotal = po.GrandTotal,
 
-                    ProdukId = po.ProdukId,
+                    //ProdukId = po.ProdukId,
                     LayananId = po.LayananId,
 
                     UserAccess = po.UserAccess,
@@ -133,6 +134,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                         Price = i.Price,
                         Discount = i.Discount,
                         SubTotal = i.SubTotal,
+                        ProdukId = i.ProdukId,
                         Keterangan = i.Keterangan
                     }).ToList()
                 })
@@ -183,7 +185,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                         GrandTotal = po.GrandTotal,
                         UserAccess = po.UserAccess,
 
-                        ProdukId = po.ProdukId,
+                        //ProdukId = po.ProdukId,
                         LayananId = po.LayananId,
 
                         StatusPO = po.StatusPO,
@@ -198,6 +200,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                             Price = i.Price,
                             Discount = i.Discount,
                             SubTotal = i.SubTotal,
+                            ProdukId = i.ProdukId,
                             Keterangan = i.Keterangan
                         }).ToList()
                     }).ToList()
@@ -235,7 +238,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     QtyTotal = po.QtyTotal,
                     GrandTotal = po.GrandTotal,
 
-                    ProdukId = po.ProdukId,
+                    //ProdukId = po.ProdukId,
                     LayananId = po.LayananId,
 
                     UserAccess = po.UserAccess,
@@ -254,6 +257,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                             Price = i.Price,
                             Discount = i.Discount,
                             SubTotal = i.SubTotal,
+                            ProdukId = i.ProdukId,
                             Keterangan = i.Keterangan
                         })
                         .ToList()
@@ -557,7 +561,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     GrandTotal = po.GrandTotal,
 
 
-                    ProdukId = po.ProdukId,
+                    //ProdukId = po.ProdukId,
                     LayananId = po.LayananId,
 
                     UserAccess = po.UserAccess,
@@ -576,6 +580,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                             Price = i.Price,
                             Discount = i.Discount,
                             SubTotal = i.SubTotal,
+                            ProdukId = i.ProdukId,
                             Keterangan = i.Keterangan
                         })
                         .ToList()

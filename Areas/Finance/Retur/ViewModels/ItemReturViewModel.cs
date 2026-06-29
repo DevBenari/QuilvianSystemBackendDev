@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.Retur.ViewModels
 {
@@ -36,6 +37,12 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.ViewModels
 
         public DateTime? TglTukarFaktur { get; set; }
 
+        // tambahan
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal? HargaTotal { get; set; }
+
+        //end
         public string? Keterangan { get; set; }
     }
 }
