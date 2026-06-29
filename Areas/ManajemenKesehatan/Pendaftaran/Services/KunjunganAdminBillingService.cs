@@ -65,6 +65,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             Guid userActiveId,
             CancellationToken cancellationToken = default)
         {
+            if (IsLabRujukan(jenisKunjungan) || IsRadRujukan(jenisKunjungan))
+                return;
+
             var kodeJenis = ResolveKodeBiayaAdmin(
                 jenisKunjungan,
                 asalKunjungan
@@ -823,6 +826,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             return value == "OP" ||
                    value == "RAJAL" ||
                    value == "RAWAT JALAN";
+        }
+
+        private static bool IsLabRujukan(string? value)
+        {
+            var text = (value ?? "").Trim().ToUpperInvariant();
+
+            return text == "OPLAB" ||
+                   text == "OP LAB" ||
+                   text == "LAB" ||
+                   text == "LABORATORIUM";
+        }
+
+        private static bool IsRadRujukan(string? value)
+        {
+            var text = (value ?? "").Trim().ToUpperInvariant();
+
+            return text == "OPRAD" ||
+                   text == "OP RAD" ||
+                   text == "RAD" ||
+                   text == "RADIOLOGI";
         }
         #endregion
 
