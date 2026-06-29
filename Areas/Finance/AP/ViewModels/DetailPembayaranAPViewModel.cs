@@ -1,4 +1,6 @@
-﻿namespace QuilvianSystemBackendDev.Areas.Finance.AP.ViewModels
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace QuilvianSystemBackendDev.Areas.Finance.AP.ViewModels
 {
     public class DetailPembayaranAPViewModel
     {
@@ -21,6 +23,11 @@
         public decimal? SisaTagihan { get; set; }
 
         public decimal? PembayaranTagihan { get; set; }
+
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal? DPPo { get; set; }
+
 
         public string? Keterangan { get; set; }
     }

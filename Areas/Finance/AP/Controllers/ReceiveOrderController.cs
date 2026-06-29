@@ -126,6 +126,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                         ro.AdditionalDiscountRp,
                         ro.Status,
                         ro.Keterangan,
+
+                        ro.HargaTotalPO,
+                        ro.TotalDiskon,
+                        ro.NominalPPN,
+
                         ro.CreateDateTime,
 
                         po.RequestType,
@@ -325,7 +330,35 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
             {
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
+                //tambahan
+                var receiveOrderId = Guid.NewGuid();
 
+                var hargaTotalPO =
+                    await _applicationDbContext.ReceiveOrderItems
+                        .Where(x =>
+                            x.ReceiveOrderId == receiveOrderId &&
+                            x.IsDelete == false)
+                        .SumAsync(x => (decimal?)x.HargaTotal) ?? 0;
+
+                var totalDiskon =
+                    await _applicationDbContext.ReceiveOrderItems
+                        .Where(x =>
+                            x.ReceiveOrderId == receiveOrderId &&
+                            x.IsDelete == false)
+                        .SumAsync(x => (decimal?)x.DiskonProduk) ?? 0;
+
+                var supplierPPN =
+                    await _applicationDbContext.Suppliers
+                        .AsNoTracking()
+                        .Where(x =>
+                            x.SupplierId == vm.SupplierId &&
+                            x.IsDelete == false)
+                        .Select(x => (decimal?)x.PPN)
+                        .FirstOrDefaultAsync() ?? 0;
+
+                var nominalPPN =
+                    hargaTotalPO * supplierPPN / 100;
+                //end
                 var userActiveId = await GetUserActiveId();
 
                 if (userActiveId == null)
@@ -338,7 +371,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
 
                 var data = new ReceiveOrder
                 {
-                    ReceiveOrderId = Guid.NewGuid(),
+                    ReceiveOrderId = receiveOrderId,
                     ReceiveOrderNumber = vm.ReceiveOrderNumber,
                     PurchaseOrderId = vm.PurchaseOrderId,
                     InvoiceNumber = vm.InvoiceNumber,
@@ -350,6 +383,12 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                     StampDuty = vm.StampDuty,
                     AdditionalDiscountRp = vm.AdditionalDiscountRp,
                     Status = vm.Status,
+                    // app.clickup.com/t/9018181067/86ey2y90w
+
+                    HargaTotalPO = hargaTotalPO,
+                    TotalDiskon = totalDiskon,
+                    NominalPPN = nominalPPN,
+
                     Keterangan = vm.Keterangan,
 
                     CreateDateTime = DateTime.UtcNow,
@@ -436,6 +475,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                 data.AdditionalDiscountRp = vm.AdditionalDiscountRp;
                 data.Status = vm.Status;
                 data.Keterangan = vm.Keterangan;
+                data.HargaTotalPO = vm.HargaTotalPO;
+                data.TotalDiskon = vm.TotalDiskon;
+                data.NominalPPN = vm.NominalPPN;
 
                 data.UpdateDateTime = DateTime.UtcNow;
                 data.UpdateBy = userActiveId.Value;

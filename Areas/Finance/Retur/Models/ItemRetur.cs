@@ -59,6 +59,13 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.Models
 
         public DateTime? TglTukarFaktur { get; set; }
 
+        // tambahan
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal? HargaTotal { get; set; }
+
+        //end
+
         public string? Keterangan { get; set; }
     }
 }

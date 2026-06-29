@@ -40,6 +40,21 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.ViewModels
         [MaxLength(100)]
         public string? BatchNumber { get; set; }
 
+
+        // tambahan
+
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal HargaSatuan { get; set; }
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal HargaTotal { get; set; }
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal DiskonProduk { get; set; }
+
+
+
         [MaxLength(500)]
         public string? Keterangan { get; set; }
 

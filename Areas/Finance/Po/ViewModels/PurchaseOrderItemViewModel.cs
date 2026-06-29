@@ -13,6 +13,7 @@
         public decimal? Discount { get; set; }
         public decimal? SubTotal { get; set; }
 
+        public Guid? ProdukId { get; set; }
         public string? Keterangan { get; set; }
     }
 }

@@ -41,6 +41,16 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Models
         [Column(TypeName = "numeric")]
         public decimal? PembayaranTagihan { get; set; }
 
+        //tambahan
+
+        public string? ReceiveOrderNumber { get; set; }
+
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal DPPo { get; set; }
+
+        //end
+
         [MaxLength(500)]
         public string? Keterangan { get; set; }
 

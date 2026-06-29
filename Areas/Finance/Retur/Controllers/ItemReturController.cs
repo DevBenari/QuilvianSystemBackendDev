@@ -264,6 +264,18 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.Controllers
                             .Select(h => h.KodeRetur)
                             .FirstOrDefault(),
 
+                        SupplierId =
+                            _applicationDbContext.HeaderReturs
+                            .Where(h => h.HeaderReturId == x.HeaderReturId)
+                            .Select(h => h.SupplierId)
+                            .FirstOrDefault(),
+
+                        NamaSupplier =
+                            _applicationDbContext.HeaderReturs
+                            .Where(h => h.HeaderReturId == x.HeaderReturId)
+                            .Select(h => h.NamaSupplier)
+                            .FirstOrDefault(),
+
                         x.StatusRetur,
                         x.IsTerkonfirmasi,
                         x.TglRetur,
@@ -287,6 +299,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.Controllers
                         x.SubtotalHarga,
                         x.TglPenerimaanPO,
                         x.TglTukarFaktur,
+                        x.HargaTotal,
                         x.Keterangan
                     });
 
@@ -424,11 +437,19 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.Controllers
                         x.ItemReturId,
                         x.ProdukId,
 
-                        //NamaProduk =
-                        //    _applicationDbContext.Products
-                        //    .Where(p => p.ProductId == x.ProdukId)
-                        //    .Select(p => p.ProductName)
-                        //    .FirstOrDefault(),
+
+
+                        SupplierId =
+                            _applicationDbContext.HeaderReturs
+                            .Where(h => h.HeaderReturId == x.HeaderReturId)
+                            .Select(h => h.SupplierId)
+                            .FirstOrDefault(),
+
+                        NamaSupplier =
+                            _applicationDbContext.HeaderReturs
+                            .Where(h => h.HeaderReturId == x.HeaderReturId)
+                            .Select(h => h.NamaSupplier)
+                            .FirstOrDefault(),
 
                         x.HeaderReturId,
 
@@ -448,6 +469,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.Controllers
                         x.QtyDiterima,
                         x.QtyTelahDiretur,
                         x.ReceiveOrderId,
+                        x.HargaTotal,
 
                         ReceiveNumber =
                             _applicationDbContext.ReceiveOrders
@@ -592,8 +614,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.Controllers
                 var itemId =
                     Guid.NewGuid();
 
-                var subtotalHarga =
-                    vm.QtyRetur * vm.HargaSatuan;
+                var subtotalHarga = vm.QtyRetur * vm.HargaSatuan;
+                var hargaTotal = vm.QtyRetur * vm.HargaSatuan;
 
                 var data = new ItemRetur
                 {
@@ -618,6 +640,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.Controllers
                     Satuan = vm.Satuan,
                     HargaSatuan = vm.HargaSatuan,
                     SubtotalHarga = subtotalHarga,
+
+                    HargaTotal = hargaTotal,
 
                     TglPenerimaanPO = vm.TglPenerimaanPO,
                     TglTukarFaktur = vm.TglTukarFaktur,

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.Finance.AP.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AP.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -23,6 +24,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<ReceiveOrderItemController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly decimal? HargaTotal;
 
         public ReceiveOrderItemController
         (
@@ -116,6 +118,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                         item.BatchNumber,
                         item.Keterangan,
                         item.CreateDateTime,
+
+                        item.HargaSatuan,
+                        item.HargaTotal,
+                        item.DiskonProduk,
 
                         ro.ReceiveOrderNumber,
                         ro.InvoiceNumber,
@@ -315,6 +321,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
+                var receiveOrderItemId = Guid.NewGuid();
+
                 bool receiveOrderExists =
                     await _applicationDbContext.ReceiveOrders
                     .AnyAsync(x =>
@@ -341,7 +349,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
 
                 var data = new ReceiveOrderItem
                 {
-                    ReceiveOrderItemId = Guid.NewGuid(),
+                    ReceiveOrderItemId = receiveOrderItemId,
                     ReceiveOrderId = vm.ReceiveOrderId,
                     ProductId = vm.ProductId,
                     Barcode = vm.Barcode,
@@ -354,6 +362,12 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                     StampDuty = vm.StampDuty,
                     ExpiredDate = vm.ExpiredDate,
                     BatchNumber = vm.BatchNumber,
+
+
+                    HargaSatuan = vm.HargaSatuan,
+                    HargaTotal = (decimal)(vm.HargaSatuan * vm.QtyReceive),
+                    DiskonProduk = vm.DiskonProduk,
+
                     Keterangan = vm.Keterangan,
 
                     CreateDateTime = DateTime.UtcNow,
@@ -454,6 +468,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AP.Controllers
                 data.ExpiredDate = vm.ExpiredDate;
                 data.BatchNumber = vm.BatchNumber;
                 data.Keterangan = vm.Keterangan;
+
+                data.HargaSatuan = vm.HargaSatuan;
+                data.HargaTotal = vm.HargaTotal;
+                data.DiskonProduk = vm.DiskonProduk;
+
 
                 data.UpdateDateTime = DateTime.UtcNow;
                 data.UpdateBy = userActiveId.Value;
