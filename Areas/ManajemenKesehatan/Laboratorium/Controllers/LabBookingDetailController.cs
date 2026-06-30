@@ -236,35 +236,73 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] LabBookingDetailViewModel vm, CancellationToken ct)
+        public async Task<IActionResult> Create(
+            [FromBody] LabBookingDetailViewModel vm,
+            CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
             await using var transaction = await _applicationDbContext.Database
-                .BeginTransactionAsync(IsolationLevel.Serializable, ct);
+                .BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
 
             try
             {
-                if (!_applicationDbContext.Database.CanConnect())
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-
-                // 🔹 Ambil user login
+                // Ambil user login
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+
                 if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                if (!vm.BookingLabId.HasValue)
+                if (!vm.BookingLabId.HasValue || vm.BookingLabId == Guid.Empty)
                     return BadRequest(new { message = "BookingLabId wajib diisi." });
 
-                if (!vm.LabId.HasValue)
+                if (!vm.LabId.HasValue || vm.LabId == Guid.Empty)
                     return BadRequest(new { message = "LabId wajib diisi." });
+
+                if (!vm.PemeriksaanLabId.HasValue || vm.PemeriksaanLabId == Guid.Empty)
+                    return BadRequest(new { message = "PemeriksaanLabId wajib diisi." });
+
+                // Pastikan BookingLab ada
+                var bookingExists = await _applicationDbContext.LabBookings
+                    .AsNoTracking()
+                    .AnyAsync(x =>
+                        x.BookingLabId == vm.BookingLabId.Value &&
+                        !x.IsDelete,
+                        ct);
+
+                if (!bookingExists)
+                    return BadRequest(new { message = "Data booking lab tidak ditemukan." });
+
+                // Pastikan Lab ada
+                //var labExists = await _applicationDbContext.Labs
+                //    .AsNoTracking()
+                //    .AnyAsync(x =>
+                //        x.LabId == vm.LabId.Value &&
+                //        !x.IsDelete,
+                //        ct);
+
+                //if (!labExists)
+                //    return BadRequest(new { message = "Data lab tidak ditemukan." });
+
+                //// Pastikan Pemeriksaan Lab ada
+                //var pemeriksaanExists = await _applicationDbContext.LabPemeriksaans
+                //    .AsNoTracking()
+                //    .AnyAsync(x =>
+                //        x.PemeriksaanLabId == vm.PemeriksaanLabId.Value &&
+                //        !x.IsDelete,
+                //        ct);
+
+                //if (!pemeriksaanExists)
+                //    return BadRequest(new { message = "Data pemeriksaan lab tidak ditemukan." });
 
                 var noOrder = await _noPhotoGeneratorService.EnsureNoOrderForBookingAsync(
                     vm.BookingLabId.Value,
@@ -272,9 +310,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     userActiveId,
                     ct
                 );
-                // ==========================================================
-                // ✅ Buat data baru LabBookingDetail
-                // ==========================================================
+
                 var data = new LabBookingDetail
                 {
                     DetailBookingLabId = Guid.NewGuid(),
@@ -304,34 +340,51 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
+                    IsDelete = false
                 };
 
                 _applicationDbContext.LabBookingDetails.Add(data);
-                await _applicationDbContext.SaveChangesAsync(ct);
 
+                await _applicationDbContext.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
+
                 await _hubContext.Clients.All.SendAsync("Lab booking detail created", new
                 {
                     Action = "create",
                     Id = data.DetailBookingLabId
-                });
+                }, ct);
 
                 return Created("", new
                 {
                     message = "Tambah Data Detail Booking Lab & Billing Berhasil || 201 Created",
                     data = new
                     {
-                        data.DetailBookingLabId
+                        data.DetailBookingLabId,
+                        NoOrder = noOrder
                     }
                 });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                await transaction.RollbackAsync(ct);
+
+                return StatusCode(500, new
+                {
+                    message = "Gagal menyimpan data.",
+                    error = dbEx.Message,
+                    innerError = dbEx.InnerException?.Message
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                await transaction.RollbackAsync(ct);
+
+                return StatusCode(500, new
+                {
+                    message = "Terjadi kesalahan internal.",
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message
+                });
             }
         }
 
