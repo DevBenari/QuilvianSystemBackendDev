@@ -250,11 +250,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.Controllers
                         x.ItemReturId,
                         x.ProdukId,
 
-                        //NamaProduk =
-                        //    _applicationDbContext.Products
-                        //    .Where(p => p.ProductId == x.ProdukId)
-                        //    .Select(p => p.ProductName)
-                        //    .FirstOrDefault(),
+                        NamaProduk =
+                            _applicationDbContext.Obats
+                            .Where(p => p.ObatId == x.ProdukId)
+                            .Select(p => p.ObatName)
+                            .FirstOrDefault(),
 
                         x.HeaderReturId,
 
@@ -271,9 +271,25 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.Controllers
                             .FirstOrDefault(),
 
                         NamaSupplier =
-                            _applicationDbContext.HeaderReturs
-                            .Where(h => h.HeaderReturId == x.HeaderReturId)
-                            .Select(h => h.NamaSupplier)
+                            _applicationDbContext.Suppliers
+                            .Where(s => s.SupplierId ==
+                                _applicationDbContext.HeaderReturs
+                                    .Where(h => h.HeaderReturId == x.HeaderReturId)
+                                    .Select(h => h.SupplierId)
+                                    .FirstOrDefault()
+                            )
+                            .Select(s => s.SupplierName)
+                            .FirstOrDefault(),
+
+                        PPN =
+                            _applicationDbContext.Suppliers
+                            .Where(s => s.SupplierId ==
+                                _applicationDbContext.HeaderReturs
+                                    .Where(h => h.HeaderReturId == x.HeaderReturId)
+                                    .Select(h => h.SupplierId)
+                                    .FirstOrDefault()
+                            )
+                            .Select(s => s.PPN)
                             .FirstOrDefault(),
 
                         x.StatusRetur,
