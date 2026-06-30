@@ -54,6 +54,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
             string? sortDirection = "desc",
             bool? isCanceled = null,
             Guid? arHeaderId = null,
+            Guid? asuransiId = null,
 
             [FromQuery, SwaggerSchema(Format = "date-time")]
             DateTime? startDate = null,
@@ -159,6 +160,12 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 if (arHeaderId.HasValue)
                 {
                     query = query.Where(x => x.ARHeaderId == arHeaderId.Value);
+                }
+
+                // FILTER ASURANSI ID
+                if (asuransiId.HasValue)
+                {
+                    query = query.Where(x => x.AsuransiId == asuransiId.Value);
                 }
                 // SORTING
                 var sortColumn =
