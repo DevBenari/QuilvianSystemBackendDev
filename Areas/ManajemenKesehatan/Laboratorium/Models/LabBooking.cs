@@ -24,9 +24,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Guid? DokterKonsulenId { get; set; }
         public Guid? TerapisId { get; set; }
         public Guid? DokterPerujukId { get; set; }
+        public Guid? DokterPemeriksaId { get; set; } // Relasi ke tabel Dokter
+
         public Guid? KonfirmatorId { get; set; }
         public string? Keterangan { get; set; } // Catatan atau keterangan tambahan
-        public bool? IsCito { get; set; } // Penanda apakah pemeriksaan bersifat "Cito" (darurat)
         public string? DiagnosaAwal { get; set; }
         public string? StatusPemeriksaan { get; set; }
 
@@ -43,6 +44,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? AlasanPembatalan { get; set; }
         public string? TTDPathPembatalan { get; set; }
         public string? PetugasPembatalan { get; set; }
+        public string? StatusKonfirmasi { get; set; }
         public string? ProsesBooking {  get; set; }
         public string? TindakLanjut {  get; set; }
         public string? HasilPenunjangLab { get; set; }
@@ -59,6 +61,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Kelas? Kelas { get; set; }
         public Dokter? DokterKonsulen { get; set; }
         public Dokter? DokterPerujuk { get; set; }
+        public Dokter? DokterPemeriksa { get; set; }
         public UserActive? Konfirmator { get; set; }
         public Diskon? Diskon { get; set; }
 

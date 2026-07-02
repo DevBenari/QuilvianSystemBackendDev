@@ -33,6 +33,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? StatusPemeriksaan {  get; set; }
         public DateTime? TanggalSelesai { get; set; }
         public bool? StatusVerifikasi { get; set; }
+        public bool? IsCito { get; set; } // Penanda apakah pemeriksaan bersifat "Cito" (darurat)
         public string? AlasanPembatalan {  get; set; }
         public string? TTDPembatalanPath { get; set; }
         public string? TipeLayanan {  get; set; }

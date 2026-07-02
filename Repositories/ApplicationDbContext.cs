@@ -1218,6 +1218,7 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<CetakFilm> CetakFilms { get; set; }
             public DbSet<CetakFilmDetail> CetakFilmDetails { get; set; }
             public DbSet<LabRujukan> LabRujukans { get; set; }
+            public DbSet<LabBookingBatal> LabBookingBatals { get; set; }
 
         #endregion
 

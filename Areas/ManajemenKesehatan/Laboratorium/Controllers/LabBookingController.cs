@@ -134,7 +134,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         x.Booking.KelasId,
                         x.Booking.Keterangan,
-                        x.Booking.IsCito,
                         x.Booking.DiagnosaAwal,
 
                         x.Booking.DokterKonsulenId,
@@ -256,7 +255,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         b.KelasId,
                         b.Keterangan,
-                        b.IsCito,
                         b.DiagnosaAwal,
 
                         b.DokterKonsulenId,
@@ -362,7 +360,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         b.KelasId,
                         b.Keterangan,
-                        b.IsCito,
                         b.DiagnosaAwal,
                         b.HemodialisaKe,
                         b.StatusPemeriksaan,
@@ -502,7 +499,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.WaktuPemeriksaan,
                     header.WaktuPemeriksaanPersiapan,
 
-                    header.IsCito,
                     header.DiagnosaAwal,
                     header.HemodialisaKe,
 
@@ -576,7 +572,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KelasId = vm.KelasId,
                     DokterPerujukId = vm.DokterPerujukId,
                     Keterangan = vm.Keterangan,
-                    IsCito = vm.IsCito,
                     IsPasienPersiapan = vm.IsPasienPersiapan,
                     DiagnosaAwal = vm.DiagnosaAwal,
                     StatusPemeriksaan = vm.StatusPemeriksaan,
@@ -622,7 +617,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             entity.NomorSuratJaminan,
                             entity.CatatanJaminan,
                             entity.TglBooking,
-                            entity.IsCito,
                             entity.CreateDateTime
                         }
                     });
@@ -691,7 +685,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.KonfirmatorId = vm.KonfirmatorId;
                 entity.TglKonfirmasi = DateTime.UtcNow;
                 entity.Keterangan = vm.Keterangan;
-                entity.IsCito = vm.IsCito;
                 entity.WaktuPemeriksaan = vm.WaktuPemeriksaan;
                 entity.WaktuPemeriksaanPersiapan = vm.WaktuPemeriksaanPersiapan;
                 entity.IsPasienPersiapan = vm.IsPasienPersiapan;
@@ -752,7 +745,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         entity.TglPemeriksaan,
                         entity.TglKonfirmasi,
                         entity.KonfirmatorId,
-                        entity.IsCito,
                         entity.UpdateDateTime
                     }
                 });
@@ -830,7 +822,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             entity.NomorSuratJaminan,
                             entity.CatatanJaminan,
                             entity.TglBooking,
-                            entity.IsCito,
                             entity.UpdateDateTime
                         }
                     });
@@ -909,7 +900,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             entity.NomorSuratJaminan,
                             entity.CatatanJaminan,
                             entity.TglBooking,
-                            entity.IsCito,
                             entity.UpdateDateTime
                         }
                     });
@@ -988,7 +978,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             entity.NomorSuratJaminan,
                             entity.CatatanJaminan,
                             entity.TglBooking,
-                            entity.IsCito,
                             entity.UpdateDateTime
                         }
                     });
@@ -1067,7 +1056,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             entity.NomorSuratJaminan,
                             entity.CatatanJaminan,
                             entity.TglBooking,
-                            entity.IsCito,
                             entity.UpdateDateTime
                         }
                     });
@@ -1577,7 +1565,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
                     b.IsDelete,
-                    b.IsCito,
                     CreateBy = u != null ? u.FullName : null
                 })
                 .ToListAsync();
@@ -1985,7 +1972,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
                     b.IsDelete,
-                    b.IsCito,
                     CreateBy = u != null ? u.FullName : null
                 })
                 .ToListAsync();
@@ -2467,7 +2453,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
                     b.IsDelete,
-                    b.IsCito,
                     CreateBy = u != null ? u.FullName : null
                 })
                 .ToListAsync();
@@ -2878,7 +2863,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
                     b.IsDelete,
-                    b.IsCito,
                     CreateBy = u != null ? u.FullName : null
                 })
                 .ToListAsync();
@@ -3272,7 +3256,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
                     b.IsDelete,
-                    b.IsCito,
                     CreateBy = u != null ? u.FullName : null
                 })
                 .ToListAsync();
