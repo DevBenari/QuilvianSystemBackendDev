@@ -30,7 +30,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? Keterangan { get; set; } // Catatan atau keterangan tambahan
         public string? DiagnosaAwal { get; set; }
         public string? StatusPemeriksaan { get; set; }
-
         public decimal? HemodialisaKe { get; set; }
         public string? NomorSuratJaminan{get; set;}
         public string? CatatanJaminan {  get; set; }
