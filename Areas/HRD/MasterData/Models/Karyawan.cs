@@ -29,5 +29,6 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Models
         public string? Alamat { get; set; }
         public string? FotoPath { get;  set; }
         public string? FotoName { get;  set; }
+        public bool? IsKaryawanMedis { get; set; } = false;
     }
 }
