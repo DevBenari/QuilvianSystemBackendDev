@@ -727,6 +727,96 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Retur.Controllers
         }
 
         // =====================================================
+        // KONFIRMASI RETUR
+        // =====================================================
+
+        [HttpPut("{id}/konfirmasi")]
+        public async Task<IActionResult> KonfirmasiRetur(Guid id)
+        {
+            using var transaction =
+                await _applicationDbContext.Database.BeginTransactionAsync();
+
+            try
+            {
+                var data =
+                    await _applicationDbContext.HeaderReturs
+                    .FirstOrDefaultAsync(x =>
+                        x.HeaderReturId == id &&
+                        x.IsDelete == false);
+
+                if (data == null)
+                {
+                    return NotFound(new
+                    {
+                        message = "Data tidak ditemukan."
+                    });
+                }
+
+                if (data.IsTerkonfirmasi)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Retur sudah dikonfirmasi."
+                    });
+                }
+
+                var userActiveId = await GetUserActiveId();
+
+                if (userActiveId == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User aktif tidak ditemukan."
+                    });
+                }
+
+                data.IsTerkonfirmasi = true;
+                data.StatusRetur = "Selesai";
+                data.UpdateDateTime = DateTime.UtcNow;
+                data.UpdateBy = userActiveId.Value;
+
+                _applicationDbContext.HeaderReturs.Update(data);
+
+                // Update seluruh item retur
+                var items =
+                    await _applicationDbContext.ItemReturs
+                    .Where(x =>
+                        x.HeaderReturId == id &&
+                        x.IsDelete == false)
+                    .ToListAsync();
+
+                foreach (var item in items)
+                {
+                    item.IsTerkonfirmasi = true;
+                    item.StatusRetur = "Selesai";
+                    item.TglRetur = data.TglRetur;
+                    item.UpdateDateTime = DateTime.UtcNow;
+                    item.UpdateBy = userActiveId.Value;
+                }
+
+                await _applicationDbContext.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return Ok(new
+                {
+                    message = "Retur berhasil dikonfirmasi."
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+
+                _logger.LogError(ex, ex.Message);
+
+                return StatusCode(500, new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+
+        // =====================================================
         // DELETE HEADER + ITEM
         // =====================================================
 
