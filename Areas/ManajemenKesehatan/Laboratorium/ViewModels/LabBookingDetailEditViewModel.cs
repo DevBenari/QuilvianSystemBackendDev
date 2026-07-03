@@ -29,6 +29,7 @@
         public DateTime? TanggalSelesai { get; set; }
         public Guid? VerifikatorId { get; set; }
         public DateTime? WaktuVerifikasi { get; set; }
+        public bool? IsCito { get; set; }
         public bool? StatusVerifikasi { get; set; }
 
     }

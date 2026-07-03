@@ -15,6 +15,7 @@
         public Guid? DokterKonsulenId { get; set; }
         public Guid? TerapisId { get; set; }
         public Guid? DokterPerujukId { get; set; }
+        public Guid? DokterPemeriksaId { get; set; }
 
         // konfrimasi
         public Guid? KonfirmatorId { get; set; }

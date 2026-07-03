@@ -2,7 +2,10 @@
 {
     public class LabBookingBatalViewModel
     {
-        public string? AlasanPembatalan { get; set; }
-        //public IFormFile? TTDPembatalan { get; set; }
+        public Guid? LabBookingId { get; set; }
+        public Guid? DetailLabBookingId { get; set; }
+        public string? JenisPembatalan { get; set; } = string.Empty;
+        public DateTime? TglPembatalan { get; set; }
+        public string? Keterangan { get; set; }
     }
 }

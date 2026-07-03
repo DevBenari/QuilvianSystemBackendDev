@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
@@ -17,5 +18,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public string? NoKamar { get; set; }
         public bool? StatusBed { get; set; }
         public string? Keterangan { get; set; }
+
+        // navigation
+        public Kamar? Kamar {  get; set; }
+        public Bed? Bed {  get; set; }
+
     }
 }

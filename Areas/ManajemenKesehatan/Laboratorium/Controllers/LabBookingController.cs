@@ -156,7 +156,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         x.Booking.ProsesBooking,
                         x.Booking.TindakLanjut,
                         x.Booking.HasilPenunjangLab,
-                        x.Booking.AnjuranDiet
+                        x.Booking.AnjuranDiet,
+                        x.Booking.StatusKonfirmasi,
                     })
                     .ToListAsync();
 
@@ -276,6 +277,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.TindakLanjut,
                         b.HasilPenunjangLab,
                         b.AnjuranDiet,
+                        b.StatusKonfirmasi,
 
                         Details = details ?? new List<object>()
                     };
@@ -317,6 +319,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     join u0 in _applicationDbContext.UserActives.AsNoTracking()
                         on b.CreateBy equals u0.UserActiveId into uGroup
                     from u in uGroup.DefaultIfEmpty()
+
+                    join k in _applicationDbContext.MainKasirs.AsNoTracking()
+                        on b.KunjunganId equals k.KunjunganId into kasirGroup
+                    from k in kasirGroup.DefaultIfEmpty()
 
                     where b.BookingLabId == id
                           && (b.IsDelete == false || b.IsDelete == null)
@@ -381,9 +387,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         DokterPerujukId = b.DokterPerujukId,
                         NamaDokterPerujuk = b.DokterPerujuk != null ? b.DokterPerujuk.NmDokter : null,
 
+                        DokterPemeriksaId = b.DokterPemeriksaId,
+                        NamaDokterPemeriksa = b.DokterPemeriksa != null ? b.DokterPemeriksa.NmDokter : null,
+
                         KonfirmatorId = b.KonfirmatorId,
                         NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                         TglKonfrimasi = b.TglKonfirmasi,
+                        b.StatusKonfirmasi,
 
                         b.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
@@ -495,6 +505,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.KonfirmatorId,
                     header.NamaKonfirmator,
                     header.TglKonfrimasi,
+                    header.StatusKonfirmasi,
 
                     header.WaktuPemeriksaan,
                     header.WaktuPemeriksaanPersiapan,
@@ -577,6 +588,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     StatusPemeriksaan = vm.StatusPemeriksaan,
                     DokterKonsulenId = vm.DokterKonsulenId,
                     TerapisId = vm.TerapisId,
+                    DokterPemeriksaId = vm.DokterPemeriksaId,
                     HemodialisaKe = vm.HemodialisaKe,
                     NomorSuratJaminan = vm.NomorSuratJaminan,
                     CatatanJaminan = vm.CatatanJaminan,
@@ -585,6 +597,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     WaktuPemeriksaan = vm.WaktuPemeriksaan,
                     WaktuPemeriksaanPersiapan = vm.WaktuPemeriksaanPersiapan,
                     StatusBookingLab = false,
+                    StatusKonfirmasi = null,
                     SuratRujukan = vm.SuratRujukan,
                     AlasanPembatalan = vm.AlasanPembatalan,
                     ProsesBooking = vm.ProsesBooking,
@@ -676,6 +689,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.PasienId = vm.PasienId;
                 entity.AsuransiId = vm.AsuransiId;
                 entity.DiskonId = vm.DiskonId;
+                entity.DokterPemeriksaId = vm.DokterPemeriksaId;
                 entity.TglPenyerahanSampling = vm.TglPenyerahanSampling;
                 entity.TglBooking = vm.TglBooking;
                 entity.TglPemeriksaan = vm.TglPemeriksaan;
@@ -956,6 +970,84 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ⚙️ Update nilai field
                 // ======================================
                 entity.ProsesBooking = status;
+
+                // ======================================
+                // 🕒 Update metadata
+                // ======================================
+                entity.UpdateBy = userActiveId;
+                entity.UpdateDateTime = DateTime.UtcNow;
+
+                _applicationDbContext.LabBookings.Update(entity);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Data berhasil diperbarui. || 200 OK",
+                        data = new
+                        {
+                            entity.BookingLabId,
+                            entity.NoOrder,
+                            entity.NomorSuratJaminan,
+                            entity.CatatanJaminan,
+                            entity.TglBooking,
+                            entity.UpdateDateTime
+                        }
+                    });
+                }
+
+                return StatusCode(500, new { message = "Gagal memperbarui data ke database." });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saat memperbarui booking lab");
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("StatusKonfirmasiBooking/{id}")]
+        public async Task<IActionResult> KonfirmasiLab(Guid id, [FromBody] string status)
+        {
+            if (id == Guid.Empty)
+                return BadRequest(new { message = "Parameter ID tidak valid." });
+
+            if (status == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            try
+            {
+                // ======================================
+                // 🔐 Ambil user aktif dari JWT
+                // ======================================
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // ======================================
+                // 🔎 Cek apakah data booking ada
+                // ======================================
+                var entity = await _applicationDbContext.LabBookings
+                    .FirstOrDefaultAsync(b => b.BookingLabId == id && (b.IsDelete == false || b.IsDelete == null));
+
+                if (entity == null)
+                    return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
+
+                // ======================================
+                // ⚙️ Update nilai field
+                // ======================================
+                entity.StatusKonfirmasi = status;
 
                 // ======================================
                 // 🕒 Update metadata
@@ -1540,6 +1632,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                     DokterPerujukId = b.DokterPerujukId,
                     NamaDokterPerujuk = b.DokterPerujuk != null ? b.DokterPerujuk.NmDokter : null,
+
+                    DokterPemeriksaId = b.DokterPemeriksaId,
+                    NamaDokterPemeriksa = b.DokterPemeriksa != null ? b.DokterPemeriksa.NmDokter : null,
 
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,

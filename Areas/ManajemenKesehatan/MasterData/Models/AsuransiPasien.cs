@@ -17,7 +17,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Umur { get; set; }
         public bool? IsExcess {  get; set; }
 
-        //public ICollection<Kunjungan> KunjunganAsuransiPasiens { get; set; } = new List<Kunjungan>();
-        //public ICollection<Kunjungan> KunjunganAsuransiPasienExcesses { get; set; } = new List<Kunjungan>();
+        public Asuransi? Asuransi { get; set; }
+        public PendaftaranPasienBaru? Pasien { get; set; }
     }
 }

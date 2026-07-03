@@ -13,7 +13,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid AsuransiId { get; set; }
         public string? KodeAsuransi { get; set; }
-
         // Informasi Asuransi
         public string? NamaAsuransi { get; set; }
         public string? JenisAsuransi { get; set; }
@@ -42,7 +41,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Keterangan { get; set; }
         public bool? IsPKS { get; set; }
 
-        //public ICollection<Kunjungan> KunjunganAsuransis { get; set; } = new List<Kunjungan>();
-        //public ICollection<Kunjungan> KunjunganAsuransiExcesses { get; set; } = new List<Kunjungan>();
+        public ICollection<AsuransiPasien> AsuransiPasiens { get; set; } = new List<AsuransiPasien>();
     }
 }

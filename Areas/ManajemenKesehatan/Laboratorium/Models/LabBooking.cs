@@ -68,5 +68,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
 
         // Relasi paling penting
         public ICollection<LabBookingDetail> LabBookingDetails { get; set; } = new HashSet<LabBookingDetail>();
+        public ICollection<LabBookingBatal> LabBookingBatals { get; set; } = new List<LabBookingBatal>();
     }
 }

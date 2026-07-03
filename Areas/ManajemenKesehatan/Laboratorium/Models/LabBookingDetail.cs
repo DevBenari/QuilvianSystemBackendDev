@@ -46,5 +46,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public LabPemeriksaan? PemeriksaanLab { get; set; }
         public SpecimenAsal? AsalSpecimen { get; set; }
         public Dokter? DokterPemeriksa { get; set; }
+
+        public ICollection<LabBookingBatal> LabBookingBatals { get; set; } = new List<LabBookingBatal>();
     }
 }
