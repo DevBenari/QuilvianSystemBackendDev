@@ -64,7 +64,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
         public async Task<string?> GenerateNoAntrianAsync(
             string kodeJenis,
-            string asal,
+            string? asal,
             Guid? poliklinikId,
             CancellationToken cancellationToken = default)
         {
@@ -73,15 +73,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
             kodeJenis = kodeJenis.Trim();
 
+            var asalNormalized = (asal ?? "").Trim().ToUpperInvariant();
+
             var now = GetLocalNow();
 
             var startToday = new DateTimeOffset(now.Date);
             var endToday = startToday.AddDays(1);
 
             /*
-             * IGD dan IP tidak pakai nomor antrean poli.
+             * IGD dan IP tidak pakai nomor antrean.
              */
             if (kodeJenis == "IGD" || kodeJenis == "IP")
+                return null;
+
+            /*
+             * Jika jenis kunjungan OP tapi asal dari IGD,
+             * maka tidak perlu dibuatkan nomor antrean poli.
+             */
+            if (kodeJenis == "OP" && asalNormalized == "IGD")
                 return null;
 
             /*
@@ -119,10 +128,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             }
 
             /*
-             * Rawat Jalan / OP tetap logic lama:
+             * Rawat Jalan / OP dari non-IGD tetap logic lama:
              * nomor antrean berdasarkan Poliklinik.KodeAntreanPoli.
              */
-            if (kodeJenis == "OP" && asal != "IGD")
+            if (kodeJenis == "OP")
             {
                 if (!poliklinikId.HasValue || poliklinikId.Value == Guid.Empty)
                     throw new ArgumentException("Poliklinik wajib dipilih untuk membuat nomor antrean.");
