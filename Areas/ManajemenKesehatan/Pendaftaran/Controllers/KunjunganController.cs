@@ -1331,6 +1331,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     var nomorAntrianFormatted = await _kunjunganNoRegistrasiService
                         .GenerateNoAntrianAsync(
                             kodeJenis: kodeJenis,
+                            asal:request.AsalKunjungan,
                             poliklinikId: request.PoliklinikId,
                             cancellationToken: ct
                         );

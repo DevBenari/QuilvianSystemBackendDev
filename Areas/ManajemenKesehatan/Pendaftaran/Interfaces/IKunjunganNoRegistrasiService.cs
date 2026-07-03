@@ -7,6 +7,7 @@
 
         Task<string?> GenerateNoAntrianAsync(
             string kodeJenis,
+            string asal,
             Guid? poliklinikId,
             CancellationToken cancellationToken = default);
 

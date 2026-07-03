@@ -64,6 +64,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
         public async Task<string?> GenerateNoAntrianAsync(
             string kodeJenis,
+            string asal,
             Guid? poliklinikId,
             CancellationToken cancellationToken = default)
         {
@@ -121,7 +122,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
              * Rawat Jalan / OP tetap logic lama:
              * nomor antrean berdasarkan Poliklinik.KodeAntreanPoli.
              */
-            if (kodeJenis == "OP")
+            if (kodeJenis == "OP" && asal!="IGD")
             {
                 if (!poliklinikId.HasValue || poliklinikId.Value == Guid.Empty)
                     throw new ArgumentException("Poliklinik wajib dipilih untuk membuat nomor antrean.");
