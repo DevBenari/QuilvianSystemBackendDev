@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
@@ -98,7 +99,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                     d.DetailBookingLabId,
                     d.BookingLabId,
-
+                    NoOrder = d.LabBooking != null ? d.LabBooking.NoOrder : null,
                     NamaLab = d.Lab != null
                         ? d.Lab.NamaLab
                         : null,
@@ -138,6 +139,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                d.LabBooking.Kunjungan.Poliklinik != null
                         ? d.LabBooking.Kunjungan.Poliklinik.NamaPoliklinik
                         : null,
+                    JenisKunjungan = d.LabBooking != null && d.LabBooking.Kunjungan != null
+                      ? d.LabBooking.Kunjungan.JenisKunjungan
+                      : null,
 
                     // kamar
                     Kamarid = bb.KamarId,
@@ -283,7 +287,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                      d.DetailBookingLabId,
                      d.BookingLabId,
-
+                     NoOrder = d.LabBooking != null ? d.LabBooking.NoOrder : null,
                      NamaLab = d.Lab != null
                          ? d.Lab.NamaLab
                          : null,
@@ -323,6 +327,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 d.LabBooking.Kunjungan.Poliklinik != null
                          ? d.LabBooking.Kunjungan.Poliklinik.NamaPoliklinik
                          : null,
+                     JenisKunjungan = d.LabBooking != null && d.LabBooking.Kunjungan != null
+                      ? d.LabBooking.Kunjungan.JenisKunjungan
+                      : null,
 
                      // kamar
                      Kamarid = bb.KamarId,
@@ -855,8 +862,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? kunjunganId = null,
             bool? isLunas = null,
             Guid? kamarId = null,
+            Guid? labId = null,
             string? namaKamar = null,
             string? noRM = null,
+            string? namaLab = null,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -908,7 +918,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                   d.DetailBookingLabId,
                   d.BookingLabId,
-
+                  NoOrder = d.LabBooking != null ? d.LabBooking.NoOrder : null,
+                  d.LabId,
                   NamaLab = d.Lab != null
                       ? d.Lab.NamaLab
                       : null,
@@ -942,11 +953,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                   NoRegistrasi = d.LabBooking != null && d.LabBooking.Kunjungan != null
                       ? d.LabBooking.Kunjungan.NoRegistrasi
                       : null,
-
                   NamaPoli = d.LabBooking != null &&
                              d.LabBooking.Kunjungan != null &&
                              d.LabBooking.Kunjungan.Poliklinik != null
                       ? d.LabBooking.Kunjungan.Poliklinik.NamaPoliklinik
+                      : null,
+                JenisKunjungan = d.LabBooking != null && d.LabBooking.Kunjungan != null
+                      ? d.LabBooking.Kunjungan.JenisKunjungan
                       : null,
 
                   // kamar
@@ -1037,6 +1050,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (kamarId.HasValue)
                 query = query.Where(x=>x.Kamarid == kamarId.Value);
 
+            if (labId.HasValue)
+                query = query.Where(x=>x.LabId == labId.Value);
+
             if (!string.IsNullOrWhiteSpace(namaKamar))
             {
                 var pattern = $"%{namaKamar.Trim()}%";
@@ -1051,6 +1067,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 query = query.Where(x =>
                     EF.Functions.ILike(x.NoRM ?? "", pattern));
+            }
+
+            if (!string.IsNullOrWhiteSpace(namaLab))
+            {
+                var pattern = $"%{namaLab.Trim()}%";
+
+                query = query.Where(x =>
+                    EF.Functions.ILike(x.NamaLab ?? "", pattern));
+            }
+
+            if (JenisKunjungan.HasValue)
+            {
+                var jk = JenisKunjungan.Value.ToString();
+
+                query = query.Where(b =>
+                    b.JenisKunjungan == jk);
             }
 
             // Filter periode/date range (gunakan range, jangan .Date)
