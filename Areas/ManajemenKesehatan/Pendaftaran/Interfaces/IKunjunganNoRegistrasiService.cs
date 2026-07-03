@@ -13,6 +13,7 @@
 
         string ValidasiJenisKunjungan(
             string? jenisKunjungan,
+            string? asal,
             Guid? poliklinikId,
             decimal? depositRanap);
     }

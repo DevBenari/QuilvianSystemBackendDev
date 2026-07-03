@@ -1241,6 +1241,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 // Validasi jenis kunjungan
                 var kodeJenis = _kunjunganNoRegistrasiService.ValidasiJenisKunjungan(
                     request.JenisKunjungan,
+                    request.AsalKunjungan,
                     request.PoliklinikId,
                     request.DepositRanap
                 );

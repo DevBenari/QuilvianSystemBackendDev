@@ -777,12 +777,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("StatusPemeriksaanLab/{id}")]
-        public async Task<IActionResult> StatusPemeriksaanLab(Guid id, [FromBody] string status)
+        public async Task<IActionResult> StatusPemeriksaanLab(Guid id, [FromBody] StatusPemeriksaanLabViewModel vm)
         {
             if (id == Guid.Empty)
                 return BadRequest(new { message = "Parameter ID tidak valid." });
 
-            if (status == null || !ModelState.IsValid)
+            if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
             try
@@ -813,7 +813,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ======================================
                 // ⚙️ Update nilai field
                 // ======================================
-                entity.StatusPemeriksaan = status;
+                entity.StatusPemeriksaan = vm.Status;
+                entity.TglPemeriksaan = vm.TglPemeriksaan;
 
                 // ======================================
                 // 🕒 Update metadata

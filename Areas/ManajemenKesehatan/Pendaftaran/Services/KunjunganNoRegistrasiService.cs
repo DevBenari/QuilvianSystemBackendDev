@@ -122,7 +122,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
              * Rawat Jalan / OP tetap logic lama:
              * nomor antrean berdasarkan Poliklinik.KodeAntreanPoli.
              */
-            if (kodeJenis == "OP" && asal!="IGD")
+            if (kodeJenis == "OP" && asal != "IGD")
             {
                 if (!poliklinikId.HasValue || poliklinikId.Value == Guid.Empty)
                     throw new ArgumentException("Poliklinik wajib dipilih untuk membuat nomor antrean.");
@@ -165,6 +165,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
         public string ValidasiJenisKunjungan(
             string? jenisKunjungan,
+            string? asal,
             Guid? poliklinikId,
             decimal? depositRanap)
         {
@@ -215,7 +216,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             }
 
             if (kodeJenis == "OP" &&
-                (poliklinikId == null || poliklinikId == Guid.Empty))
+                (poliklinikId == null || poliklinikId == Guid.Empty) && asal != "IGD")
             {
                 throw new ArgumentException(
                     "Poliklinik wajib dipilih untuk kunjungan Rawat Jalan.");
