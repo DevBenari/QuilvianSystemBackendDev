@@ -393,6 +393,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          ? p.NamaPemeriksaan
                          : null,
 
+                     NamaKategori = p != null ? p.KategoriPemeriksaan.NamaKategori : null,
+
                      HargaPemeriksaan = p != null
                          ? p.HargaPemeriksaan
                          : null,
@@ -1023,6 +1025,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                   NamaPemeriksaan = p != null
                       ? p.NamaPemeriksaan
                       : null,
+                  
+                  NamaKategori = p!= null ? p.KategoriPemeriksaan.NamaKategori :null,
 
                   HargaPemeriksaan = p != null
                       ? p.HargaPemeriksaan

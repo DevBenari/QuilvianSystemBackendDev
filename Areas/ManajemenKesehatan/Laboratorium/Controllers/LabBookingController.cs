@@ -128,7 +128,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         NamaDiskon = x.Booking.Diskon != null ? x.Booking.Diskon.NamaDiskon : null,
 
                         x.Booking.TglPemeriksaan,
-                        x.Booking.TglPenyerahanSampling,
+                        x.Booking.TglSampling,
                         x.Booking.TglBooking,
                         x.Booking.StatusPemeriksaan,
 
@@ -250,7 +250,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.NamaDiskon,
 
                         b.TglPemeriksaan,
-                        b.TglPenyerahanSampling,
+                        b.TglSampling,
                         b.TglBooking,
                         b.StatusPemeriksaan,
 
@@ -359,7 +359,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         b.TglPemeriksaan,
                         b.TglBooking,
-                        b.TglPenyerahanSampling,
+                        b.TglSampling,
 
                         b.WaktuPemeriksaan,
                         b.WaktuPemeriksaanPersiapan,
@@ -486,7 +486,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.NomorSuratJaminan,
                     header.TglPemeriksaan,
                     header.TglBooking,
-                    header.TglPenyerahanSampling,
+                    header.TglSampling,
 
                     header.StatusBookingLab,
                     header.CatatanJaminan,
@@ -577,9 +577,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     PasienId = vm.PasienId,
                     AsuransiId = vm.AsuransiId,
                     DiskonId = vm.DiskonId,
-                    TglPenyerahanSampling = vm.TglPenyerahanSampling,
                     TglBooking = vm.TglBooking,
-                    TglPemeriksaan = vm.TglPemeriksaan,
                     KelasId = vm.KelasId,
                     DokterPerujukId = vm.DokterPerujukId,
                     Keterangan = vm.Keterangan,
@@ -690,9 +688,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.AsuransiId = vm.AsuransiId;
                 entity.DiskonId = vm.DiskonId;
                 entity.DokterPemeriksaId = vm.DokterPemeriksaId;
-                entity.TglPenyerahanSampling = vm.TglPenyerahanSampling;
                 entity.TglBooking = vm.TglBooking;
-                entity.TglPemeriksaan = vm.TglPemeriksaan;
                 entity.KelasId = vm.KelasId;
                 entity.DokterPerujukId = vm.DokterPerujukId;
                 entity.SuratRujukan = vm.SuratRujukan;
@@ -1012,80 +1008,117 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("StatusKonfirmasiBooking/{id}")]
-        public async Task<IActionResult> KonfirmasiLab(Guid id, [FromBody] string status)
+        public async Task<IActionResult> KonfirmasiLab(
+            Guid id,
+            [FromBody] StatusKonfirmasiBookingViewModel vm,
+            CancellationToken ct)
         {
             if (id == Guid.Empty)
                 return BadRequest(new { message = "Parameter ID tidak valid." });
 
-            if (status == null || !ModelState.IsValid)
+            if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
+
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync(ct);
 
             try
             {
                 // ======================================
-                // 🔐 Ambil user aktif dari JWT
+                // Ambil user aktif dari JWT
                 // ======================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var getUserActive = _applicationDbContext.UserActives
-                    .FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+
                 if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userActiveId = getUserActive.UserActiveId;
+                var now = DateTimeOffset.UtcNow;
 
                 // ======================================
-                // 🔎 Cek apakah data booking ada
+                // Cek apakah data booking ada
                 // ======================================
                 var entity = await _applicationDbContext.LabBookings
-                    .FirstOrDefaultAsync(b => b.BookingLabId == id && (b.IsDelete == false || b.IsDelete == null));
+                    .FirstOrDefaultAsync(b =>
+                        b.BookingLabId == id &&
+                        (b.IsDelete == false || b.IsDelete == null),
+                        ct);
 
                 if (entity == null)
                     return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
 
                 // ======================================
-                // ⚙️ Update nilai field
+                // Update LabBooking
                 // ======================================
-                entity.StatusKonfirmasi = status;
+                entity.StatusKonfirmasi = vm.Status;
+                entity.KonfirmatorId = vm.KonfirmatorId;
+                entity.DokterPemeriksaId = vm.DokterPemeriksaId;
+                entity.TglSampling = vm.TglSampling;
 
-                // ======================================
-                // 🕒 Update metadata
-                // ======================================
                 entity.UpdateBy = userActiveId;
-                entity.UpdateDateTime = DateTime.UtcNow;
+                entity.UpdateDateTime = now;
 
-                _applicationDbContext.LabBookings.Update(entity);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                // Update dokter pemeriksa di LabBookingDetail
+                var updatedDetailCount = await _applicationDbContext.Database.ExecuteSqlInterpolatedAsync($@"
+                    UPDATE ""LabBookingDetails""
+                    SET 
+                        ""DokterPemeriksaId"" = {vm.DokterPemeriksaId},
+                        ""UpdateBy"" = {userActiveId},
+                        ""UpdateDateTime"" = {now}
+                    WHERE ""BookingLabId"" = {id}
+                      AND (""IsDelete"" = false OR ""IsDelete"" IS NULL)
+                ", ct);
 
-                if (result > 0)
+                var result = await _applicationDbContext.SaveChangesAsync(ct);
+
+                await trx.CommitAsync(ct);
+
+                return Ok(new
                 {
-                    return Ok(new
+                    message = "Data berhasil diperbarui. || 200 OK",
+                    data = new
                     {
-                        message = "Data berhasil diperbarui. || 200 OK",
-                        data = new
-                        {
-                            entity.BookingLabId,
-                            entity.NoOrder,
-                            entity.NomorSuratJaminan,
-                            entity.CatatanJaminan,
-                            entity.TglBooking,
-                            entity.UpdateDateTime
-                        }
-                    });
-                }
-
-                return StatusCode(500, new { message = "Gagal memperbarui data ke database." });
+                        entity.BookingLabId,
+                        entity.NoOrder,
+                        entity.NomorSuratJaminan,
+                        entity.CatatanJaminan,
+                        entity.TglBooking,
+                        entity.StatusKonfirmasi,
+                        entity.KonfirmatorId,
+                        entity.DokterPemeriksaId,
+                        entity.TglSampling,
+                        entity.UpdateDateTime,
+                        UpdatedLabBookingDetail = updatedDetailCount
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
+                await trx.RollbackAsync(ct);
+
+                return StatusCode(500, new
+                {
+                    message = "Kesalahan database.",
+                    error = dbEx.Message,
+                    innerError = dbEx.InnerException?.Message
+                });
             }
             catch (Exception ex)
             {
+                await trx.RollbackAsync(ct);
+
                 _logger.LogError(ex, "Error saat memperbarui booking lab");
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}",
+                    innerError = ex.InnerException?.Message
+                });
             }
         }
 

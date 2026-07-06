@@ -14,7 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Guid? KunjunganId { get; set; } // Relasi dengan tabel Kunjungan
         public Guid? PasienId { get; set; } // Relasi dengan tabel Pasien
         public Guid? AsuransiId { get; set; }
-        public DateTime? TglPenyerahanSampling { get; set; } // Tanggal pengambilan atau penyerahan sampel
+        public DateTime? TglSampling { get; set; } // Tanggal pengambilan atau penyerahan sampel
         public DateTime? TglBooking { get; set; } // Tanggal booking lab
         public DateTime? TglPemeriksaan { get; set; }
         public Guid? KelasId { get; set; } // Relasi ke tabel Kelas
