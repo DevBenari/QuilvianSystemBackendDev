@@ -66,7 +66,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                                 KaryawanId = k.UserActiveId,
                                 k.UserActiveId,
                                 NamaKaryawan = k.FullName, // Mengambil nama dari tabel UserActives
-                                k.DepartementId,
+                                k.DepartemenId,
                                 k.InstalasiUnitId,
                                 k.JabatanId,
                                 k.NoIdentitas,
@@ -221,7 +221,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 }
 
                 // 6. Mapping perubahan data dari ViewModel ke Entity yang sudah ada
-                data.DepartementId = vm.DepartementId ?? Guid.Empty;
+                data.DepartemenId = vm.DepartemenId ?? Guid.Empty;
                 data.InstalasiUnitId = vm.InstalasiUnitId ?? Guid.Empty;
                 data.JabatanId = vm.JabatanId ?? Guid.Empty;
                 data.NoIdentitas = vm.NoIdentitas;
