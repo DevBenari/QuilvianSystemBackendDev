@@ -599,7 +599,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         user.FotoPath = fotoPath;
                         user.DepartementId = user.DepartemenId;
                         user.InstalasiUnitId = user.InstalasiUnitId;
-                        // tidak perlu Add lagi!
                     }
 
                     await _applicationDbContext.SaveChangesAsync();

@@ -104,6 +104,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         ? d.Lab.NamaLab
                         : null,
                     NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
+                    TglBooking = d.LabBooking != null ? d.LabBooking.TglBooking : null,
+                    TglPemeriksaan = d.LabBooking != null ? d.LabBooking.TglPemeriksaan : null,
                     TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
                     TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
 
@@ -300,6 +302,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          ? d.Lab.NamaLab
                          : null,
                      NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
+                     TglBooking = d.LabBooking != null ? d.LabBooking.TglBooking : null,
+                     TglPemeriksaan = d.LabBooking != null ? d.LabBooking.TglPemeriksaan : null,
                      TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
                      TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
 
