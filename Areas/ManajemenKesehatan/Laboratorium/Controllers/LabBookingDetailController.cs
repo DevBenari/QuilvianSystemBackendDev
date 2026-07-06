@@ -103,6 +103,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaLab = d.Lab != null
                         ? d.Lab.NamaLab
                         : null,
+                    NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
+                    TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
+                    TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
+
+                    // informasi dokter
+                    DokterPemeriksa = d.LabBooking != null ? d.LabBooking.DokterPemeriksa.NmDokter : null,
+                    DokterKonsulen = d.LabBooking != null ? d.LabBooking.DokterKonsulen.NmDokter : null,
+                    DokterRujukan = d.LabBooking != null ? d.LabBooking.DokterPerujuk.NmDokter : null,
 
                     // Informasi Pasien
                     d.PasienId,
@@ -291,10 +299,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaLab = d.Lab != null
                          ? d.Lab.NamaLab
                          : null,
+                     NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
+                     TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
+                     TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
+
+                     // Informasi dokter
+                     DokterPemeriksa = d.LabBooking != null ? d.LabBooking.DokterPemeriksa.NmDokter : null,
+                     DokterKonsulen = d.LabBooking != null ? d.LabBooking.DokterKonsulen.NmDokter : null,
+                     DokterRujukan = d.LabBooking != null ? d.LabBooking.DokterPerujuk.NmDokter : null,
 
                      // Informasi Pasien
                      d.PasienId,
-
                      NamaPasien = d.LabBooking != null && d.LabBooking.Pasien != null
                          ? d.LabBooking.Pasien.NamaLengkap
                          : null,
@@ -925,6 +940,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                   NamaLab = d.Lab != null
                       ? d.Lab.NamaLab
                       : null,
+                  NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
+                  TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
+                  TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
+
+                  // informasi dokter
+                  DokterPemeriksa = d.LabBooking != null ? d.LabBooking.DokterPemeriksa.NmDokter : null,
+                  DokterKonsulen = d.LabBooking != null ? d.LabBooking.DokterKonsulen.NmDokter : null,
+                  DokterRujukan = d.LabBooking != null ? d.LabBooking.DokterPerujuk.NmDokter : null,
 
                   // Informasi Pasien
                   d.PasienId,
@@ -935,6 +958,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                   NoRM = d.LabBooking != null && d.LabBooking.Pasien != null
                       ? d.LabBooking.Pasien.NoRekamMedis
+                      : null,
+
+                  NoIdentitas = d.LabBooking != null && d.LabBooking.Pasien != null
+                      ? d.LabBooking.Pasien.NoIdentitas
                       : null,
 
                   JenisKelamin = d.LabBooking != null && d.LabBooking.Pasien != null
@@ -1036,7 +1063,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                   d.StatusPemeriksaan,
                   d.TanggalSelesai,
                   IsLunas = bl != null ? (bool?)bl.StatusBilling : null,
-                  d.QtyOrder
+                  d.QtyOrder,
+                  
               });
 
             // Filter kunjunganId
@@ -1069,8 +1097,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             {
                 var pattern = $"%{noRM.Trim()}%";
 
-                query = query.Where(x =>
-                    EF.Functions.ILike(x.NoRM ?? "", pattern));
+                query = query.Where
+                    (x =>EF.Functions.ILike(x.NoRM ?? "", pattern) ||
+                    EF.Functions.ILike(x.NoIdentitas ?? "", pattern));
             }
 
             if (!string.IsNullOrWhiteSpace(namaLab))
