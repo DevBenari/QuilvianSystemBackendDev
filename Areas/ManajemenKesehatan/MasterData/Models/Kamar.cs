@@ -14,5 +14,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Lantai { get; set; }
         public string? PosisiRuangan { get; set; }
         public string? Deskripsi { get; set; }
+
+        // navigation
+        public Kelas? Kelas { get; set; }
     }
 }
