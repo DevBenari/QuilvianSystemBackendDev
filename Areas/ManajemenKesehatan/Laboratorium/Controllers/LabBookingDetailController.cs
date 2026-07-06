@@ -920,11 +920,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
               join ap0 in _applicationDbContext.AsuransiPasiens.AsNoTracking()
                   on d.LabBooking.Kunjungan.AsuransiPasienId equals (Guid?)ap0.AsuransiPasienId into asuransiPasienJoin
               from ap in asuransiPasienJoin.DefaultIfEmpty()
-
-              join bl in _applicationDbContext.Billings.AsNoTracking()
-                on d.PemeriksaanLabId equals bl.ItemId into blg
-              from bl in blg.DefaultIfEmpty()
-
               where d.IsDelete == false || d.IsDelete == null
 
               select new
@@ -941,6 +936,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                       ? d.Lab.NamaLab
                       : null,
                   NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
+                  TglBooking = d.LabBooking != null ? d.LabBooking.TglBooking : null,
+                  TglPemeriksaan = d.LabBooking != null ? d.LabBooking.TglPemeriksaan : null,
                   TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
                   TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
 
@@ -1062,7 +1059,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                   d.NoPhoto,
                   d.StatusPemeriksaan,
                   d.TanggalSelesai,
-                  IsLunas = bl != null ? (bool?)bl.StatusBilling : null,
+                  IsLunas = _applicationDbContext.Billings
+                        .AsNoTracking()
+                        .Where(b =>
+                            b.KunjunganId == d.LabBooking.KunjunganId &&
+                            b.ItemId == d.PemeriksaanLabId &&
+                            b.JenisBilling == "Pemeriksaan Lab" &&
+                            (b.IsDelete == false || b.IsDelete == null))
+                        .Select(b => (bool?)b.StatusBilling)
+                        .FirstOrDefault(),
                   d.QtyOrder,
                   
               });
@@ -1155,18 +1160,68 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (startUtc.HasValue && endUtcExclusive.HasValue)
                 query = query.Where(x => x.CreateDateTime >= startUtc.Value && x.CreateDateTime < endUtcExclusive.Value);
 
-            // Sorting whitelist (hindari dynamic string reflection)
-            var desc = (sortDirection ?? "desc").Equals("desc", StringComparison.OrdinalIgnoreCase);
+            var desc = (sortDirection ?? "desc")
+                .Equals("desc", StringComparison.OrdinalIgnoreCase);
 
-            query = (orderBy ?? "CreateDateTime") switch
-            {
-                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName).ThenByDescending(x => x.CreateDateTime)
-                                      : query.OrderBy(x => x.CreateByName).ThenBy(x => x.CreateDateTime),
+            var selectedOrderBy = orderBy?.Trim() ?? "CreateDateTime";
 
-                _ => desc ? query.OrderByDescending(x => x.CreateDateTime)
-                          : query.OrderBy(x => x.CreateDateTime)
-            };
+            query = desc
+                ? selectedOrderBy switch
+                {
+                    "CreateDateTime" => query
+                        .OrderByDescending(x => x.CreateDateTime),
 
+                    "TglBooking" => query
+                        .OrderBy(x => x.TglBooking == null)
+                        .ThenByDescending(x => x.TglBooking)
+                        .ThenByDescending(x => x.CreateDateTime),
+
+                    "TglSampling" => query
+                        .OrderBy(x => x.TglSampling == null)
+                        .ThenByDescending(x => x.TglSampling)
+                        .ThenByDescending(x => x.CreateDateTime),
+
+                    "TglPemeriksaan" => query
+                        .OrderBy(x => x.TglPemeriksaan == null)
+                        .ThenByDescending(x => x.TglPemeriksaan)
+                        .ThenByDescending(x => x.CreateDateTime),
+
+                    "TglKonfirmasi" => query
+                        .OrderBy(x => x.TglKonfirmasi == null)
+                        .ThenByDescending(x => x.TglKonfirmasi)
+                        .ThenByDescending(x => x.CreateDateTime),
+
+                    _ => query
+                        .OrderByDescending(x => x.CreateDateTime)
+                }
+                : selectedOrderBy switch
+                {
+                    "CreateDateTime" => query
+                        .OrderBy(x => x.CreateDateTime),
+
+                    "TglBooking" => query
+                        .OrderBy(x => x.TglBooking == null)
+                        .ThenBy(x => x.TglBooking)
+                        .ThenBy(x => x.CreateDateTime),
+
+                    "TglSampling" => query
+                        .OrderBy(x => x.TglSampling == null)
+                        .ThenBy(x => x.TglSampling)
+                        .ThenBy(x => x.CreateDateTime),
+
+                    "TglPemeriksaan" => query
+                        .OrderBy(x => x.TglPemeriksaan == null)
+                        .ThenBy(x => x.TglPemeriksaan)
+                        .ThenBy(x => x.CreateDateTime),
+
+                    "TglKonfirmasi" => query
+                        .OrderBy(x => x.TglKonfirmasi == null)
+                        .ThenBy(x => x.TglKonfirmasi)
+                        .ThenBy(x => x.CreateDateTime),
+
+                    _ => query
+                        .OrderBy(x => x.CreateDateTime)
+                };
             // Total count (async)
             var totalRows = await query.CountAsync(ct);
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
