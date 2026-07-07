@@ -51,9 +51,29 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
         public string? FotoPath { get; set; }
         public string? FotoName { get; set; }
 
+        public bool? IsKaryawanMedis { get; set; } = false;
+        public string? StatusPerkawinan { get; set; }
+
+        public Guid? AgamaId { get; set; }
+
+        public Guid? PendidikanTerakhirId { get; set; }
+
+        // Alamat tinggal sekarang
+        public string? AlamatDomisili { get; set; }
+
+        public Guid? ProvinsiId { get; set; }
+
+        public Guid? KotaId { get; set; }
+
+        public Guid? KecId { get; set; }
+
+        public Guid? KewarganegaraanId { get; set; }
+
+        public string? StatusKewarganegaraan { get; set; }
+
         // navigation
         public Departement? Departemen { get; set; }
-        public InstalasiUnit? InstalasiUnit { get; set; }
+        //public InstalasiUnit? InstalasiUnit { get; set; }
         public Position? Position { get; set; }
         public TipeUser? TipeUser { get; set; }
         public Jabatan? Jabatan { get; set; }
