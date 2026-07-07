@@ -59,6 +59,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _noPhotoGeneratorService = noPhotoGeneratorService;
         }
 
+        private static string HitungUmurLengkap(DateTime? tanggalLahir)
+        {
+            if (!tanggalLahir.HasValue) return "-";
+
+            var today = DateTime.Today;
+            int tahun = today.Year - tanggalLahir.Value.Year;
+            int bulan = today.Month - tanggalLahir.Value.Month;
+            int hari = today.Day - tanggalLahir.Value.Day;
+
+            if (hari < 0)
+            {
+                bulan--;
+                var prevMonth = today.AddMonths(-1);
+                hari += DateTime.DaysInMonth(prevMonth.Year, prevMonth.Month);
+            }
+
+            if (bulan < 0)
+            {
+                tahun--;
+                bulan += 12;
+            }
+
+            return $"{tahun} tahun {bulan} bulan {hari} hari";
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
@@ -103,6 +128,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaLab = d.Lab != null
                         ? d.Lab.NamaLab
                         : null,
+                    Diagnosa = d.LabBooking != null ? d.LabBooking.DiagnosaAwal : null,
+                    NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
+                    TglBooking = d.LabBooking != null ? d.LabBooking.TglBooking : null,
+                    TglPemeriksaan = d.LabBooking != null ? d.LabBooking.TglPemeriksaan : null,
+                    TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
+                    TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
+
+                    // informasi dokter
+                    DokterPemeriksa = d.LabBooking != null ? d.LabBooking.DokterPemeriksa.NmDokter : null,
+                    DokterKonsulen = d.LabBooking != null ? d.LabBooking.DokterKonsulen.NmDokter : null,
+                    DokterRujukan = d.LabBooking != null ? d.LabBooking.DokterPerujuk.NmDokter : null,
 
                     // Informasi Pasien
                     d.PasienId,
@@ -114,6 +150,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NoRM = d.LabBooking != null && d.LabBooking.Pasien != null
                         ? d.LabBooking.Pasien.NoRekamMedis
                         : null,
+
+                    Umur = d.LabBooking != null && d.LabBooking.Pasien != null && d.LabBooking.Pasien.TanggalLahir.HasValue
+                         ? HitungUmurLengkap(d.LabBooking.Pasien.TanggalLahir)
+                         : null,
 
                     JenisKelamin = d.LabBooking != null && d.LabBooking.Pasien != null
                         ? d.LabBooking.Pasien.JenisKelamin
@@ -146,6 +186,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     // kamar
                     Kamarid = bb.KamarId,
                     NamaKamar = bb.Kamar != null ? bb.Kamar.NamaKamar : null,
+                    NamaKelas = bb.Kamar.Kelas != null ? bb.Kamar.Kelas.NamaKelas : null,
 
                     // Informasi Asuransi
                     AsuransiId = d.LabBooking != null && d.LabBooking.Kunjungan != null
@@ -291,16 +332,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaLab = d.Lab != null
                          ? d.Lab.NamaLab
                          : null,
+                     Diagnosa = d.LabBooking != null ? d.LabBooking.DiagnosaAwal : null,
+
+                     NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
+                     TglBooking = d.LabBooking != null ? d.LabBooking.TglBooking : null,
+                     TglPemeriksaan = d.LabBooking != null ? d.LabBooking.TglPemeriksaan : null,
+                     TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
+                     TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
+
+                     // Informasi dokter
+                     DokterPemeriksa = d.LabBooking != null ? d.LabBooking.DokterPemeriksa.NmDokter : null,
+                     DokterKonsulen = d.LabBooking != null ? d.LabBooking.DokterKonsulen.NmDokter : null,
+                     DokterRujukan = d.LabBooking != null ? d.LabBooking.DokterPerujuk.NmDokter : null,
 
                      // Informasi Pasien
                      d.PasienId,
-
                      NamaPasien = d.LabBooking != null && d.LabBooking.Pasien != null
                          ? d.LabBooking.Pasien.NamaLengkap
                          : null,
 
                      NoRM = d.LabBooking != null && d.LabBooking.Pasien != null
                          ? d.LabBooking.Pasien.NoRekamMedis
+                         : null,
+
+                     Umur = d.LabBooking != null && d.LabBooking.Pasien != null && d.LabBooking.Pasien.TanggalLahir.HasValue
+                         ? HitungUmurLengkap(d.LabBooking.Pasien.TanggalLahir)
                          : null,
 
                      JenisKelamin = d.LabBooking != null && d.LabBooking.Pasien != null
@@ -334,6 +390,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      // kamar
                      Kamarid = bb.KamarId,
                      NamaKamar = bb.Kamar != null ? bb.Kamar.NamaKamar : null,
+                     NamaKelas = bb.Kamar.Kelas != null ? bb.Kamar.Kelas.NamaKelas : null,
 
                      // Informasi Asuransi
                      AsuransiId = d.LabBooking != null && d.LabBooking.Kunjungan != null
@@ -392,6 +449,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaPemeriksaan = p != null
                          ? p.NamaPemeriksaan
                          : null,
+
+                     NamaKategori = p != null ? p.KategoriPemeriksaan.NamaKategori : null,
 
                      HargaPemeriksaan = p != null
                          ? p.HargaPemeriksaan
@@ -903,11 +962,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
               join ap0 in _applicationDbContext.AsuransiPasiens.AsNoTracking()
                   on d.LabBooking.Kunjungan.AsuransiPasienId equals (Guid?)ap0.AsuransiPasienId into asuransiPasienJoin
               from ap in asuransiPasienJoin.DefaultIfEmpty()
-
-              join bl in _applicationDbContext.Billings.AsNoTracking()
-                on d.PemeriksaanLabId equals bl.ItemId into blg
-              from bl in blg.DefaultIfEmpty()
-
               where d.IsDelete == false || d.IsDelete == null
 
               select new
@@ -923,6 +977,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                   NamaLab = d.Lab != null
                       ? d.Lab.NamaLab
                       : null,
+                  Diagnosa = d.LabBooking != null ? d.LabBooking.DiagnosaAwal : null,
+
+                  NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
+                  TglBooking = d.LabBooking != null ? d.LabBooking.TglBooking : null,
+                  TglPemeriksaan = d.LabBooking != null ? d.LabBooking.TglPemeriksaan : null,
+                  TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
+                  TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
+
+                  // informasi dokter
+                  DokterPemeriksa = d.LabBooking != null ? d.LabBooking.DokterPemeriksa.NmDokter : null,
+                  DokterKonsulen = d.LabBooking != null ? d.LabBooking.DokterKonsulen.NmDokter : null,
+                  DokterRujukan = d.LabBooking != null ? d.LabBooking.DokterPerujuk.NmDokter : null,
 
                   // Informasi Pasien
                   d.PasienId,
@@ -931,8 +997,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                       ? d.LabBooking.Pasien.NamaLengkap
                       : null,
 
+                  Umur = d.LabBooking != null && d.LabBooking.Pasien != null && d.LabBooking.Pasien.TanggalLahir.HasValue
+                         ? HitungUmurLengkap(d.LabBooking.Pasien.TanggalLahir)
+                         : null,
+
                   NoRM = d.LabBooking != null && d.LabBooking.Pasien != null
                       ? d.LabBooking.Pasien.NoRekamMedis
+                      : null,
+
+                  NoIdentitas = d.LabBooking != null && d.LabBooking.Pasien != null
+                      ? d.LabBooking.Pasien.NoIdentitas
                       : null,
 
                   JenisKelamin = d.LabBooking != null && d.LabBooking.Pasien != null
@@ -958,13 +1032,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.LabBooking.Kunjungan.Poliklinik != null
                       ? d.LabBooking.Kunjungan.Poliklinik.NamaPoliklinik
                       : null,
-                JenisKunjungan = d.LabBooking != null && d.LabBooking.Kunjungan != null
+                  JenisKunjungan = d.LabBooking != null && d.LabBooking.Kunjungan != null
                       ? d.LabBooking.Kunjungan.JenisKunjungan
                       : null,
 
                   // kamar
                   Kamarid =bb.KamarId,
                   NamaKamar = bb.Kamar != null ? bb.Kamar.NamaKamar : null,
+                  NamaKelas = bb.Kamar.Kelas != null ? bb.Kamar.Kelas.NamaKelas : null,
 
                   // Informasi Asuransi
                   AsuransiId = d.LabBooking != null && d.LabBooking.Kunjungan != null
@@ -1023,6 +1098,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                   NamaPemeriksaan = p != null
                       ? p.NamaPemeriksaan
                       : null,
+                  
+                  NamaKategori = p!= null ? p.KategoriPemeriksaan.NamaKategori :null,
 
                   HargaPemeriksaan = p != null
                       ? p.HargaPemeriksaan
@@ -1031,8 +1108,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                   d.NoPhoto,
                   d.StatusPemeriksaan,
                   d.TanggalSelesai,
-                  IsLunas = bl != null ? (bool?)bl.StatusBilling : null,
-                  d.QtyOrder
+                  IsLunas = _applicationDbContext.Billings
+                        .AsNoTracking()
+                        .Where(b =>
+                            b.KunjunganId == d.LabBooking.KunjunganId &&
+                            b.ItemId == d.PemeriksaanLabId &&
+                            b.JenisBilling == "Pemeriksaan Lab" &&
+                            (b.IsDelete == false || b.IsDelete == null))
+                        .Select(b => (bool?)b.StatusBilling)
+                        .FirstOrDefault(),
+                  d.QtyOrder,
+                  
               });
 
             // Filter kunjunganId
@@ -1065,8 +1151,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             {
                 var pattern = $"%{noRM.Trim()}%";
 
-                query = query.Where(x =>
-                    EF.Functions.ILike(x.NoRM ?? "", pattern));
+                query = query.Where
+                    (x =>EF.Functions.ILike(x.NoRM ?? "", pattern) ||
+                    EF.Functions.ILike(x.NoIdentitas ?? "", pattern));
             }
 
             if (!string.IsNullOrWhiteSpace(namaLab))
@@ -1085,6 +1172,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.JenisKunjungan == jk);
             }
 
+            var selectedOrderBy = orderBy?.Trim() ?? "CreateDateTime";
+
             // Filter periode/date range (gunakan range, jangan .Date)
             // Kita pakai UTC date boundary agar index CreateDateTime kepakai.
             DateTimeOffset? startUtc = null;
@@ -1093,7 +1182,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (startDate.HasValue && endDate.HasValue)
             {
                 var s = DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc);
-                var e = DateTime.SpecifyKind(endDate.Value.Date, DateTimeKind.Utc).AddDays(1); // exclusive
+                var e = DateTime.SpecifyKind(endDate.Value.Date, DateTimeKind.Utc).AddDays(1);
+
                 startUtc = new DateTimeOffset(s);
                 endUtcExclusive = new DateTimeOffset(e);
             }
@@ -1103,16 +1193,63 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 (DateTime s, DateTime e) = periode.Value switch
                 {
-                    PeriodeFilter.Today => (todayUtc, todayUtc.AddDays(1)),
-                    PeriodeFilter.ThisWeek => (todayUtc.AddDays(-(int)todayUtc.DayOfWeek), todayUtc.AddDays(1)),
-                    PeriodeFilter.LastWeek => (todayUtc.AddDays(-7 - (int)todayUtc.DayOfWeek), todayUtc.AddDays(-(int)todayUtc.DayOfWeek)),
-                    PeriodeFilter.ThisMonth => (new DateTime(todayUtc.Year, todayUtc.Month, 1), new DateTime(todayUtc.Year, todayUtc.Month, 1).AddMonths(1)),
-                    PeriodeFilter.LastMonth => (new DateTime(todayUtc.Year, todayUtc.Month, 1).AddMonths(-1), new DateTime(todayUtc.Year, todayUtc.Month, 1)),
-                    PeriodeFilter.ThisYear => (new DateTime(todayUtc.Year, 1, 1), new DateTime(todayUtc.Year + 1, 1, 1)),
-                    PeriodeFilter.LastYear => (new DateTime(todayUtc.Year - 1, 1, 1), new DateTime(todayUtc.Year, 1, 1)),
-                    PeriodeFilter.Last3Months => (todayUtc.AddMonths(-3), todayUtc.AddDays(1)),
-                    PeriodeFilter.Last6Months => (todayUtc.AddMonths(-6), todayUtc.AddDays(1)),
-                    _ => (todayUtc, todayUtc.AddDays(1))
+                    PeriodeFilter.Today =>
+                        (todayUtc, todayUtc.AddDays(1)),
+
+                    PeriodeFilter.Yesterday =>
+                       (todayUtc, todayUtc.AddDays(-1)),
+
+                    PeriodeFilter.ThisWeek =>
+                        (todayUtc.AddDays(-(int)todayUtc.DayOfWeek),
+                         todayUtc.AddDays(1)),
+
+                    PeriodeFilter.LastWeek =>
+                        (
+                            todayUtc.AddDays(-7 - (int)todayUtc.DayOfWeek),
+                            todayUtc.AddDays(-(int)todayUtc.DayOfWeek)
+                        ),
+
+                    PeriodeFilter.ThisMonth =>
+                        (
+                            new DateTime(todayUtc.Year, todayUtc.Month, 1),
+                            new DateTime(todayUtc.Year, todayUtc.Month, 1).AddMonths(1)
+                        ),
+
+                    PeriodeFilter.LastMonth =>
+                        (
+                            new DateTime(todayUtc.Year, todayUtc.Month, 1).AddMonths(-1),
+                            new DateTime(todayUtc.Year, todayUtc.Month, 1)
+                        ),
+
+                    PeriodeFilter.ThisYear =>
+                        (
+                            new DateTime(todayUtc.Year, 1, 1),
+                            new DateTime(todayUtc.Year + 1, 1, 1)
+                        ),
+
+                    PeriodeFilter.LastYear =>
+                        (
+                            new DateTime(todayUtc.Year - 1, 1, 1),
+                            new DateTime(todayUtc.Year, 1, 1)
+                        ),
+
+                    PeriodeFilter.Last3Months =>
+                        (
+                            todayUtc.AddMonths(-3),
+                            todayUtc.AddDays(1)
+                        ),
+
+                    PeriodeFilter.Last6Months =>
+                        (
+                            todayUtc.AddMonths(-6),
+                            todayUtc.AddDays(1)
+                        ),
+
+                    _ =>
+                        (
+                            todayUtc,
+                            todayUtc.AddDays(1)
+                        )
                 };
 
                 startUtc = new DateTimeOffset(DateTime.SpecifyKind(s, DateTimeKind.Utc));
@@ -1120,20 +1257,106 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
 
             if (startUtc.HasValue && endUtcExclusive.HasValue)
-                query = query.Where(x => x.CreateDateTime >= startUtc.Value && x.CreateDateTime < endUtcExclusive.Value);
-
-            // Sorting whitelist (hindari dynamic string reflection)
-            var desc = (sortDirection ?? "desc").Equals("desc", StringComparison.OrdinalIgnoreCase);
-
-            query = (orderBy ?? "CreateDateTime") switch
             {
-                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName).ThenByDescending(x => x.CreateDateTime)
-                                      : query.OrderBy(x => x.CreateByName).ThenBy(x => x.CreateDateTime),
+                switch (selectedOrderBy)
+                {
+                    case "TglBooking":
+                        query = query.Where(x =>
+                            x.TglBooking.HasValue &&
+                            x.TglBooking.Value >= startUtc.Value &&
+                            x.TglBooking.Value < endUtcExclusive.Value);
+                        break;
 
-                _ => desc ? query.OrderByDescending(x => x.CreateDateTime)
-                          : query.OrderBy(x => x.CreateDateTime)
-            };
+                    case "TglSampling":
+                        query = query.Where(x =>
+                            x.TglSampling.HasValue &&
+                            x.TglSampling.Value >= startUtc.Value &&
+                            x.TglSampling.Value < endUtcExclusive.Value);
+                        break;
 
+                    case "TglPemeriksaan":
+                        query = query.Where(x =>
+                            x.TglPemeriksaan.HasValue &&
+                            x.TglPemeriksaan.Value >= startUtc.Value &&
+                            x.TglPemeriksaan.Value < endUtcExclusive.Value);
+                        break;
+
+                    case "TglKonfirmasi":
+                        query = query.Where(x =>
+                            x.TglKonfirmasi.HasValue &&
+                            x.TglKonfirmasi.Value >= startUtc.Value &&
+                            x.TglKonfirmasi.Value < endUtcExclusive.Value);
+                        break;
+
+                    default:
+                        query = query.Where(x =>
+                            x.CreateDateTime >= startUtc.Value &&
+                            x.CreateDateTime < endUtcExclusive.Value);
+                        break;
+                }
+            }
+
+            var desc = (sortDirection ?? "desc")
+                .Equals("desc", StringComparison.OrdinalIgnoreCase);
+
+
+            query = desc
+                ? selectedOrderBy switch
+                {
+                    "CreateDateTime" => query
+                        .OrderByDescending(x => x.CreateDateTime),
+
+                    "TglBooking" => query
+                        .OrderBy(x => x.TglBooking == null)
+                        .ThenByDescending(x => x.TglBooking)
+                        .ThenByDescending(x => x.CreateDateTime),
+
+                    "TglSampling" => query
+                        .OrderBy(x => x.TglSampling == null)
+                        .ThenByDescending(x => x.TglSampling)
+                        .ThenByDescending(x => x.CreateDateTime),
+
+                    "TglPemeriksaan" => query
+                        .OrderBy(x => x.TglPemeriksaan == null)
+                        .ThenByDescending(x => x.TglPemeriksaan)
+                        .ThenByDescending(x => x.CreateDateTime),
+
+                    "TglKonfirmasi" => query
+                        .OrderBy(x => x.TglKonfirmasi == null)
+                        .ThenByDescending(x => x.TglKonfirmasi)
+                        .ThenByDescending(x => x.CreateDateTime),
+
+                    _ => query
+                        .OrderByDescending(x => x.CreateDateTime)
+                }
+                : selectedOrderBy switch
+                {
+                    "CreateDateTime" => query
+                        .OrderBy(x => x.CreateDateTime),
+
+                    "TglBooking" => query
+                        .OrderBy(x => x.TglBooking == null)
+                        .ThenBy(x => x.TglBooking)
+                        .ThenBy(x => x.CreateDateTime),
+
+                    "TglSampling" => query
+                        .OrderBy(x => x.TglSampling == null)
+                        .ThenBy(x => x.TglSampling)
+                        .ThenBy(x => x.CreateDateTime),
+
+                    "TglPemeriksaan" => query
+                        .OrderBy(x => x.TglPemeriksaan == null)
+                        .ThenBy(x => x.TglPemeriksaan)
+                        .ThenBy(x => x.CreateDateTime),
+
+                    "TglKonfirmasi" => query
+                        .OrderBy(x => x.TglKonfirmasi == null)
+                        .ThenBy(x => x.TglKonfirmasi)
+                        .ThenBy(x => x.CreateDateTime),
+
+                    _ => query
+                        .OrderBy(x => x.CreateDateTime)
+                };
             // Total count (async)
             var totalRows = await query.CountAsync(ct);
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);

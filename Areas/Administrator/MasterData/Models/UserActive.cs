@@ -1,4 +1,6 @@
-﻿using QuilvianSystemBackendDev.Models;
+﻿using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
@@ -32,7 +34,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
 
         //karyawan
         //public Guid KaryawanId { get; set; }
-        public Guid? DepartementId { get; set; }
         public Guid? JabatanId { get; set; }
 
         public string? NoIdentitas { get; set; }
@@ -49,5 +50,12 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
         public string? Alamat { get; set; }
         public string? FotoPath { get; set; }
         public string? FotoName { get; set; }
+
+        // navigation
+        public Departement? Departemen { get; set; }
+        public InstalasiUnit? InstalasiUnit { get; set; }
+        public Position? Position { get; set; }
+        public TipeUser? TipeUser { get; set; }
+        public Jabatan? Jabatan { get; set; }
     }
 }

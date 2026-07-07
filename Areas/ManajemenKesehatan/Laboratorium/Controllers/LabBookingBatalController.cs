@@ -92,7 +92,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         x.LabBooking.KunjunganId,
                         x.LabBooking.PasienId,
                         x.LabBooking.AsuransiId,
-                        x.LabBooking.TglPenyerahanSampling,
+                        x.LabBooking.TglSampling,
                         x.LabBooking.TglBooking,
                         x.LabBooking.TglPemeriksaan,
                         x.LabBooking.KelasId,

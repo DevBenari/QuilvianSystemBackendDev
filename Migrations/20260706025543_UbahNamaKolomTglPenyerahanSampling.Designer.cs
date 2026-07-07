@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260706025543_UbahNamaKolomTglPenyerahanSampling")]
+    partial class UbahNamaKolomTglPenyerahanSampling
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -329,13 +331,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Address")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("AgamaId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Alamat")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AlamatDomisili")
                         .HasColumnType("text");
 
                     b.Property<string>("BankId")
@@ -357,6 +353,9 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("DepartemenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DepartementId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Email")
@@ -394,23 +393,11 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
-                    b.Property<bool?>("IsKaryawanMedis")
-                        .HasColumnType("boolean");
-
                     b.Property<Guid?>("JabatanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("KecId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("KewarganegaraanId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("KodeKaryawan")
                         .HasColumnType("text");
-
-                    b.Property<Guid?>("KotaId")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("NoHandphone")
                         .HasColumnType("text");
@@ -427,9 +414,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NoSTR")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("PendidikanTerakhirId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("PinPegawai")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -441,16 +425,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("PositionId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("ProvinsiId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("StatusKewarganegaraan")
-                        .HasColumnType("text");
-
                     b.Property<string>("StatusPegawai")
-                        .HasColumnType("text");
-
-                    b.Property<string>("StatusPerkawinan")
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("TanggalAkhirKerja")
@@ -476,16 +451,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("UserActiveId");
-
-                    b.HasIndex("DepartemenId");
-
-                    b.HasIndex("InstalasiUnitId");
-
-                    b.HasIndex("JabatanId");
-
-                    b.HasIndex("PositionId");
-
-                    b.HasIndex("TipeUserId");
 
                     b.ToTable("MstUserActive", "public");
                 });
@@ -13207,8 +13172,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("KamarId");
 
-                    b.HasIndex("KelasId");
-
                     b.ToTable("Kamars");
                 });
 
@@ -23907,39 +23870,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models.UserActive", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.Departement", "Departemen")
-                        .WithMany()
-                        .HasForeignKey("DepartemenId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.InstalasiUnit", "InstalasiUnit")
-                        .WithMany()
-                        .HasForeignKey("InstalasiUnitId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Jabatan", "Jabatan")
-                        .WithMany()
-                        .HasForeignKey("JabatanId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.Position", "Position")
-                        .WithMany()
-                        .HasForeignKey("PositionId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TipeUser", "TipeUser")
-                        .WithMany()
-                        .HasForeignKey("TipeUserId");
-
-                    b.Navigation("Departemen");
-
-                    b.Navigation("InstalasiUnit");
-
-                    b.Navigation("Jabatan");
-
-                    b.Navigation("Position");
-
-                    b.Navigation("TipeUser");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.AP.Models.DetailPembayaranAP", b =>
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.Finance.AP.Models.PembayaranAP", "PembayaranAP")
@@ -24694,15 +24624,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasForeignKey("ProvinsiId");
 
                     b.Navigation("Provinsi");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kamar", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kelas", "Kelas")
-                        .WithMany()
-                        .HasForeignKey("KelasId");
-
-                    b.Navigation("Kelas");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kecamatan", b =>

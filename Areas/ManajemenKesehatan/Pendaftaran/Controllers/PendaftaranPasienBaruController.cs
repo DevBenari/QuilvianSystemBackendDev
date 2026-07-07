@@ -201,6 +201,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                                         ? $"/FotoPasienBaru/{a.FotoName}"
                                         : $"/FotoPasienBaru/user.jpg",
                             QRUrl = $"/QRCodePasienBaru/{Path.GetFileName(a.QrCode)}",
+                            
                         };
 
             // Hitung total data sebelum paginasi

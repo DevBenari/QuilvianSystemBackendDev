@@ -597,9 +597,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         user.NoHandphone = user.Handphone;
                         user.FotoName = fotoFileName;
                         user.FotoPath = fotoPath;
-                        user.DepartementId = user.DepartemenId;
+                        user.DepartemenId = user.DepartemenId;
                         user.InstalasiUnitId = user.InstalasiUnitId;
-                        // tidak perlu Add lagi!
                     }
 
                     await _applicationDbContext.SaveChangesAsync();
@@ -777,7 +776,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 user.NoIdentitas = vm.IdentityNumber;
                 user.Alamat = vm.Address;
                 user.NoHandphone = vm.Handphone;
-                user.DepartementId = vm.DepartemenId;
                 user.UpdateDateTime = DateTimeOffset.UtcNow;
                 user.UpdateBy = userActiveLoginId;
 

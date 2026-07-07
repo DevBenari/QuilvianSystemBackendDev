@@ -3,7 +3,7 @@
     public class KaryawanViewModel
     {
         public Guid? UserActiveId { get; set; }
-        public Guid? DepartementId { get; set; }
+        public Guid? DepartemenId { get; set; }
         public Guid? InstalasiUnitId { get; set; }
         public Guid? JabatanId { get; set; }
         public string? NoIdentitas { get; set; }
