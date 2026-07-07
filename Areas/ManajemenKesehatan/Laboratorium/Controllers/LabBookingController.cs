@@ -278,7 +278,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.HasilPenunjangLab,
                         b.AnjuranDiet,
                         b.StatusKonfirmasi,
-
                         Details = details ?? new List<object>()
                     };
                 }).ToList();
@@ -1065,7 +1064,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 // Update dokter pemeriksa di LabBookingDetail
                 var updatedDetailCount = await _applicationDbContext.Database.ExecuteSqlInterpolatedAsync($@"
-                    UPDATE ""LabBookingDetails""
+                    UPDATE ""LabBookingDetail""
                     SET 
                         ""DokterPemeriksaId"" = {vm.DokterPemeriksaId},
                         ""UpdateBy"" = {userActiveId},
