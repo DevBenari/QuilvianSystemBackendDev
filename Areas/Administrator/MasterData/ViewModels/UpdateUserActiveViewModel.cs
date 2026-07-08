@@ -1,4 +1,6 @@
-﻿namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.ViewModels
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.ViewModels
 {
     public class UpdateUserActiveViewModel
     {
@@ -18,5 +20,52 @@
         public IFormFile? Foto { get; set; }
         public string? NoSTR { get; set; }
         public string? StatusPegawai { get; set; }
+
+
+
+        public Guid UserActiveId { get; set; }
+        public string UserActiveCode { get; set; }
+        [MaxLength(64)]
+        public string? PinPegawai { get; set; }
+
+
+        //karyawan
+        //public Guid KaryawanId { get; set; }
+        public Guid? JabatanId { get; set; }
+
+        public string? NoIdentitas { get; set; }
+        public string? KodeKaryawan { get; set; }
+        public string? NoRekening { get; set; }
+        public string? NoKaryawan { get; set; }
+        public string? BankId { get; set; }
+
+        public DateTime? TanggalKontrak { get; set; }
+        public DateTime? TanggalAwalKerja { get; set; }
+        public DateTime? TanggalAkhirKerja { get; set; }
+
+        public string? NoHandphone { get; set; }
+        public string? Alamat { get; set; }
+        public string? FotoPath { get; set; }
+        public string? FotoName { get; set; }
+
+        public bool? IsKaryawanMedis { get; set; } = false;
+        public string? StatusPerkawinan { get; set; }
+
+        public Guid? AgamaId { get; set; }
+
+        public Guid? PendidikanTerakhirId { get; set; }
+
+        // Alamat tinggal sekarang
+        public string? AlamatDomisili { get; set; }
+
+        public Guid? ProvinsiId { get; set; }
+
+        public Guid? KotaId { get; set; }
+
+        public Guid? KecId { get; set; }
+
+        public Guid? KewarganegaraanId { get; set; }
+
+        public string? StatusKewarganegaraan { get; set; }
     }
 }
