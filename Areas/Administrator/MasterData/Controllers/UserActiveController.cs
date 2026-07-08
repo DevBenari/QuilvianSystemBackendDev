@@ -674,7 +674,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             });
         }
 
-
         [HttpPut("UserActive/{id}")]
         public async Task<IActionResult> UpdateUserActive(Guid id, [FromForm] UpdateUserActiveViewModel vm)
         {
@@ -980,7 +979,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
 
         [HttpPost("UbahPassword")]
         public async Task<IActionResult> UbahPassword(ResetPasswordViewModel vm)

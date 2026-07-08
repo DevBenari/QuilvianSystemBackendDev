@@ -123,6 +123,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         x.Booking.PasienId,
                         NamaLengkap = x.Booking.Pasien != null ? x.Booking.Pasien.NamaLengkap : null,
                         NoRekamMedis = x.Booking.Pasien != null ? x.Booking.Pasien.NoRekamMedis : null,
+                        NoIdentitas = x.Booking.Pasien != null ? x.Booking.Pasien.NoIdentitas : null,
 
                         x.Booking.DiskonId,
                         NamaDiskon = x.Booking.Diskon != null ? x.Booking.Diskon.NamaDiskon : null,
@@ -245,6 +246,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.PasienId,
                         b.NamaLengkap,
                         b.NoRekamMedis,
+                        b.NoIdentitas,
 
                         b.DiskonId,
                         b.NamaDiskon,
@@ -346,6 +348,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         PasienId = b.PasienId,
                         PasienNama = b.Pasien != null ? b.Pasien.NamaLengkap : null,
                         NoRekamMedis = b.Pasien != null ? b.Pasien.NoRekamMedis : null,
+                        NoIdentitas = b.Pasien != null ? b.Pasien.NoIdentitas : null,
                         JenisKelamin = b.Pasien != null ? b.Pasien.JenisKelamin : null,
 
                         b.DiskonId,
@@ -477,6 +480,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.PasienId,
                     header.PasienNama,
                     header.NoRekamMedis,
+                    header.NoIdentitas,
                     header.JenisKelamin,
 
                     header.DiskonId,
@@ -1419,6 +1423,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             bool? isPasienPersiapan = null,
             Guid? labId = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+            string? search = null,
             string? namaLab = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -1474,6 +1479,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     from b in parentQuery
                     where b.Kunjungan.JenisKunjungan == jk.ToString()
                     select b;
+            }
+
+            // filter norm dan noidentitas
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var keyword = search.Trim();
+
+                parentQuery = parentQuery.Where(b =>
+                    b.Pasien != null &&
+                    (
+                        (
+                            b.Pasien.NoRekamMedis != null &&
+                            EF.Functions.ILike(b.Pasien.NoRekamMedis, $"%{keyword}%")
+                        )
+                        ||
+                        (
+                            b.Pasien.NoIdentitas != null &&
+                            EF.Functions.ILike(b.Pasien.NoIdentitas, $"%{keyword}%")
+                        )
+                    )
+                );
             }
 
             // filter periode
@@ -1647,6 +1673,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     PasienId = b.PasienId,
                     NamaLengkap = b.Pasien != null ? b.Pasien.NamaLengkap : null,
                     NoRekamMedis = b.Pasien != null ? b.Pasien.NoRekamMedis : null,
+                    NoIdentitas = b.Pasien != null ? b.Pasien.NoIdentitas : null,
                     JenisKelamin = b.Pasien != null ? b.Pasien.JenisKelamin : null,
 
                     PoliId = b.Kunjungan != null ? b.Kunjungan.PoliklinikId : null,
@@ -1888,6 +1915,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
             bool? isPasienPersiapan = null,
+            string? search = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -1950,6 +1978,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 baseQuery = baseQuery.Where(b =>
                     b.Kunjungan != null &&
                     b.Kunjungan.JenisKunjungan == jk);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var keyword = search.Trim();
+
+                baseQuery = baseQuery.Where(b =>
+                    b.Pasien != null &&
+                    (
+                        (
+                            b.Pasien.NoRekamMedis != null &&
+                            EF.Functions.ILike(b.Pasien.NoRekamMedis, $"%{keyword}%")
+                        )
+                        ||
+                        (
+                            b.Pasien.NoIdentitas != null &&
+                            EF.Functions.ILike(b.Pasien.NoIdentitas, $"%{keyword}%")
+                        )
+                    )
+                );
             }
 
             if (startDate.HasValue && endDate.HasValue)
@@ -2057,6 +2105,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     PasienId = b.PasienId,
                     NamaLengkap = b.Pasien != null ? b.Pasien.NamaLengkap : null,
                     NoRekamMedis = b.Pasien != null ? b.Pasien.NoRekamMedis : null,
+                    NoIdentitas = b.Pasien != null ? b.Pasien.NoIdentitas : null,
                     JenisKelamin = b.Pasien != null ? b.Pasien.JenisKelamin : null,
 
                     PoliId = b.Kunjungan != null ? b.Kunjungan.PoliklinikId : null,
@@ -2283,6 +2332,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
+            string? search = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -2341,6 +2391,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 baseQuery = baseQuery.Where(b =>
                     b.Kunjungan != null &&
                     b.Kunjungan.JenisKunjungan == jk);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var keyword = search.Trim();
+
+                baseQuery = baseQuery.Where(b =>
+                    b.Pasien != null &&
+                    (
+                        (
+                            b.Pasien.NoRekamMedis != null &&
+                            EF.Functions.ILike(b.Pasien.NoRekamMedis, $"%{keyword}%")
+                        )
+                        ||
+                        (
+                            b.Pasien.NoIdentitas != null &&
+                            EF.Functions.ILike(b.Pasien.NoIdentitas, $"%{keyword}%")
+                        )
+                    )
+                );
             }
 
             // =============================
@@ -2539,6 +2609,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     PasienId = b.PasienId,
                     NamaLengkap = b.Pasien != null ? b.Pasien.NamaLengkap : null,
                     NoRekamMedis = b.Pasien != null ? b.Pasien.NoRekamMedis : null,
+                    NoIdentitas = b.Pasien != null ? b.Pasien.NoIdentitas : null,
                     JenisKelamin = b.Pasien != null ? b.Pasien.JenisKelamin : null,
 
                     PoliId = b.Kunjungan != null ? b.Kunjungan.PoliklinikId : null,
@@ -2677,6 +2748,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? labBookingId = null,
             Guid? dokterPemeriksaId = null,
             string? dokterKonsul = null,
+            string? search = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -2726,6 +2798,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var keyword = search.Trim();
+
+                baseQuery = baseQuery.Where(b =>
+                    b.Pasien != null &&
+                    (
+                        (
+                            b.Pasien.NoRekamMedis != null &&
+                            EF.Functions.ILike(b.Pasien.NoRekamMedis, $"%{keyword}%")
+                        )
+                        ||
+                        (
+                            b.Pasien.NoIdentitas != null &&
+                            EF.Functions.ILike(b.Pasien.NoIdentitas, $"%{keyword}%")
+                        )
+                    )
+                );
+            }
 
             // =============================
             // 2) Filter periode
@@ -3086,6 +3178,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
             string? dokterKonsul = null,
+            string? search = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -3149,6 +3242,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 baseQuery = baseQuery.Where(b =>
                     b.Kunjungan != null &&
                     b.Kunjungan.JenisKunjungan == jk);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var keyword = search.Trim();
+
+                baseQuery = baseQuery.Where(b =>
+                    b.Pasien != null &&
+                    (
+                        (
+                            b.Pasien.NoRekamMedis != null &&
+                            EF.Functions.ILike(b.Pasien.NoRekamMedis, $"%{keyword}%")
+                        )
+                        ||
+                        (
+                            b.Pasien.NoIdentitas != null &&
+                            EF.Functions.ILike(b.Pasien.NoIdentitas, $"%{keyword}%")
+                        )
+                    )
+                );
             }
 
             // =============================

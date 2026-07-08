@@ -1214,16 +1214,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     ms.Position = 0;
 
                     var content = new MultipartFormDataContent
-            {
-                {
-                    new StreamContent(ms)
                     {
-                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                    }, "file", fotoFileName
-                },
-                { new StringContent("FotoPasienBaru"), "folderTarget" },
-                { new StringContent(oldFileName), "oldFileName" }
-            };
+                        {
+                            new StreamContent(ms)
+                            {
+                                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                            }, "file", fotoFileName
+                        },
+                        { new StringContent("FotoPasienBaru"), "folderTarget" },
+                        { new StringContent(oldFileName), "oldFileName" }
+                    };
 
                     var flaskResponse = await client.PostAsync(_uploadUrl, content);
                     if (!flaskResponse.IsSuccessStatusCode)
@@ -1293,7 +1293,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedPendaftaranPasienBaru(
+        public async Task<IActionResult> PagedPendaftaranPasienBaru(
         int page = 1,
         int perPage = 10,
         string? search = null,
