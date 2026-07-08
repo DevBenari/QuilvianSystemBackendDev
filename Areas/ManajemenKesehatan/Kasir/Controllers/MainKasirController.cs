@@ -659,7 +659,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         public async Task<IActionResult> GetBillingKasirByKunjunganId(
             Guid kunjunganId,
             [FromQuery] DateTime? asOf = null,
-            [FromQuery] string? jenisKunjungan = null,
+            [FromQuery] EnumJenisKunjungan? jenisKunjungan = null,
             [FromQuery] string? asalKunjungan = null,
             CancellationToken ct = default)
         {
@@ -1677,6 +1677,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             [FromQuery] StatusBayarEnum? status = null,
             [FromQuery] bool? iclosed = null,
             [FromQuery] string? search = null,
+            [FromQuery] string? namaAsuransi = null,
             [FromQuery] bool? ispks = null,
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null,
@@ -1697,6 +1698,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 PasienId = pasienId,
                 asal = asalKunjungan,
                 jk = jenisKunjungan,
+                //NamaAsuransi = namaAsuransi,
                 isClosed = iclosed,
                 isPks = ispks,
                 Search = search,

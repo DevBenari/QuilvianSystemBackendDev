@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
@@ -36,6 +37,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public decimal? Deposito { get;  set; }
         public decimal? SisaDeposito { get; set; }
         public decimal? TotalPembayaran { get; set; }
+
+        public Kunjungan? Kunjungan { get; set; }
     }
 
 }
