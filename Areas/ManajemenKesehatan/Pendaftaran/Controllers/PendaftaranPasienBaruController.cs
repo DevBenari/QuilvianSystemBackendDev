@@ -258,6 +258,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.TipePendaftaran,
                     listdata.TitleId,
                     listdata.NamaLengkap,
+                    listdata.KaryawanId,
                     listdata.NoKaryawan,
                     listdata.IdentitasId,
                     listdata.NoIdentitas,
@@ -395,6 +396,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     pasien.TipePasien,
                     pasien.TitleId,
                     pasien.NamaLengkap,
+                    pasien.KaryawanId,
                     pasien.NoKaryawan,
                     pasien.IdentitasId,
                     pasien.NoIdentitas,
@@ -532,6 +534,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     pasien.TipePasien,
                     pasien.TitleId,
                     pasien.NamaLengkap,
+                    pasien.KaryawanId,
                     pasien.NoKaryawan,
                     pasien.IdentitasId,
                     pasien.NoIdentitas,
@@ -664,6 +667,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.TipePasien,
                     listdata.TitleId,
                     listdata.NamaLengkap,
+                    listdata.KaryawanId,
                     listdata.NoKaryawan,
                     listdata.IdentitasId,
                     listdata.NoIdentitas,
@@ -1024,6 +1028,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     MembershipId = vm.MembershipId,
                     TinggalBersama = vm.TinggalBersama,
 
+                    // jika pasien adalah karyawan
+                    NoKaryawan = vm.NoKaryawan,
+                    KaryawanId = vm.KaryawanId,
+
                     // ✅ sesuai pola Lab (path hasil dari Flask)
                     FotoName = fotoFileName,
                     FotoPath = fotoPath,
@@ -1321,6 +1329,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             TipePasien = a.TipePasien,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
+                            KaryawanId = a.KaryawanId,
                             NoKaryawan = a.NoKaryawan,
                             CatatanKhusus = a.CatatanKhusus,
                             FotoName = a.FotoName,
