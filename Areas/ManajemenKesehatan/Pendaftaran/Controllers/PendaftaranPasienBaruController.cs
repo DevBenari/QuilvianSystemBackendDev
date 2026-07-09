@@ -845,23 +845,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 }
 
                 // =============================
-                // VALIDASI KHUSUS KARYAWAN KIOSK
+                // CARI NO KARYAWAN KHUSUS KARYAWAN KIOSK
                 // =============================
-                if (!string.IsNullOrWhiteSpace(vm.NoKaryawan))
-                {
-                    vm.NoKaryawan = vm.NoKaryawan.Trim();
-
-                    var isNoKaryawanExists = await _applicationDbContext.PendaftaranPasienBarus
-                        .AnyAsync(x => x.NoKaryawan == vm.NoKaryawan, ct);
-
-                    if (isNoKaryawanExists)
-                    {
-                        return Conflict(new
-                        {
-                            message = "Data sudah tersedia"
-                        });
-                    }
-                }
+                var noKaryawan = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .Where(x => x.UserActiveId == vm.KaryawanId)
+                    .Select(x => x.NoKaryawan)
+                    .FirstOrDefaultAsync(ct);
 
                 // =============================
                 // ✅ Cek Duplikasi 
@@ -1029,7 +1019,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     TinggalBersama = vm.TinggalBersama,
 
                     // jika pasien adalah karyawan
-                    NoKaryawan = vm.NoKaryawan,
+                    NoKaryawan = noKaryawan,
                     KaryawanId = vm.KaryawanId,
 
                     // ✅ sesuai pola Lab (path hasil dari Flask)
