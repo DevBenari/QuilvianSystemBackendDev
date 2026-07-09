@@ -84,7 +84,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public EnumJenisKunjungan? jk {  get; set; }
         public string? Search { get; set; }
         public string? StatusBilling { get; set; }
-        //public string? NamaAsuransi { get; set; }
+        public string? NamaAsuransi { get; set; }
         public bool? isClosed { get; set; }
         public bool? isPks { get; set; }
         public bool? isCovered { get; set; }
@@ -2129,6 +2129,28 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         }
 
         // ============================================================
+        // FILTER NAMA ASURANSI / ASURANSI EXCESS
+        // ============================================================
+        if (!string.IsNullOrWhiteSpace(query.NamaAsuransi))
+        {
+            var namaAsuransi = query.NamaAsuransi.Trim();
+
+            baseQuery = baseQuery.Where(k =>
+                (
+                    k.Asuransi != null &&
+                    k.Asuransi.NamaAsuransi != null &&
+                    EF.Functions.ILike(k.Asuransi.NamaAsuransi, $"%{namaAsuransi}%")
+                )
+                ||
+                (
+                    k.AsuransiExcess != null &&
+                    k.AsuransiExcess.NamaAsuransi != null &&
+                    EF.Functions.ILike(k.AsuransiExcess.NamaAsuransi, $"%{namaAsuransi}%")
+                )
+            );
+        }
+
+        // ============================================================
         // FILTER NAMA & NO HP 
         // ============================================================
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -2167,20 +2189,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     b.StatusBilling != null &&
                     EF.Functions.ILike(b.StatusBilling, wantedStatusBilling)));
         }
-
-        //if (!string.IsNullOrWhiteSpace(query.NamaAsuransi))
-        //{
-        //    var keyword = $"%{query.NamaAsuransi.Trim()}%";
-
-        //    baseQuery = baseQuery.Where(x =>
-        //        (x.Kunjungan.Asuransi != null &&
-        //         EF.Functions.ILike(x.Kunjungan.Asuransi.NamaAsuransi, keyword))
-
-        //        ||
-
-        //        (x.Kunjungan.AsuransiExcess != null &&
-        //         EF.Functions.ILike(x.Kunjungan.AsuransiExcess.NamaAsuransi, keyword)));
-        //}
 
         // date range
         if (query.StartDate.HasValue && query.EndDate.HasValue)
@@ -2712,7 +2720,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.TotalRacikan = dto.DaftarRacikan.Sum(x => (decimal)((dynamic)x).Subtotal);
             }
 
-            // TINDAKAN
             // =========================
             // TINDAKAN
             // =========================
@@ -3306,6 +3313,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         };
     }
     #endregion
+
     // ======================================================
     // FUNCTION GET BY ID MAIN KASIR (pembayaran dan detailnya)
     // =======================================================

@@ -1698,7 +1698,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 PasienId = pasienId,
                 asal = asalKunjungan,
                 jk = jenisKunjungan,
-                //NamaAsuransi = namaAsuransi,
+                NamaAsuransi = namaAsuransi,
                 isClosed = iclosed,
                 isPks = ispks,
                 Search = search,
