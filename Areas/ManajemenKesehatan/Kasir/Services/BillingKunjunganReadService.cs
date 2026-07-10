@@ -84,6 +84,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public EnumJenisKunjungan? jk {  get; set; }
         public string? Search { get; set; }
         public string? StatusBilling { get; set; }
+        public string? NamaAsuransi { get; set; }
         public bool? isClosed { get; set; }
         public bool? isPks { get; set; }
         public bool? isCovered { get; set; }
@@ -169,11 +170,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 on k.AsuransiId equals a0.AsuransiId into ag
             from a in ag.DefaultIfEmpty()
 
-                // JOIN berdasarkan AsuransiPasienId yang tersimpan di kunjungan
-            join ap0 in _db.AsuransiPasiens.AsNoTracking()
-                on k.AsuransiPasienId equals (Guid?)ap0.AsuransiPasienId into apg
-            from ap in apg.DefaultIfEmpty()
-
             select new
             {
                 k.KunjunganID,
@@ -185,6 +181,26 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.TipePembayaran,
                 k.PasienId,
                 k.AsuransiId,
+                NamaAsuransi = k.Asuransi != null
+                    ? k.Asuransi.NamaAsuransi
+                    : null,
+                //IsPKS = k.AsuransiPasien != null
+                //    ? k.AsuransiPasien.Asuransi.IsPKS
+                //    : null,
+                //NoPolis = k.AsuransiPasien != null
+                //    ? k.AsuransiPasien.NoPolis
+                //    : null,
+
+                k.AsuransiExcessId,
+                NamaAsuransiExcess = k.AsuransiExcess != null
+                    ? k.AsuransiExcess.NamaAsuransi
+                    : null,
+                //NoPolisExcess = k.AsuransiPasienExcess != null
+                //    ? k.AsuransiPasienExcess.NoPolis
+                //    : null,
+                //IsPKSExcess = k.AsuransiPasienExcess != null
+                //    ? k.AsuransiPasienExcess.Asuransi.IsPKS
+                //    : null,
 
                 NamaLengkap = p != null ? p.NamaLengkap : null,
                 JenisKelamin = p != null ? p.JenisKelamin : null,
@@ -195,9 +211,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                 NmDokter = d != null ? d.NmDokter : null,
                 NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
-                NamaAsuransi = a != null ? a.NamaAsuransi : null,
-                NoPolis = ap != null ? ap.NoPolis : null,
-                IsPKS = a != null ? a.IsPKS : null,
             }
         ).FirstOrDefaultAsync(ct);
 
@@ -223,8 +236,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             NamaPoliklinik = header.NamaPoliklinik,
             TipePembayaran = header.TipePembayaran,
             NamaAsuransi = header.NamaAsuransi,
-            NoPolis = header.NoPolis,
-            IsPKS = header.IsPKS,
+            //IsPKS = header.IsPKS,
+            //NoPolis = header.NoPolis,
+            NamaAsuransiExcess = header.NamaAsuransiExcess,
+            //NoPolisExcess = header.NoPolisExcess,
+            //IsPKSExcess = header.IsPKSExcess,
             Umur = HitungUmurLengkap(header.TanggalLahir)
         };
 
@@ -1055,7 +1071,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     public async Task<BillingKunjunganDto?> GetBillingByKunjunganId(
     Guid kunjunganId,
     DateTime? asOf = null,
-    string? jenisKunjungan = null,
+    EnumJenisKunjungan? jenisKunjungan = null,
     string? asalKunjungan = null,
     CancellationToken ct = default)
     {
@@ -1067,13 +1083,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.KunjunganID == kunjunganId &&
                 !k.IsDelete);
 
-        if (!string.IsNullOrWhiteSpace(jenisKunjungan))
+        if (jenisKunjungan.HasValue)
         {
-            var jenis = jenisKunjungan.Trim();
-
             kunjunganQuery = kunjunganQuery.Where(k =>
-                k.JenisKunjungan != null &&
-                k.JenisKunjungan.Trim().ToUpper() == jenis.ToUpper());
+                k.JenisKunjungan == jenisKunjungan.Value.ToString());
         }
 
         if (!string.IsNullOrWhiteSpace(asalKunjungan))
@@ -1122,6 +1135,26 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.TipePembayaran,
                 k.PasienId,
                 k.AsuransiId,
+                NamaAsuransi = k.Asuransi != null
+                    ? k.Asuransi.NamaAsuransi
+                    : null,
+                //IsPKS = k.AsuransiPasien != null
+                //    ? k.AsuransiPasien.Asuransi.IsPKS
+                //    : null,
+                //NoPolis = k.AsuransiPasien != null
+                //    ? k.AsuransiPasien.NoPolis
+                //    : null,
+
+                k.AsuransiExcessId,
+                NamaAsuransiExcess = k.AsuransiExcess != null
+                    ? k.AsuransiExcess.NamaAsuransi
+                    : null,
+                //NoPolisExcess = k.AsuransiPasienExcess != null
+                //    ? k.AsuransiPasienExcess.NoPolis
+                //    : null,
+                //IsPKSExcess = k.AsuransiPasienExcess != null
+                //    ? k.AsuransiPasienExcess.Asuransi.IsPKS
+                //    : null,
 
                 NamaLengkap = p != null ? p.NamaLengkap : null,
                 NoKaryawan = p != null ? p.NoKaryawan : null,
@@ -1131,9 +1164,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                 NmDokter = d != null ? d.NmDokter : null,
                 NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
-                NamaAsuransi = a != null ? a.NamaAsuransi : null,
-                NoPolis = ap != null ? ap.NoPolis : null,
-                IsPKS = a != null ? a.IsPKS : null,
+
             }
         ).FirstOrDefaultAsync(ct);
 
@@ -1159,8 +1190,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             NamaPoliklinik = header.NamaPoliklinik,
             TipePembayaran = header.TipePembayaran,
             NamaAsuransi = header.NamaAsuransi,
-            NoPolis = header.NoPolis,
-            IsPKS = header.IsPKS,
+            //NoPolis = header.NoPolis,
+            //IsPKS = header.IsPKS,
+            NamaAsuransiExcess = header.NamaAsuransiExcess,
+            //NoPolisExcess = header.NoPolisExcess,
+            //IsPKSExcess = header.IsPKSExcess,
             Umur = HitungUmurLengkap(header.TanggalLahir)
         };
 
@@ -2095,6 +2129,28 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         }
 
         // ============================================================
+        // FILTER NAMA ASURANSI / ASURANSI EXCESS
+        // ============================================================
+        if (!string.IsNullOrWhiteSpace(query.NamaAsuransi))
+        {
+            var namaAsuransi = query.NamaAsuransi.Trim();
+
+            baseQuery = baseQuery.Where(k =>
+                (
+                    k.Asuransi != null &&
+                    k.Asuransi.NamaAsuransi != null &&
+                    EF.Functions.ILike(k.Asuransi.NamaAsuransi, $"%{namaAsuransi}%")
+                )
+                ||
+                (
+                    k.AsuransiExcess != null &&
+                    k.AsuransiExcess.NamaAsuransi != null &&
+                    EF.Functions.ILike(k.AsuransiExcess.NamaAsuransi, $"%{namaAsuransi}%")
+                )
+            );
+        }
+
+        // ============================================================
         // FILTER NAMA & NO HP 
         // ============================================================
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -2199,16 +2255,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 on k.PoliklinikId equals poli0.PoliklinikId into polig
             from poli in polig.DefaultIfEmpty()
 
-            join a0 in _db.Asuransis.AsNoTracking()
-                on k.AsuransiId equals a0.AsuransiId into ag
-            from a in ag.DefaultIfEmpty()
-
-                // ✅ LEFT JOIN AsuransiPasien, tapi khusus yang match AsuransiId kunjungan
-                // JOIN berdasarkan AsuransiPasienId yang tersimpan di kunjungan
-            join ap0 in _db.AsuransiPasiens.AsNoTracking()
-                on k.AsuransiPasienId equals (Guid?)ap0.AsuransiPasienId into apg
-            from ap in apg.DefaultIfEmpty()
-
             select new
             {
                 k.KunjunganID,
@@ -2229,9 +2275,26 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NoHp = p != null ? p.NoPasien : null,
                 NmDokter = d != null ? d.NmDokter : null,
                 NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
-                NamaAsuransi = a != null ? a.NamaAsuransi : null,
-                IsPKS = a != null ? a.IsPKS : null,
-                NoPolis = ap != null ? ap.NoPolis : null,
+                NamaAsuransi = k.Asuransi != null
+                    ? k.Asuransi.NamaAsuransi
+                    : null,
+                //IsPKS = k.AsuransiPasien != null
+                //    ? k.AsuransiPasien.Asuransi.IsPKS
+                //    : null,
+                //NoPolis = k.AsuransiPasien != null
+                //    ? k.AsuransiPasien.NoPolis
+                //    : null,
+
+                k.AsuransiExcessId,
+                NamaAsuransiExcess = k.AsuransiExcess != null
+                    ? k.AsuransiExcess.NamaAsuransi
+                    : null,
+                //NoPolisExcess = k.AsuransiPasienExcess != null
+                //    ? k.AsuransiPasienExcess.NoPolis
+                //    : null,
+                //IsPKSExcess = k.AsuransiPasienExcess != null
+                //    ? k.AsuransiPasienExcess.Asuransi.IsPKS
+                //    : null,
             }
         ).ToListAsync(ct);
 
@@ -2501,8 +2564,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NamaPoliklinik = h.NamaPoliklinik,
                 TipePembayaran = h.TipePembayaran,
                 NamaAsuransi = h.NamaAsuransi,
-                NoPolis = h.NoPolis,
-                IsPKS = h.IsPKS,
+                //NoPolis = h.NoPolis,
+                //IsPKS = h.IsPKS,
+                NamaAsuransiExcess = h.NamaAsuransiExcess,
+                //NoPolisExcess = h.NoPolisExcess,
+                //IsPKSExcess = h.IsPKSExcess,
                 Umur = HitungUmurLengkap(h.TanggalLahir),
 
                 DaftarPemeriksaanLab = new List<object>(),
@@ -2654,7 +2720,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.TotalRacikan = dto.DaftarRacikan.Sum(x => (decimal)((dynamic)x).Subtotal);
             }
 
-            // TINDAKAN
             // =========================
             // TINDAKAN
             // =========================
@@ -3187,8 +3252,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.NamaPoliklinik,
                 dto.TipePembayaran,
                 dto.NamaAsuransi,
-                dto.NoPolis,
-                dto.IsPKS,
+                //dto.NoPolis,
+                //dto.IsPKS,
+                dto.NamaAsuransiExcess,
+                //dto.NoPolisExcess,
+                //dto.IsPKSExcess,
                 dto.Umur,
                 dto.AsOf,
 
@@ -3245,6 +3313,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         };
     }
     #endregion
+
     // ======================================================
     // FUNCTION GET BY ID MAIN KASIR (pembayaran dan detailnya)
     // =======================================================
@@ -3267,9 +3336,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 on x.KunjunganId equals k0.KunjunganID into kGroup
             from k in kGroup.DefaultIfEmpty()
 
-            join a0 in _db.Asuransis.AsNoTracking()
-                on k.AsuransiId equals a0.AsuransiId into aGroup
-            from a in aGroup.DefaultIfEmpty()
 
             where x.KunjunganId == kunjunganId && x.IsDelete != true
             orderby x.CreateDateTime descending
@@ -3283,8 +3349,26 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NamaLengkap = p != null ? p.NamaLengkap : null,
                 NoRekamMedis = p != null ? p.NoRekamMedis : null,
 
-                AsuransiId = (Guid?)k.AsuransiId,
-                NamaAsuransi = a != null ? a.NamaAsuransi : null,
+                NamaAsuransi = k.AsuransiPasien != null
+                    ? k.AsuransiPasien.Asuransi.NamaAsuransi
+                    : null,
+                IsPKS = k.AsuransiPasien != null
+                    ? k.AsuransiPasien.Asuransi.IsPKS
+                    : null,
+                NoPolis = k.AsuransiPasien != null
+                    ? k.AsuransiPasien.NoPolis
+                    : null,
+
+                k.AsuransiExcessId,
+                NamaAsuransiExcess = k.AsuransiPasienExcess != null
+                    ? k.AsuransiPasienExcess.Asuransi.NamaAsuransi
+                    : null,
+                NoPolisExcess = k.AsuransiPasienExcess != null
+                    ? k.AsuransiPasienExcess.NoPolis
+                    : null,
+                IsPKSExcess = k.AsuransiPasienExcess != null
+                    ? k.AsuransiPasienExcess.Asuransi.IsPKS
+                    : null,
 
                 x.InvoiceBilling,
                 x.IsSudahDibuatAR,
@@ -3449,8 +3533,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     h.NoRekamMedis,
                     h.NoBill,
                     h.StatusBilling,
-                    h.AsuransiId,
                     h.NamaAsuransi,
+                    h.NoPolis,
+                    h.IsPKS,
+                    h.NamaAsuransiExcess,
+                    h.NoPolisExcess,
+                    h.IsPKSExcess,
                     h.InvoiceBilling,
                     h.IsSudahDibuatAR,
                     JumlahAngsuran = jumlahAngsuranHitung,

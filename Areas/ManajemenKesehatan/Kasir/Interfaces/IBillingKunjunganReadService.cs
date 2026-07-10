@@ -1,4 +1,5 @@
 ﻿using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using static BillingKunjunganReadService;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces
@@ -13,7 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces
         Task<BillingKunjunganDto?> GetBillingByKunjunganId
             (Guid kunjunganId,
             DateTime? asOf = null,
-            string? jenisKunjungan = null,
+            EnumJenisKunjungan? jenisKunjungan = null,
             string? asalKunjungan = null,
             CancellationToken ct = default);
 

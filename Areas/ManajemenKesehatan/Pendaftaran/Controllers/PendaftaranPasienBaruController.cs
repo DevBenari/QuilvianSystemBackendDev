@@ -258,6 +258,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.TipePendaftaran,
                     listdata.TitleId,
                     listdata.NamaLengkap,
+                    listdata.KaryawanId,
                     listdata.NoKaryawan,
                     listdata.IdentitasId,
                     listdata.NoIdentitas,
@@ -395,6 +396,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     pasien.TipePasien,
                     pasien.TitleId,
                     pasien.NamaLengkap,
+                    pasien.KaryawanId,
                     pasien.NoKaryawan,
                     pasien.IdentitasId,
                     pasien.NoIdentitas,
@@ -532,6 +534,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     pasien.TipePasien,
                     pasien.TitleId,
                     pasien.NamaLengkap,
+                    pasien.KaryawanId,
                     pasien.NoKaryawan,
                     pasien.IdentitasId,
                     pasien.NoIdentitas,
@@ -664,6 +667,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.TipePasien,
                     listdata.TitleId,
                     listdata.NamaLengkap,
+                    listdata.KaryawanId,
                     listdata.NoKaryawan,
                     listdata.IdentitasId,
                     listdata.NoIdentitas,
@@ -841,23 +845,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 }
 
                 // =============================
-                // VALIDASI KHUSUS KARYAWAN KIOSK
+                // CARI NO KARYAWAN KHUSUS KARYAWAN KIOSK
                 // =============================
-                if (!string.IsNullOrWhiteSpace(vm.NoKaryawan))
-                {
-                    vm.NoKaryawan = vm.NoKaryawan.Trim();
-
-                    var isNoKaryawanExists = await _applicationDbContext.PendaftaranPasienBarus
-                        .AnyAsync(x => x.NoKaryawan == vm.NoKaryawan, ct);
-
-                    if (isNoKaryawanExists)
-                    {
-                        return Conflict(new
-                        {
-                            message = "Data sudah tersedia"
-                        });
-                    }
-                }
+                var noKaryawan = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .Where(x => x.UserActiveId == vm.KaryawanId)
+                    .Select(x => x.NoKaryawan)
+                    .FirstOrDefaultAsync(ct);
 
                 // =============================
                 // ✅ Cek Duplikasi 
@@ -1023,6 +1017,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     HubunganKeluarga3 = vm.HubunganKeluarga3,
                     MembershipId = vm.MembershipId,
                     TinggalBersama = vm.TinggalBersama,
+
+                    // jika pasien adalah karyawan
+                    NoKaryawan = noKaryawan,
+                    KaryawanId = vm.KaryawanId,
 
                     // ✅ sesuai pola Lab (path hasil dari Flask)
                     FotoName = fotoFileName,
@@ -1214,16 +1212,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     ms.Position = 0;
 
                     var content = new MultipartFormDataContent
-            {
-                {
-                    new StreamContent(ms)
                     {
-                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                    }, "file", fotoFileName
-                },
-                { new StringContent("FotoPasienBaru"), "folderTarget" },
-                { new StringContent(oldFileName), "oldFileName" }
-            };
+                        {
+                            new StreamContent(ms)
+                            {
+                                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                            }, "file", fotoFileName
+                        },
+                        { new StringContent("FotoPasienBaru"), "folderTarget" },
+                        { new StringContent(oldFileName), "oldFileName" }
+                    };
 
                     var flaskResponse = await client.PostAsync(_uploadUrl, content);
                     if (!flaskResponse.IsSuccessStatusCode)
@@ -1293,7 +1291,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedPendaftaranPasienBaru(
+        public async Task<IActionResult> PagedPendaftaranPasienBaru(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -1321,6 +1319,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             TipePasien = a.TipePasien,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
+                            KaryawanId = a.KaryawanId,
                             NoKaryawan = a.NoKaryawan,
                             CatatanKhusus = a.CatatanKhusus,
                             FotoName = a.FotoName,

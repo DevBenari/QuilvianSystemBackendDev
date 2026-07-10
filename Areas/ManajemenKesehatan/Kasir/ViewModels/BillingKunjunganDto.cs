@@ -24,8 +24,11 @@
         public string? NamaPoliklinik { get; set; }
         public string? TipePembayaran { get; set; }
         public string? NamaAsuransi { get; set; }
-        public string? NoPolis {  get; set; }
-        public bool? IsPKS { get; set; }
+        //public string? NoPolis { get; set; }
+        //public bool? IsPKS { get; set; }
+        public string? NamaAsuransiExcess { get; set; }
+        //public string? NoPolisExcess {  get; set; }
+        //public bool? IsPKSExcess { get; set; }
         public string? Umur { get; set; }
         #endregion
 

@@ -795,74 +795,71 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                 string? noKaryawan = null;
 
-                if (!isDokter)
+                var departemenId = vm.DepartemenId;
+
+                if (!departemenId.HasValue || departemenId.Value == Guid.Empty)
                 {
-                    var departemenId = vm.DepartemenId;
-
-                    if (!departemenId.HasValue || departemenId.Value == Guid.Empty)
-                    {
-                        await transaction.RollbackAsync();
-                        return BadRequest(new { message = "Departemen wajib dipilih untuk membuat nomor karyawan." });
-                    }
-
-                    var kodeDepartement = await _applicationDbContext.Departements
-                        .AsNoTracking()
-                        .Where(x => x.DepartementId == departemenId.Value)
-                        .Select(x => x.KodeDepartement)
-                        .FirstOrDefaultAsync();
-
-                    if (string.IsNullOrWhiteSpace(kodeDepartement))
-                    {
-                        await transaction.RollbackAsync();
-                        return BadRequest(new { message = "Kode departement tidak ditemukan." });
-                    }
-
-                    kodeDepartement = new string(
-                        kodeDepartement
-                            .Trim()
-                            .ToUpperInvariant()
-                            .Where(char.IsLetterOrDigit)
-                            .ToArray()
-                    );
-
-                    if (string.IsNullOrWhiteSpace(kodeDepartement))
-                    {
-                        await transaction.RollbackAsync();
-                        return BadRequest(new { message = "Kode departement tidak valid." });
-                    }
-
-                    var tahun = localNow.Year;
-                    var bulan = localNow.Month.ToString("D2");
-                    var hari = localNow.Day.ToString("D2");
-
-                    var prefixTahun = $"EMP{tahun}-";
-
-                    var existingNoKaryawan = await _applicationDbContext.UserActives
-                        .AsNoTracking()
-                        .Where(x =>
-                            (x.IsDelete == false || x.IsDelete == null) &&
-                            x.NoKaryawan != null &&
-                            x.NoKaryawan.StartsWith(prefixTahun))
-                        .Select(x => x.NoKaryawan)
-                        .ToListAsync();
-
-                    var lastRunningNumber = existingNoKaryawan
-                        .Select(no =>
-                        {
-                            if (string.IsNullOrWhiteSpace(no))
-                                return 0;
-
-                            var lastSegment = no.Split('-').LastOrDefault();
-
-                            return int.TryParse(lastSegment, out var parsed)
-                                ? parsed
-                                : 0;
-                        })
-                        .DefaultIfEmpty(0)
-                        .Max();
-
-                    noKaryawan = $"EMP{tahun}-{kodeDepartement}-{bulan}{hari}-{lastRunningNumber + 1:D5}";
+                    await transaction.RollbackAsync();
+                    return BadRequest(new { message = "Departemen wajib dipilih untuk membuat nomor karyawan." });
                 }
+
+                var kodeDepartement = await _applicationDbContext.Departements
+                    .AsNoTracking()
+                    .Where(x => x.DepartementId == departemenId.Value)
+                    .Select(x => x.KodeDepartement)
+                    .FirstOrDefaultAsync();
+
+                if (string.IsNullOrWhiteSpace(kodeDepartement))
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest(new { message = "Kode departement tidak ditemukan." });
+                }
+
+                kodeDepartement = new string(
+                    kodeDepartement
+                        .Trim()
+                        .ToUpperInvariant()
+                        .Where(char.IsLetterOrDigit)
+                        .ToArray()
+                );
+
+                if (string.IsNullOrWhiteSpace(kodeDepartement))
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest(new { message = "Kode departement tidak valid." });
+                }
+
+                var tahun = localNow.Year;
+                var bulan = localNow.Month.ToString("D2");
+                var hari = localNow.Day.ToString("D2");
+
+                var prefixTahun = $"EMP{tahun}-";
+
+                var existingNoKaryawan = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .Where(x =>
+                        (x.IsDelete == false || x.IsDelete == null) &&
+                        x.NoKaryawan != null &&
+                        x.NoKaryawan.StartsWith(prefixTahun))
+                    .Select(x => x.NoKaryawan)
+                    .ToListAsync();
+
+                var lastRunningNumber = existingNoKaryawan
+                    .Select(no =>
+                    {
+                        if (string.IsNullOrWhiteSpace(no))
+                            return 0;
+
+                        var lastSegment = no.Split('-').LastOrDefault();
+
+                        return int.TryParse(lastSegment, out var parsed)
+                            ? parsed
+                            : 0;
+                    })
+                    .DefaultIfEmpty(0)
+                    .Max();
+
+                noKaryawan = $"EMP{tahun}-{kodeDepartement}-{bulan}{hari}-{lastRunningNumber + 1:D5}";
 
                 // =========================
                 // FOTO DEFAULT
@@ -925,9 +922,9 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         ? identityNumber
                         : vm.NoIdentitas.Trim(),
 
-                    KodeKaryawan = !string.IsNullOrWhiteSpace(noKaryawan)
-                        ? noKaryawan
-                        : vm.KodeKaryawan?.Trim(),
+                    //KodeKaryawan = !string.IsNullOrWhiteSpace(noKaryawan)
+                    //    ? noKaryawan
+                    //    : vm.KodeKaryawan?.Trim(),
 
                     NoKaryawan = !string.IsNullOrWhiteSpace(noKaryawan)
                         ? noKaryawan
@@ -1070,269 +1067,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 });
             }
         }
-        //[HttpPost("UserActive")]
-        //public async Task<IActionResult> CreateUserActive([FromForm] UserActiveViewModel vm)
-        //{
-        //    if (vm == null)
-        //    {
-        //        return BadRequest(new { message = "Data tidak valid." });
-        //    }
 
-        //    try
-        //    {
-        //        // **Ambil User ID dari JWT Claims**
-        //        var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        //        var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-        //        var UserActiveId = GetUserActive.UserActiveId;
-
-        //        if (string.IsNullOrEmpty(EmailLogin))
-        //        {
-        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
-        //        }
-
-        //        var dateNow = DateTime.UtcNow; ;
-        //        var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
-
-        //        // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-        //        var lastCode = _applicationDbContext.UserActives
-        //            .Where(d => d.CreateDateTime.Date == dateNow.Date)
-        //            .OrderByDescending(k => k.UserActiveCode)
-        //            .FirstOrDefault();
-
-        //        string kode;
-        //        if (lastCode == null)
-        //        {
-        //            kode = "USR" + setDateNow + "0001";
-        //        }
-        //        else
-        //        {
-        //            var lastCodeTrim = lastCode.UserActiveCode.Substring(3, 6);
-
-        //            if (lastCodeTrim != setDateNow)
-        //            {
-        //                kode = "USR" + setDateNow + "0001";
-        //            }
-        //            else
-        //            {
-        //                kode = "USR" + setDateNow +
-        //                    (Convert.ToInt32(lastCode.UserActiveCode.Substring(9)) + 1).ToString("D4");
-        //            }
-        //        }
-
-        //        // **Konversi `TanggalLahir` dari string "yyyy-MM-dd" ke `DateTime`**
-        //        if (!DateTime.TryParseExact(vm.DateOfBirth, "yyyy-MM-dd",
-        //            CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
-        //        {
-        //            return BadRequest(new { message = "Format TanggalLahir tidak valid! Gunakan format yyyy-MM-dd." });
-        //        }
-        //        parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
-
-        //        // Ambil tipe user
-        //        var tipeUser = await _applicationDbContext.TipeUsers.FirstOrDefaultAsync(t => t.TipeUserId == vm.TipeUserId);
-        //        var isDokter = tipeUser?.NamaTipeUser.ToLower() == "dokter";
-
-        //        // Jika dokter, generate kode dokter untuk nama file
-        //        string kodeDokter = "";
-
-        //        if (isDokter)
-        //        {
-        //            var lastDr = _applicationDbContext.Dokters
-        //                .Where(d => d.CreateDateTime.Date == dateNow.Date)
-        //                .OrderByDescending(k => k.KdDokter)
-        //                .FirstOrDefault();
-
-        //            if (lastDr == null)
-        //            {
-        //                kodeDokter = "DKR" + setDateNow + "0001";
-        //            }
-        //            else
-        //            {
-        //                var lastCodeTrim = lastDr.KdDokter.Substring(3, 6);
-
-        //                if (lastCodeTrim != setDateNow)
-        //                {
-        //                    kodeDokter = "DKR" + setDateNow + "0001";
-        //                }
-        //                else
-        //                {
-        //                    kodeDokter = "DKR" + setDateNow +
-        //                        (Convert.ToInt32(lastDr.KdDokter.Substring(9)) + 1).ToString("D4");
-        //                }
-        //            }
-        //        }
-
-        //        // set foto default
-        //        var fotoPath = isDokter ? "/default-photo/user.jpeg" : "/default-photo/user.jpeg";
-        //        var fotoFileName = isDokter ? "user.jpeg" : "user.jpeg";
-
-        //        // Cek Duplikasi
-        //        var id = Guid.NewGuid();
-        //        var isDuplicateUserActive = await _applicationDbContext.UserActives
-        //            .AnyAsync(c => c.UserActiveCode == kode 
-        //            && c.Email == vm.Email
-        //            && c.IdentityNumber == vm.IdentityNumber
-        //            && c.FullName.Trim().ToLower() == c.FullName.Trim().ToLower()
-        //            );
-
-        //        if (isDuplicateUserActive) 
-        //        {
-        //            return Conflict(new { message = "User ini telah terdaftar" });
-        //        }
-
-        //        // Validate ModelState
-        //        if (ModelState.IsValid)
-        //        {
-
-        //            var userLogin = new ApplicationUser
-        //            {
-        //                KodeUser = kode,
-        //                NamaUser = vm.FullName,
-        //                Email = vm.Email,
-        //                UserName = vm.Email,
-        //                PhoneNumber = vm.Handphone,
-        //                IsActive = true
-        //            };
-
-        //            var user = new UserActive
-        //            {
-        //                CreateDateTime = DateTimeOffset.UtcNow,
-        //                CreateBy = UserActiveId,
-        //                UserActiveId = id,
-        //                UserActiveCode = kode,
-        //                FullName = vm.FullName,
-        //                PinPegawai = DelegasiVerifikasi.ComputeSha256Hash(GeneratePinPegawai(TryParseTanggalToUtc(vm.DateOfBirth))),
-        //                IdentityNumber = vm.IdentityNumber,
-        //                PlaceOfBirth = vm.PlaceOfBirth,
-        //                DateOfBirth = (DateTime)TryParseTanggalToUtc(vm.DateOfBirth),
-        //                Gender = vm.Gender,
-        //                Address = vm.Address,
-        //                Handphone = vm.Handphone,
-        //                Email = vm.Email,
-        //                IsActive = true,
-        //                DepartemenId = vm.DepartemenId,
-        //                PositionId = vm.PositionId,
-        //                TipeUserId = vm.TipeUserId,
-        //                InstalasiUnitId = vm.InstalasiUnitId,
-        //                NoSTR = vm.NoSTR,
-        //                StatusPegawai = vm.StatusPegawai,
-        //                FotoName = fotoFileName,
-        //                FotoPath = fotoPath,
-        //            };
-
-        //            var passTglLahir = parsedDate.ToString("ddMMMyyyy");
-
-        //            using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
-
-        //            var resultLogin = await _userManager.CreateAsync(userLogin, passTglLahir);
-
-        //            if (!resultLogin.Succeeded)
-        //            {
-        //                var errorMessage = string.Join(", ", resultLogin.Errors.Select(e => e.Description));
-        //                await transaction.RollbackAsync();
-        //                return BadRequest(new { message = $"Gagal membuat user login: {errorMessage}" });
-        //            }
-
-        //            _applicationDbContext.UserActives.Add(user);
-
-
-        //            // Jika tipe user adalah dokter → buat entri di tabel Dokter
-        //            Guid? createdDokterId = null;
-        //            if (isDokter)
-        //            {
-        //                var dokter = new Dokter
-        //                {
-        //                    DokterId = Guid.NewGuid(),
-        //                    KdDokter = kodeDokter,
-        //                    NmDokter = vm.FullName,
-        //                    Email = vm.Email,
-        //                    Nohp = vm.Handphone,
-        //                    Nik = vm.IdentityNumber,
-        //                    Alamat = vm.Address,
-        //                    UserActiveId = user.UserActiveId,
-        //                    CreateDateTime = DateTimeOffset.UtcNow,
-        //                    CreateBy = UserActiveId,
-        //                    IsActive = true,
-        //                    IsDelete = false
-        //                };
-        //                createdDokterId = dokter.DokterId;
-        //                _applicationDbContext.Dokters.Add(dokter);
-        //            }
-        //            else
-        //            {
-        //                string noKaryawan = "";
-
-        //                var lastKaryawan = _applicationDbContext.UserActives
-        //                    .Where(k => k.CreateDateTime.Date == dateNow.Date)
-        //                    .OrderByDescending(k => k.NoKaryawan)
-        //                    .FirstOrDefault();
-
-        //                if (lastKaryawan == null)
-        //                {
-        //                    noKaryawan = "KRY" + setDateNow + "0001";
-        //                }
-        //                else
-        //                {
-        //                    var lastCodeTrim = lastKaryawan.NoKaryawan.Substring(3, 6);
-
-        //                    if (lastCodeTrim != setDateNow)
-        //                    {
-        //                        noKaryawan = "KRY" + setDateNow + "0001";
-        //                    }
-        //                    else
-        //                    {
-        //                        noKaryawan = "KRY" + setDateNow +
-        //                            (Convert.ToInt32(lastKaryawan.NoKaryawan.Substring(9)) + 1).ToString("D4");
-        //                    }
-        //                }
-
-        //                user.NoKaryawan = noKaryawan;
-        //                user.NoIdentitas = user.IdentityNumber;
-        //                user.Alamat = user.Address;
-        //                user.NoHandphone = user.Handphone;
-        //                user.FotoName = fotoFileName;
-        //                user.FotoPath = fotoPath;
-        //                user.DepartementId = user.DepartemenId;
-        //                user.InstalasiUnitId = user.InstalasiUnitId;
-        //                // tidak perlu Add lagi!
-        //            }
-
-        //            await _applicationDbContext.SaveChangesAsync();
-        //            await transaction.CommitAsync();
-
-        //            // ROLE USER
-        //            var idnetuser = await _applicationDbContext.Users
-        //            .FirstOrDefaultAsync(u => u.Email == vm.Email);
-
-        //            if (idnetuser != null) // ← ini yang benar
-        //            {
-        //                // Memastikan PositionId tidak kosong
-        //                if (vm.PositionId.HasValue)
-        //                {
-        //                    var createRoleResponse = CreateRole(vm.PositionId.Value, idnetuser.Id);
-        //                    // Jika CreateRole mengembalikan Task/IActionResult, jangan lupa pakai await
-        //                }
-        //            }
-        //            // END ROLE USER
-
-        //            return Created("", new 
-        //            {   message = "Tambah Data Berhasil || 201 Created",
-        //                dokterId = createdDokterId
-        //            });
-        //        }
-        //        else
-        //        {
-        //            return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-
-        //    }
-        //}
-
-
-        // GET: api/Administrator/UserActive/ByDepartemen/{departemenId}
         [HttpGet("ByDepartemen/{departemenId}")]
         public async Task<IActionResult> GetUsersByDepartemen(Guid departemenId)
         {
@@ -1368,7 +1103,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 data = users
             });
         }
-
 
         [HttpPut("UserActive/{id}")]
         public async Task<IActionResult> UpdateUserActive(Guid id, [FromForm] UpdateUserActiveViewModel vm)
@@ -1917,311 +1651,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 });
             }
         }
-        //public async Task<IActionResult> UpdateUserActive(Guid id, [FromForm] UpdateUserActiveViewModel vm)
-        //{
-        //    if (vm == null)
-        //        return BadRequest(new { message = "Data tidak valid." });
-
-        //    try
-        //    {
-        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        //        if (string.IsNullOrEmpty(emailLogin))
-        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-        //        var loginUserActive = await _applicationDbContext.UserActives
-        //            .FirstOrDefaultAsync(u => u.Email == emailLogin);
-
-        //        if (loginUserActive == null)
-        //            return Unauthorized(new { message = "Data user login tidak ditemukan!" });
-
-        //        var userActiveLoginId = loginUserActive.UserActiveId;
-
-        //        var user = await _applicationDbContext.UserActives
-        //            .FirstOrDefaultAsync(u => u.UserActiveId == id);
-
-        //        if (user == null)
-        //            return NotFound(new { message = "Data UserActive tidak ditemukan." });
-
-        //        if (!DateTime.TryParseExact(
-        //                vm.DateOfBirth,
-        //                "yyyy-MM-dd",
-        //                CultureInfo.InvariantCulture,
-        //                DateTimeStyles.None,
-        //                out DateTime parsedDate))
-        //        {
-        //            return BadRequest(new { message = "Format TanggalLahir tidak valid! Gunakan format yyyy-MM-dd." });
-        //        }
-
-        //        parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
-
-        //        var isDuplicateEmail = await _applicationDbContext.UserActives
-        //            .AnyAsync(x => x.Email == vm.Email && x.UserActiveId != id);
-
-        //        if (isDuplicateEmail)
-        //            return Conflict(new { message = "Email sudah dipakai oleh user lain! || 409 Conflict" });
-
-        //        var tipeUser = await _applicationDbContext.TipeUsers
-        //            .FirstOrDefaultAsync(t => t.TipeUserId == vm.TipeUserId);
-
-        //        var isDokter = tipeUser?.NamaTipeUser?.Trim().ToLower() == "dokter";
-
-        //        using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
-
-        //        // =========================
-        //        // UPDATE ASP.NET IDENTITY
-        //        // =========================
-        //        var identityUser = await _userManager.FindByEmailAsync(user.Email);
-        //        if (identityUser == null)
-        //            return BadRequest(new { message = "User login tidak ditemukan." });
-
-        //        if (!string.Equals(identityUser.Email, vm.Email, StringComparison.OrdinalIgnoreCase))
-        //        {
-        //            identityUser.Email = vm.Email;
-        //            identityUser.UserName = vm.Email;
-        //        }
-
-        //        if (identityUser is ApplicationUser appUser)
-        //        {
-        //            appUser.NamaUser = vm.FullName;
-        //            appUser.PhoneNumber = vm.Handphone;
-        //            appUser.IsActive = true;
-        //        }
-
-        //        var resultUpdateIdentity = await _userManager.UpdateAsync(identityUser);
-        //        if (!resultUpdateIdentity.Succeeded)
-        //        {
-        //            var err = string.Join(", ", resultUpdateIdentity.Errors.Select(e => e.Description));
-        //            await transaction.RollbackAsync();
-        //            return BadRequest(new { message = $"Gagal update user login: {err}" });
-        //        }
-
-        //        // =========================
-        //        // UPDATE USERACTIVE
-        //        // =========================
-        //        user.FullName = vm.FullName;
-        //        user.IdentityNumber = vm.IdentityNumber;
-        //        user.PlaceOfBirth = vm.PlaceOfBirth;
-        //        user.DateOfBirth = parsedDate;
-        //        user.Gender = vm.Gender;
-        //        user.Address = vm.Address;
-        //        user.Handphone = vm.Handphone;
-        //        user.Email = vm.Email;
-        //        user.DepartemenId = vm.DepartemenId;
-        //        user.PositionId = vm.PositionId;
-        //        user.TipeUserId = vm.TipeUserId;
-        //        user.InstalasiUnitId = vm.InstalasiUnitId;
-        //        user.NoSTR = vm.NoSTR;
-        //        user.StatusPegawai = vm.StatusPegawai;
-        //        user.IsActive = true;
-
-        //        user.NoIdentitas = vm.IdentityNumber;
-        //        user.Alamat = vm.Address;
-        //        user.NoHandphone = vm.Handphone;
-        //        user.UpdateDateTime = DateTimeOffset.UtcNow;
-        //        user.UpdateBy = userActiveLoginId;
-
-        //        user.PinPegawai = DelegasiVerifikasi.ComputeSha256Hash(
-        //            GeneratePinPegawai(parsedDate)
-        //        );
-
-        //        // =========================
-        //        // SYNC DOKTER
-        //        // =========================
-        //        var dokterExisting = await _applicationDbContext.Dokters
-        //            .Where(d => d.UserActiveId == user.UserActiveId)
-        //            .OrderBy(d => d.IsDelete)
-        //            .ThenByDescending(d => d.CreateDateTime)
-        //            .FirstOrDefaultAsync();
-
-        //        string kdDokter = dokterExisting?.KdDokter ?? "";
-        //        string noKaryawan = user.NoKaryawan ?? "";
-
-        //        if (isDokter)
-        //        {
-        //            if (dokterExisting == null)
-        //            {
-        //                var dateNow = DateTime.UtcNow;
-        //                var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
-
-        //                var lastDr = await _applicationDbContext.Dokters
-        //                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-        //                    .OrderByDescending(k => k.KdDokter)
-        //                    .FirstOrDefaultAsync();
-
-        //                if (lastDr == null)
-        //                {
-        //                    kdDokter = "DKR" + setDateNow + "0001";
-        //                }
-        //                else
-        //                {
-        //                    var lastTrim = lastDr.KdDokter.Substring(3, 6);
-        //                    if (lastTrim != setDateNow)
-        //                        kdDokter = "DKR" + setDateNow + "0001";
-        //                    else
-        //                        kdDokter = "DKR" + setDateNow +
-        //                                   (Convert.ToInt32(lastDr.KdDokter.Substring(9)) + 1).ToString("D4");
-        //                }
-
-        //                var dokterBaru = new Dokter
-        //                {
-        //                    DokterId = Guid.NewGuid(),
-        //                    KdDokter = kdDokter,
-        //                    NmDokter = vm.FullName,
-        //                    Email = vm.Email,
-        //                    Nohp = vm.Handphone,
-        //                    Nik = vm.IdentityNumber,
-        //                    Alamat = vm.Address,
-        //                    UserActiveId = user.UserActiveId,
-        //                    CreateDateTime = DateTimeOffset.UtcNow,
-        //                    CreateBy = userActiveLoginId,
-        //                    IsActive = true,
-        //                    IsDelete = false
-        //                };
-
-        //                _applicationDbContext.Dokters.Add(dokterBaru);
-        //            }
-        //            else
-        //            {
-        //                kdDokter = dokterExisting.KdDokter;
-
-        //                dokterExisting.NmDokter = vm.FullName;
-        //                dokterExisting.Email = vm.Email;
-        //                dokterExisting.Nohp = vm.Handphone;
-        //                dokterExisting.Nik = vm.IdentityNumber;
-        //                dokterExisting.Alamat = vm.Address;
-        //                dokterExisting.IsActive = true;
-        //                dokterExisting.IsDelete = false;
-        //                dokterExisting.UpdateDateTime = DateTimeOffset.UtcNow;
-        //                dokterExisting.UpdateBy = userActiveLoginId;
-
-        //                _applicationDbContext.Dokters.Update(dokterExisting);
-        //            }
-        //        }
-        //        else
-        //        {
-        //            if (string.IsNullOrWhiteSpace(user.NoKaryawan))
-        //            {
-        //                var dateNow = DateTime.UtcNow;
-        //                var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
-
-        //                var lastKaryawan = await _applicationDbContext.UserActives
-        //                    .Where(k => k.CreateDateTime.Date == dateNow.Date)
-        //                    .OrderByDescending(k => k.NoKaryawan)
-        //                    .FirstOrDefaultAsync();
-
-        //                if (lastKaryawan == null || string.IsNullOrEmpty(lastKaryawan.NoKaryawan))
-        //                {
-        //                    noKaryawan = "KRY" + setDateNow + "0001";
-        //                }
-        //                else
-        //                {
-        //                    var lastTrim = lastKaryawan.NoKaryawan.Substring(3, 6);
-        //                    if (lastTrim != setDateNow)
-        //                        noKaryawan = "KRY" + setDateNow + "0001";
-        //                    else
-        //                        noKaryawan = "KRY" + setDateNow +
-        //                                     (Convert.ToInt32(lastKaryawan.NoKaryawan.Substring(9)) + 1).ToString("D4");
-        //                }
-
-        //                user.NoKaryawan = noKaryawan;
-        //            }
-        //            else
-        //            {
-        //                noKaryawan = user.NoKaryawan;
-        //            }
-
-        //            if (dokterExisting != null && dokterExisting.IsDelete == false)
-        //            {
-        //                dokterExisting.IsDelete = true;
-        //                dokterExisting.IsActive = false;
-        //                dokterExisting.UpdateDateTime = DateTimeOffset.UtcNow;
-        //                dokterExisting.UpdateBy = userActiveLoginId;
-
-        //                _applicationDbContext.Dokters.Update(dokterExisting);
-        //            }
-        //        }
-
-        //        // =========================
-        //        // UPLOAD FOTO
-        //        // =========================
-        //        if (vm.Foto != null && vm.Foto.Length > 0)
-        //        {
-        //            var maxSize = 2 * 1024 * 1024;
-        //            var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-        //            var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
-
-        //            if (vm.Foto.Length > maxSize)
-        //                return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-
-        //            if (!allowedExtensions.Contains(fileExtension))
-        //                return BadRequest(new { message = "Format file tidak valid! Gunakan JPG, JPEG, atau PNG." });
-
-        //            string namaDasarFoto;
-        //            if (isDokter)
-        //            {
-        //                namaDasarFoto = !string.IsNullOrWhiteSpace(kdDokter)
-        //                    ? kdDokter
-        //                    : user.UserActiveCode;
-        //            }
-        //            else
-        //            {
-        //                namaDasarFoto = !string.IsNullOrWhiteSpace(noKaryawan)
-        //                    ? noKaryawan
-        //                    : user.UserActiveCode;
-        //            }
-
-        //            var fotoFileName = $"{namaDasarFoto}{fileExtension}";
-        //            var oldFileName = user.FotoName ?? "";
-
-        //            using var client = new HttpClient();
-        //            using var ms = new MemoryStream();
-        //            await vm.Foto.CopyToAsync(ms);
-        //            ms.Position = 0;
-
-        //            var content = new MultipartFormDataContent
-        //            {
-        //                {
-        //                    new StreamContent(ms)
-        //                    {
-        //                        Headers =
-        //                        {
-        //                            ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType)
-        //                        }
-        //                    },
-        //                    "file",
-        //                    fotoFileName
-        //                },
-        //                { new StringContent("FotoKaryawan"), "folderTarget" },
-        //                { new StringContent(oldFileName), "oldFileName" }
-        //            };
-
-        //            var flaskResponse = await client.PostAsync(_uploadUrl, content);
-        //            if (!flaskResponse.IsSuccessStatusCode)
-        //            {
-        //                await transaction.RollbackAsync();
-        //                return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
-        //            }
-
-        //            user.FotoName = fotoFileName;
-        //            user.FotoPath = $"/FotoKaryawan/{fotoFileName}";
-        //            user.UpdateDateTime = DateTimeOffset.UtcNow;
-        //            user.UpdateBy = userActiveLoginId;
-
-        //        }
-
-        //        _applicationDbContext.UserActives.Update(user);
-
-        //        await _applicationDbContext.SaveChangesAsync();
-        //        await transaction.CommitAsync();
-
-        //        return Ok(new { message = "Update Data Berhasil || 200 OK" });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-        //    }
-        //}
-
 
         [HttpPost("UbahPassword")]
         public async Task<IActionResult> UbahPassword(ResetPasswordViewModel vm)

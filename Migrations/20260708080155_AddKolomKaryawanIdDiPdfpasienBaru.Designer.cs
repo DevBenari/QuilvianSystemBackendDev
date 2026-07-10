@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708080155_AddKolomKaryawanIdDiPdfpasienBaru")]
+    partial class AddKolomKaryawanIdDiPdfpasienBaru
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -8567,8 +8569,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("KasirId");
-
-                    b.HasIndex("KunjunganId");
 
                     b.ToTable("MainKasir", "public");
                 });
@@ -19588,8 +19588,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("JenisKelamin")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("KaryawanId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("KaryawanId")
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("KecKabId")
                         .HasColumnType("uuid");
@@ -24285,15 +24285,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasForeignKey("KunjunganId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_Billing_MstKunjungan_KunjunganId");
-
-                    b.Navigation("Kunjungan");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models.MainKasir", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.Kunjungan", "Kunjungan")
-                        .WithMany()
-                        .HasForeignKey("KunjunganId");
 
                     b.Navigation("Kunjungan");
                 });
