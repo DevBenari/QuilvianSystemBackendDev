@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using NuGet.Configuration;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.Finance.All.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AP.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AR.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Models;
@@ -1361,10 +1362,13 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<HeaderRetur> HeaderReturs { get; set; }
             public DbSet<ItemRetur> ItemReturs { get; set; }
 
-            #endregion
+        #endregion
 
 
-
+        public DbSet<RecurringJournal> RecurringJournals { get; set; }
+        public DbSet<RecurringJournalDetail> RecurringJournalDetails { get; set; }
+        public DbSet<AccManualJurnal> AccManualJurnals { get; set; }
+        public DbSet<AccManualJurnalDetail> AccManualJurnalDetails { get; set; }
         public DbSet<MasterBank> MasterBanks { get; set; }
 
         #endregion
