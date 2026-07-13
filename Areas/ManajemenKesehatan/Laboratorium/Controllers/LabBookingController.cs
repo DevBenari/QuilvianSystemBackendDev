@@ -776,7 +776,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("StatusPemeriksaanLab/{id}")]
-        public async Task<IActionResult> StatusPemeriksaanLab(Guid id, [FromBody] StatusPemeriksaanLabViewModel vm)
+        public async Task<IActionResult> StatusPemeriksaanLab(
+            Guid id,
+            [FromBody] StatusPemeriksaanLabViewModel vm)
         {
             if (id == Guid.Empty)
                 return BadRequest(new { message = "Parameter ID tidak valid." });
@@ -790,67 +792,95 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // 🔐 Ambil user aktif dari JWT
                 // ======================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var getUserActive = _applicationDbContext.UserActives
-                    .FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(x => x.Email == emailLogin);
+
                 if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userActiveId = getUserActive.UserActiveId;
 
                 // ======================================
-                // 🔎 Cek apakah data booking ada
+                // 🔎 Ambil Header + Detail
                 // ======================================
                 var entity = await _applicationDbContext.LabBookings
-                    .FirstOrDefaultAsync(b => b.BookingLabId == id && (b.IsDelete == false || b.IsDelete == null));
+                    .Include(x => x.LabBookingDetails)
+                    .FirstOrDefaultAsync(x =>
+                        x.BookingLabId == id &&
+                        (x.IsDelete == false || x.IsDelete == null));
 
                 if (entity == null)
-                    return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
-
-                // ======================================
-                // ⚙️ Update nilai field
-                // ======================================
-                entity.StatusPemeriksaan = vm.Status;
-                entity.TglPemeriksaan = vm.TglPemeriksaan;
-
-                // ======================================
-                // 🕒 Update metadata
-                // ======================================
-                entity.UpdateBy = userActiveId;
-                entity.UpdateDateTime = DateTime.UtcNow;
-
-                _applicationDbContext.LabBookings.Update(entity);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
                 {
-                    return Ok(new
+                    return NotFound(new
                     {
-                        message = "Data berhasil diperbarui. || 200 OK",
-                        data = new
-                        {
-                            entity.BookingLabId,
-                            entity.NoOrder,
-                            entity.NomorSuratJaminan,
-                            entity.CatatanJaminan,
-                            entity.TglBooking,
-                            entity.UpdateDateTime
-                        }
+                        message = "Data Booking Lab tidak ditemukan. || 404 Not Found"
                     });
                 }
 
-                return StatusCode(500, new { message = "Gagal memperbarui data ke database." });
+                // ======================================
+                // 🕒 Waktu update
+                // ======================================
+                var now = DateTime.UtcNow;
+
+                // ======================================
+                // Update Header
+                // ======================================
+                entity.StatusPemeriksaan = vm.Status;
+                entity.TglPemeriksaan = vm.TglPemeriksaan;
+                entity.UpdateBy = userActiveId;
+                entity.UpdateDateTime = now;
+
+                // ======================================
+                // Update Seluruh Detail
+                // ======================================
+                foreach (var detail in entity.LabBookingDetails.Where(x => x.IsDelete != true))
+                {
+                    detail.StatusPemeriksaan = vm.Status;
+                    detail.UpdateBy = userActiveId;
+                    detail.UpdateDateTime = now;
+                }
+
+                // ======================================
+                // Simpan perubahan
+                // ======================================
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Data berhasil diperbarui. || 200 OK",
+                    data = new
+                    {
+                        entity.BookingLabId,
+                        entity.NoOrder,
+                        entity.NomorSuratJaminan,
+                        entity.CatatanJaminan,
+                        entity.StatusPemeriksaan,
+                        entity.TglPemeriksaan,
+                        entity.TglBooking,
+                        entity.UpdateDateTime,
+                        TotalDetailDiupdate = entity.LabBookingDetails.Count(x => x.IsDelete != true)
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Kesalahan database: {dbEx.InnerException?.Message}"
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saat memperbarui booking lab");
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                _logger.LogError(ex, "Error saat memperbarui status pemeriksaan lab");
+
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
             }
         }
 
