@@ -236,10 +236,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
         private static DateTime GetLocalNow()
         {
-            /*
-             * Jika server kamu sudah pakai timezone Indonesia,
-             * DateTime.Now sudah cukup.
-             */
             return DateTime.Now;
         }
     }
