@@ -65,6 +65,5 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Models
         [MaxLength(500)]
         public string? Keterangan { get; set; }
 
-        public List<AccManualJurnalDetail>? AccManualJurnalDetails { get; set; }
     }
 }

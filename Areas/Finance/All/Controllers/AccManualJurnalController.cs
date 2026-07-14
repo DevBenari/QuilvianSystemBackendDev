@@ -3,50 +3,57 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.Finance.All.Models;
+using QuilvianSystemBackendDev.Areas.Finance.All.ViewModels;
 using QuilvianSystemBackendDev.Repositories;
-using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class AccManualJurnalController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _applicationDbContext;
         private readonly ILogger<AccManualJurnalController> _logger;
 
         public AccManualJurnalController(
-            ApplicationDbContext context,
+            ApplicationDbContext applicationDbContext,
             ILogger<AccManualJurnalController> logger)
         {
-            _context = context;
+            _applicationDbContext = applicationDbContext;
             _logger = logger;
         }
 
+        // =====================================================
+        // PAGED
+        // =====================================================
+
         [HttpGet("paged")]
-        public async Task<IActionResult> Paged(
+        public async Task<IActionResult> PagedAccManualJurnal(
             int page = 1,
             int perPage = 10,
             string? search = null,
+            string? orderBy = "TglDokumen",
+            string? sortDirection = "desc",
             string? tipeDokumen = null,
             DateTime? startDate = null,
-            DateTime? endDate = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc")
+            DateTime? endDate = null)
         {
             try
             {
-                page = page < 1 ? 1 : page;
-                perPage = perPage < 1 ? 10 : perPage;
+                if (page < 1)
+                    page = 1;
 
-                var query = _context.AccManualJurnals
+                if (perPage < 1)
+                    perPage = 10;
+
+                var query = _applicationDbContext
+                    .AccManualJurnals
                     .AsNoTracking()
-                    .Where(x =>
-                        x.IsDelete == false ||
-                        x.IsDelete == null);
+                    .AsQueryable();
 
+                // SEARCH
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     var keyword = $"%{search.Trim()}%";
@@ -55,26 +62,32 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                         EF.Functions.ILike(
                             x.KodeManualJurnal ?? "",
                             keyword) ||
+
                         EF.Functions.ILike(
                             x.TipeDokumen ?? "",
                             keyword) ||
+
                         EF.Functions.ILike(
                             x.RecurringJournalName ?? "",
                             keyword) ||
+
                         EF.Functions.ILike(
                             x.NamaMataUang ?? "",
                             keyword) ||
+
                         EF.Functions.ILike(
                             x.Keterangan ?? "",
                             keyword));
                 }
 
+                // FILTER TIPE DOKUMEN
                 if (!string.IsNullOrWhiteSpace(tipeDokumen))
                 {
                     query = query.Where(x =>
                         x.TipeDokumen == tipeDokumen);
                 }
 
+                // FILTER TANGGAL
                 if (startDate.HasValue)
                 {
                     query = query.Where(x =>
@@ -83,19 +96,23 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
 
                 if (endDate.HasValue)
                 {
-                    var endDateExclusive =
+                    var endExclusive =
                         endDate.Value.Date.AddDays(1);
 
                     query = query.Where(x =>
-                        x.TglDokumen < endDateExclusive);
+                        x.TglDokumen < endExclusive);
                 }
 
-                var isDescending = string.Equals(
-                    sortDirection,
-                    "desc",
-                    StringComparison.OrdinalIgnoreCase);
+                // SORTING
+                var sortColumn =
+                    orderBy?.Trim().ToLower()
+                    ?? "tgldokumen";
 
-                query = orderBy?.Trim().ToLower() switch
+                var isDescending =
+                    sortDirection?.Trim().ToLower()
+                    == "desc";
+
+                query = sortColumn switch
                 {
                     "kodemanualjurnal" =>
                         isDescending
@@ -103,13 +120,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                                 x.KodeManualJurnal)
                             : query.OrderBy(x =>
                                 x.KodeManualJurnal),
-
-                    "tgldokumen" =>
-                        isDescending
-                            ? query.OrderByDescending(x =>
-                                x.TglDokumen)
-                            : query.OrderBy(x =>
-                                x.TglDokumen),
 
                     "tglmanualjurnal" =>
                         isDescending
@@ -125,15 +135,33 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                             : query.OrderBy(x =>
                                 x.TipeDokumen),
 
+                    "namamatauang" =>
+                        isDescending
+                            ? query.OrderByDescending(x =>
+                                x.NamaMataUang)
+                            : query.OrderBy(x =>
+                                x.NamaMataUang),
+
+                    "unbalancedamount" =>
+                        isDescending
+                            ? query.OrderByDescending(x =>
+                                x.UnbalancedAmount)
+                            : query.OrderBy(x =>
+                                x.UnbalancedAmount),
+
                     _ =>
                         isDescending
                             ? query.OrderByDescending(x =>
-                                x.CreateDateTime)
+                                x.TglDokumen)
                             : query.OrderBy(x =>
-                                x.CreateDateTime)
+                                x.TglDokumen)
                 };
 
                 var totalRows = await query.CountAsync();
+
+                var totalPages =
+                    (int)Math.Ceiling(
+                        totalRows / (double)perPage);
 
                 var rows = await query
                     .Skip((page - 1) * perPage)
@@ -158,12 +186,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                         x.RateToIdr,
                         x.UnbalancedAmount,
 
-                        x.Keterangan,
-
-                        x.CreateDateTime,
-                        x.CreateBy,
-                        x.UpdateDateTime,
-                        x.UpdateBy
+                        x.Keterangan
                     })
                     .ToListAsync();
 
@@ -171,16 +194,14 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                 {
                     status = "success",
                     message = "Data berhasil diambil.",
+
                     data = new
                     {
                         Rows = rows,
                         TotalRows = totalRows,
                         CurrentPage = page,
                         PerPage = perPage,
-                        TotalPages = totalRows == 0
-                            ? 0
-                            : (int)Math.Ceiling(
-                                totalRows / (double)perPage)
+                        TotalPages = totalPages
                     }
                 });
             }
@@ -195,24 +216,49 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
             }
         }
 
+        // =====================================================
+        // GET BY ID
+        // =====================================================
+
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             try
             {
-                var data = await _context.AccManualJurnals
+                var data = await _applicationDbContext
+                    .AccManualJurnals
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(x =>
-                        x.AccManualJurnalId == id &&
-                        (x.IsDelete == false ||
-                         x.IsDelete == null));
+                    .Where(x =>
+                        x.AccManualJurnalId == id)
+                    .Select(x => new
+                    {
+                        x.AccManualJurnalId,
+                        x.KodeManualJurnal,
+                        x.TglDokumen,
+                        x.TglManualJurnal,
+                        x.TglPembatalan,
+                        x.TipeDokumen,
+
+                        x.TempRJId,
+                        x.RecurringJournalName,
+                        x.RecurringJournalDate,
+
+                        x.MataUangId,
+                        x.NamaMataUang,
+
+                        x.ExchangeRateId,
+                        x.RateToIdr,
+                        x.UnbalancedAmount,
+
+                        x.Keterangan
+                    })
+                    .FirstOrDefaultAsync();
 
                 if (data == null)
                 {
                     return NotFound(new
                     {
-                        message =
-                            "Jurnal manual tidak ditemukan."
+                        message = "Data tidak ditemukan."
                     });
                 }
 
@@ -233,293 +279,266 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
             }
         }
 
+        // =====================================================
+        // CREATE
+        // LANGSUNG PUSH KE AccManualJurnals
+        // =====================================================
+
         [HttpPost]
         public async Task<IActionResult> Create(
-            [FromBody] AccManualJurnal request)
+            [FromBody] AccManualJurnalViewModel vm)
         {
             try
             {
-                var userActiveId =
-                    await GetCurrentUserActiveId();
-
-                if (!userActiveId.HasValue)
+                if (!ModelState.IsValid)
                 {
-                    return Unauthorized(new
-                    {
-                        message =
-                            "User aktif tidak ditemukan."
-                    });
+                    return BadRequest(ModelState);
                 }
-
-                var kodeManualJurnal =
-                    await GenerateKodeManualJurnal();
-
-                RecurringJournal? recurringJournal = null;
-
-                if (request.TempRJId.HasValue)
+                if (vm.TempRJId.HasValue)
                 {
-                    recurringJournal = await _context
-                        .RecurringJournals
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(x =>
-                            x.TempRJId ==
-                            request.TempRJId.Value &&
-                            (x.IsDelete == false ||
-                             x.IsDelete == null));
+                    var exists = await _applicationDbContext.RecurringJournals
+                        .AnyAsync(x => x.TempRJId == vm.TempRJId.Value);
 
-                    if (recurringJournal == null)
+                    if (!exists)
                     {
                         return BadRequest(new
                         {
-                            message =
-                                "Recurring journal tidak ditemukan."
+                            message = "Recurring Journal tidak ditemukan."
                         });
                     }
                 }
-
-                var entity = new AccManualJurnal
+                var data = new AccManualJurnal
                 {
                     AccManualJurnalId = Guid.NewGuid(),
 
                     KodeManualJurnal =
-                        kodeManualJurnal,
+                        vm.KodeManualJurnal,
 
                     TglDokumen =
-                        request.TglDokumen,
+                        vm.TglDokumen,
 
                     TglManualJurnal =
-                        request.TglManualJurnal,
+                        vm.TglManualJurnal,
 
                     TglPembatalan =
-                        request.TglPembatalan,
+                        vm.TglPembatalan,
 
                     TipeDokumen =
-                        request.TipeDokumen?.Trim(),
+                        vm.TipeDokumen,
 
                     TempRJId =
-                        request.TempRJId,
+                        vm.TempRJId,
 
                     RecurringJournalName =
-                        recurringJournal?
-                            .RecurringJournalName,
+                        vm.RecurringJournalName,
 
                     RecurringJournalDate =
-                        recurringJournal?
-                            .RecurringJournalDate,
+                        vm.RecurringJournalDate,
 
                     MataUangId =
-                        request.MataUangId,
+                        vm.MataUangId,
 
                     NamaMataUang =
-                        request.NamaMataUang?.Trim(),
+                        vm.NamaMataUang,
 
                     ExchangeRateId =
-                        request.ExchangeRateId,
+                        vm.ExchangeRateId,
 
                     RateToIdr =
-                        request.RateToIdr,
+                        vm.RateToIdr,
 
                     UnbalancedAmount =
-                        request.UnbalancedAmount,
+                        vm.UnbalancedAmount,
 
                     Keterangan =
-                        request.Keterangan?.Trim(),
-
-                    IsDelete = false,
-                    CreateBy = userActiveId.Value,
-                    CreateDateTime = DateTime.UtcNow
+                        vm.Keterangan
                 };
 
-                _context.AccManualJurnals.Add(entity);
+                _applicationDbContext
+                    .AccManualJurnals
+                    .Add(data);
 
-                await _context.SaveChangesAsync();
+                var result =
+                    await _applicationDbContext
+                        .SaveChangesAsync();
 
-                return Created("", new
+                if (result > 0)
                 {
-                    status = "success",
-                    message =
-                        "Jurnal manual berhasil ditambahkan.",
-                    data = entity
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
+                    return Created("", new
+                    {
+                        message =
+                            "Tambah data berhasil."
+                    });
+                }
 
                 return StatusCode(500, new
                 {
-                    message = ex.Message
+                    message =
+                        "Gagal menyimpan data."
+                });
+            }
+
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.ToString());
+
+                return StatusCode(500, new
+                {
+                    message = ex.Message,
+                    inner = ex.InnerException?.Message
                 });
             }
         }
+
+        // =====================================================
+        // UPDATE
+        // =====================================================
 
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(
             Guid id,
-            [FromBody] AccManualJurnal request)
+            [FromBody] AccManualJurnalViewModel vm)
         {
             try
             {
-                var userActiveId =
-                    await GetCurrentUserActiveId();
-
-                if (!userActiveId.HasValue)
+                if (!ModelState.IsValid)
                 {
-                    return Unauthorized(new
-                    {
-                        message =
-                            "User aktif tidak ditemukan."
-                    });
+                    return BadRequest(ModelState);
                 }
 
-                var entity = await _context.AccManualJurnals
+                var data = await _applicationDbContext
+                    .AccManualJurnals
                     .FirstOrDefaultAsync(x =>
-                        x.AccManualJurnalId == id &&
-                        (x.IsDelete == false ||
-                         x.IsDelete == null));
+                        x.AccManualJurnalId == id);
 
-                if (entity == null)
+                if (data == null)
                 {
                     return NotFound(new
                     {
-                        message =
-                            "Jurnal manual tidak ditemukan."
+                        message = "Data tidak ditemukan."
                     });
                 }
 
-                RecurringJournal? recurringJournal = null;
+                data.KodeManualJurnal =
+                    vm.KodeManualJurnal;
 
-                if (request.TempRJId.HasValue)
+                data.TglDokumen =
+                    vm.TglDokumen;
+
+                data.TglManualJurnal =
+                    vm.TglManualJurnal;
+
+                data.TglPembatalan =
+                    vm.TglPembatalan;
+
+                data.TipeDokumen =
+                    vm.TipeDokumen;
+
+                data.TempRJId =
+                    vm.TempRJId;
+
+                data.RecurringJournalName =
+                    vm.RecurringJournalName;
+
+                data.RecurringJournalDate =
+                    vm.RecurringJournalDate;
+
+                data.MataUangId =
+                    vm.MataUangId;
+
+                data.NamaMataUang =
+                    vm.NamaMataUang;
+
+                data.ExchangeRateId =
+                    vm.ExchangeRateId;
+
+                data.RateToIdr =
+                    vm.RateToIdr;
+
+                data.UnbalancedAmount =
+                    vm.UnbalancedAmount;
+
+                data.Keterangan =
+                    vm.Keterangan;
+
+                _applicationDbContext
+                    .AccManualJurnals
+                    .Update(data);
+
+                var result =
+                    await _applicationDbContext
+                        .SaveChangesAsync();
+
+                if (result > 0)
                 {
-                    recurringJournal = await _context
-                        .RecurringJournals
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(x =>
-                            x.TempRJId ==
-                            request.TempRJId.Value &&
-                            (x.IsDelete == false ||
-                             x.IsDelete == null));
-
-                    if (recurringJournal == null)
+                    return Ok(new
                     {
-                        return BadRequest(new
-                        {
-                            message =
-                                "Recurring journal tidak ditemukan."
-                        });
-                    }
+                        message =
+                            "Update data berhasil."
+                    });
                 }
 
-                entity.TglDokumen =
-                    request.TglDokumen;
-
-                entity.TglManualJurnal =
-                    request.TglManualJurnal;
-
-                entity.TglPembatalan =
-                    request.TglPembatalan;
-
-                entity.TipeDokumen =
-                    request.TipeDokumen?.Trim();
-
-                entity.TempRJId =
-                    request.TempRJId;
-
-                entity.RecurringJournalName =
-                    recurringJournal?
-                        .RecurringJournalName;
-
-                entity.RecurringJournalDate =
-                    recurringJournal?
-                        .RecurringJournalDate;
-
-                entity.MataUangId =
-                    request.MataUangId;
-
-                entity.NamaMataUang =
-                    request.NamaMataUang?.Trim();
-
-                entity.ExchangeRateId =
-                    request.ExchangeRateId;
-
-                entity.RateToIdr =
-                    request.RateToIdr;
-
-                entity.UnbalancedAmount =
-                    request.UnbalancedAmount;
-
-                entity.Keterangan =
-                    request.Keterangan?.Trim();
-
-                entity.UpdateBy =
-                    userActiveId.Value;
-
-                entity.UpdateDateTime =
-                    DateTime.UtcNow;
-
-                await _context.SaveChangesAsync();
-
-                return Ok(new
+                return StatusCode(500, new
                 {
-                    status = "success",
                     message =
-                        "Jurnal manual berhasil diperbarui."
+                        "Gagal update data."
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
+                _logger.LogError(ex, ex.ToString());
 
                 return StatusCode(500, new
                 {
-                    message = ex.Message
+                    message = ex.Message,
+                    inner = ex.InnerException?.Message
                 });
             }
         }
+
+        // =====================================================
+        // DELETE LANGSUNG
+        // =====================================================
 
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
-                var userActiveId =
-                    await GetCurrentUserActiveId();
-
-                if (!userActiveId.HasValue)
-                {
-                    return Unauthorized(new
-                    {
-                        message =
-                            "User aktif tidak ditemukan."
-                    });
-                }
-
-                var entity = await _context.AccManualJurnals
+                var data = await _applicationDbContext
+                    .AccManualJurnals
                     .FirstOrDefaultAsync(x =>
-                        x.AccManualJurnalId == id &&
-                        (x.IsDelete == false ||
-                         x.IsDelete == null));
+                        x.AccManualJurnalId == id);
 
-                if (entity == null)
+                if (data == null)
                 {
                     return NotFound(new
                     {
-                        message =
-                            "Jurnal manual tidak ditemukan."
+                        message = "Data tidak ditemukan."
                     });
                 }
 
-                entity.IsDelete = true;
-                entity.DeleteBy = userActiveId.Value;
-                entity.DeleteDateTime = DateTime.UtcNow;
+                _applicationDbContext
+                    .AccManualJurnals
+                    .Remove(data);
 
-                await _context.SaveChangesAsync();
+                var result =
+                    await _applicationDbContext
+                        .SaveChangesAsync();
 
-                return Ok(new
+                if (result > 0)
                 {
-                    status = "success",
+                    return Ok(new
+                    {
+                        message =
+                            "Delete berhasil."
+                    });
+                }
+
+                return StatusCode(500, new
+                {
                     message =
-                        "Jurnal manual berhasil dihapus."
+                        "Gagal delete data."
                 });
             }
             catch (Exception ex)
@@ -531,53 +550,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                     message = ex.Message
                 });
             }
-        }
-
-        private async Task<string> GenerateKodeManualJurnal()
-        {
-            const string prefix = "ACC-MJ-";
-
-            var lastCode = await _context.AccManualJurnals
-                .AsNoTracking()
-                .Where(x =>
-                    x.KodeManualJurnal != null &&
-                    x.KodeManualJurnal.StartsWith(prefix))
-                .OrderByDescending(x =>
-                    x.KodeManualJurnal)
-                .Select(x =>
-                    x.KodeManualJurnal)
-                .FirstOrDefaultAsync();
-
-            var nextNumber = 1;
-
-            if (!string.IsNullOrWhiteSpace(lastCode))
-            {
-                var numberPart =
-                    lastCode.Replace(prefix, "");
-
-                if (int.TryParse(
-                    numberPart,
-                    out var lastNumber))
-                {
-                    nextNumber = lastNumber + 1;
-                }
-            }
-
-            return $"{prefix}{nextNumber:D5}";
-        }
-
-        private async Task<Guid?> GetCurrentUserActiveId()
-        {
-            var email = User.FindFirst(
-                ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrWhiteSpace(email))
-                return null;
-
-            return await _context.UserActives
-                .Where(x => x.Email == email)
-                .Select(x => (Guid?)x.UserActiveId)
-                .FirstOrDefaultAsync();
         }
     }
 }

@@ -1,50 +1,56 @@
-﻿
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.Finance.All.Models;
+using QuilvianSystemBackendDev.Areas.Finance.All.ViewModels;
 using QuilvianSystemBackendDev.Repositories;
-using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class RecurringJournalController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _applicationDbContext;
         private readonly ILogger<RecurringJournalController> _logger;
 
         public RecurringJournalController(
-            ApplicationDbContext context,
+            ApplicationDbContext applicationDbContext,
             ILogger<RecurringJournalController> logger)
         {
-            _context = context;
+            _applicationDbContext = applicationDbContext;
             _logger = logger;
         }
 
+        // =====================================================
+        // PAGED
+        // =====================================================
+
         [HttpGet("paged")]
-        public async Task<IActionResult> Paged(
+        public async Task<IActionResult> PagedRecurringJournal(
             int page = 1,
             int perPage = 10,
             string? search = null,
-            string? orderBy = "CreateDateTime",
+            string? orderBy = "RecurringJournalDate",
             string? sortDirection = "desc")
         {
             try
             {
-                page = page < 1 ? 1 : page;
-                perPage = perPage < 1 ? 10 : perPage;
+                if (page < 1)
+                    page = 1;
 
-                var query = _context.RecurringJournals
+                if (perPage < 1)
+                    perPage = 10;
+
+                var query = _applicationDbContext
+                    .RecurringJournals
                     .AsNoTracking()
-                    .Where(x =>
-                        x.IsDelete == false ||
-                        x.IsDelete == null);
+                    .AsQueryable();
 
+                // SEARCH
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     var keyword = $"%{search.Trim()}%";
@@ -53,17 +59,22 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                         EF.Functions.ILike(
                             x.RecurringJournalName ?? "",
                             keyword) ||
+
                         EF.Functions.ILike(
                             x.Keterangan ?? "",
                             keyword));
                 }
 
-                var isDescending = string.Equals(
-                    sortDirection,
-                    "desc",
-                    StringComparison.OrdinalIgnoreCase);
+                // SORTING
+                var sortColumn =
+                    orderBy?.Trim().ToLower()
+                    ?? "recurringjournaldate";
 
-                query = orderBy?.Trim().ToLower() switch
+                var isDescending =
+                    sortDirection?.Trim().ToLower()
+                    == "desc";
+
+                query = sortColumn switch
                 {
                     "recurringjournalname" =>
                         isDescending
@@ -82,12 +93,17 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                     _ =>
                         isDescending
                             ? query.OrderByDescending(x =>
-                                x.CreateDateTime)
+                                x.RecurringJournalDate)
                             : query.OrderBy(x =>
-                                x.CreateDateTime)
+                                x.RecurringJournalDate)
                 };
 
+                // PAGINATION
                 var totalRows = await query.CountAsync();
+
+                var totalPages =
+                    (int)Math.Ceiling(
+                        totalRows / (double)perPage);
 
                 var rows = await query
                     .Skip((page - 1) * perPage)
@@ -97,11 +113,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                         x.TempRJId,
                         x.RecurringJournalName,
                         x.RecurringJournalDate,
-                        x.Keterangan,
-                        x.CreateDateTime,
-                        x.CreateBy,
-                        x.UpdateDateTime,
-                        x.UpdateBy
+                        x.Keterangan
                     })
                     .ToListAsync();
 
@@ -109,48 +121,57 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                 {
                     status = "success",
                     message = "Data berhasil diambil.",
+
                     data = new
                     {
                         Rows = rows,
                         TotalRows = totalRows,
                         CurrentPage = page,
                         PerPage = perPage,
-                        TotalPages = totalRows == 0
-                            ? 0
-                            : (int)Math.Ceiling(
-                                totalRows / (double)perPage)
+                        TotalPages = totalPages
                     }
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
+                _logger.LogError(ex, ex.ToString());
 
                 return StatusCode(500, new
                 {
-                    message = ex.Message
+                    message = ex.Message,
+                    inner = ex.InnerException?.Message
                 });
             }
         }
+
+        // =====================================================
+        // GET BY ID
+        // =====================================================
 
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             try
             {
-                var data = await _context.RecurringJournals
+                var data = await _applicationDbContext
+                    .RecurringJournals
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(x =>
-                        x.TempRJId == id &&
-                        (x.IsDelete == false ||
-                         x.IsDelete == null));
+                    .Where(x =>
+                        x.TempRJId == id)
+                    .Select(x => new
+                    {
+                        x.TempRJId,
+                        x.RecurringJournalName,
+                        x.RecurringJournalDate,
+                        x.Keterangan
+                    })
+                    .FirstOrDefaultAsync();
 
                 if (data == null)
                 {
                     return NotFound(new
                     {
-                        message =
-                            "Recurring journal tidak ditemukan."
+                        message = "Data tidak ditemukan."
                     });
                 }
 
@@ -162,213 +183,203 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
+                _logger.LogError(ex, ex.ToString());
 
                 return StatusCode(500, new
                 {
-                    message = ex.Message
+                    message = ex.Message,
+                    inner = ex.InnerException?.Message
                 });
             }
         }
 
+        // =====================================================
+        // CREATE
+        // LANGSUNG PUSH KE RecurringJournals
+        // =====================================================
+
         [HttpPost]
         public async Task<IActionResult> Create(
-            [FromBody] RecurringJournal request)
+            [FromBody] RecurringJournalViewModel vm)
         {
             try
             {
-                var userActiveId =
-                    await GetCurrentUserActiveId();
-
-                if (!userActiveId.HasValue)
+                if (!ModelState.IsValid)
                 {
-                    return Unauthorized(new
-                    {
-                        message =
-                            "User aktif tidak ditemukan."
-                    });
+                    return BadRequest(ModelState);
                 }
 
-                if (string.IsNullOrWhiteSpace(
-                    request.RecurringJournalName))
-                {
-                    return BadRequest(new
-                    {
-                        message =
-                            "Recurring journal wajib diisi."
-                    });
-                }
-
-                var entity = new RecurringJournal
+                var data = new RecurringJournal
                 {
                     TempRJId = Guid.NewGuid(),
+
                     RecurringJournalName =
-                        request.RecurringJournalName.Trim(),
+                        vm.RecurringJournalName,
+
                     RecurringJournalDate =
-                        request.RecurringJournalDate,
+                        vm.RecurringJournalDate,
+
                     Keterangan =
-                        request.Keterangan?.Trim(),
-                    IsDelete = false,
-                    CreateBy = userActiveId.Value,
-                    CreateDateTime = DateTime.UtcNow
+                        vm.Keterangan
                 };
 
-                _context.RecurringJournals.Add(entity);
-                await _context.SaveChangesAsync();
+                _applicationDbContext
+                    .RecurringJournals
+                    .Add(data);
 
-                return Created("", new
+                var result =
+                    await _applicationDbContext
+                        .SaveChangesAsync();
+
+                if (result > 0)
                 {
-                    status = "success",
-                    message =
-                        "Recurring journal berhasil ditambahkan.",
-                    data = entity
+                    return Created("", new
+                    {
+                        message = "Tambah data berhasil."
+                    });
+                }
+
+                return StatusCode(500, new
+                {
+                    message = "Gagal menyimpan data."
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
+                _logger.LogError(ex, ex.ToString());
 
                 return StatusCode(500, new
                 {
-                    message = ex.Message
+                    message = ex.Message,
+                    inner = ex.InnerException?.Message
                 });
             }
         }
+
+        // =====================================================
+        // UPDATE
+        // =====================================================
 
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(
             Guid id,
-            [FromBody] RecurringJournal request)
+            [FromBody] RecurringJournalViewModel vm)
         {
             try
             {
-                var userActiveId =
-                    await GetCurrentUserActiveId();
-
-                if (!userActiveId.HasValue)
+                if (!ModelState.IsValid)
                 {
-                    return Unauthorized(new
-                    {
-                        message =
-                            "User aktif tidak ditemukan."
-                    });
+                    return BadRequest(ModelState);
                 }
 
-                var entity = await _context.RecurringJournals
+                var data = await _applicationDbContext
+                    .RecurringJournals
                     .FirstOrDefaultAsync(x =>
-                        x.TempRJId == id &&
-                        (x.IsDelete == false ||
-                         x.IsDelete == null));
+                        x.TempRJId == id);
 
-                if (entity == null)
+                if (data == null)
                 {
                     return NotFound(new
                     {
-                        message =
-                            "Recurring journal tidak ditemukan."
+                        message = "Data tidak ditemukan."
                     });
                 }
 
-                entity.RecurringJournalName =
-                    request.RecurringJournalName.Trim();
+                data.RecurringJournalName =
+                    vm.RecurringJournalName;
 
-                entity.RecurringJournalDate =
-                    request.RecurringJournalDate;
+                data.RecurringJournalDate =
+                    vm.RecurringJournalDate;
 
-                entity.Keterangan =
-                    request.Keterangan?.Trim();
+                data.Keterangan =
+                    vm.Keterangan;
 
-                entity.UpdateBy = userActiveId.Value;
-                entity.UpdateDateTime = DateTime.UtcNow;
+                _applicationDbContext
+                    .RecurringJournals
+                    .Update(data);
 
-                await _context.SaveChangesAsync();
+                var result =
+                    await _applicationDbContext
+                        .SaveChangesAsync();
 
-                return Ok(new
+                if (result > 0)
                 {
-                    status = "success",
-                    message =
-                        "Recurring journal berhasil diperbarui."
+                    return Ok(new
+                    {
+                        message = "Update data berhasil."
+                    });
+                }
+
+                return StatusCode(500, new
+                {
+                    message = "Gagal update data."
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
+                _logger.LogError(ex, ex.ToString());
 
                 return StatusCode(500, new
                 {
-                    message = ex.Message
+                    message = ex.Message,
+                    inner = ex.InnerException?.Message
                 });
             }
         }
+
+        // =====================================================
+        // DELETE LANGSUNG
+        // =====================================================
 
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
-                var userActiveId =
-                    await GetCurrentUserActiveId();
-
-                if (!userActiveId.HasValue)
-                {
-                    return Unauthorized(new
-                    {
-                        message =
-                            "User aktif tidak ditemukan."
-                    });
-                }
-
-                var entity = await _context.RecurringJournals
+                var data = await _applicationDbContext
+                    .RecurringJournals
                     .FirstOrDefaultAsync(x =>
-                        x.TempRJId == id &&
-                        (x.IsDelete == false ||
-                         x.IsDelete == null));
+                        x.TempRJId == id);
 
-                if (entity == null)
+                if (data == null)
                 {
                     return NotFound(new
                     {
-                        message =
-                            "Recurring journal tidak ditemukan."
+                        message = "Data tidak ditemukan."
                     });
                 }
 
-                entity.IsDelete = true;
-                entity.DeleteBy = userActiveId.Value;
-                entity.DeleteDateTime = DateTime.UtcNow;
+                _applicationDbContext
+                    .RecurringJournals
+                    .Remove(data);
 
-                await _context.SaveChangesAsync();
+                var result =
+                    await _applicationDbContext
+                        .SaveChangesAsync();
 
-                return Ok(new
+                if (result > 0)
                 {
-                    status = "success",
-                    message =
-                        "Recurring journal berhasil dihapus."
+                    return Ok(new
+                    {
+                        message = "Delete berhasil."
+                    });
+                }
+
+                return StatusCode(500, new
+                {
+                    message = "Gagal delete data."
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
+                _logger.LogError(ex, ex.ToString());
 
                 return StatusCode(500, new
                 {
-                    message = ex.Message
+                    message = ex.Message,
+                    inner = ex.InnerException?.Message
                 });
             }
-        }
-
-        private async Task<Guid?> GetCurrentUserActiveId()
-        {
-            var email = User.FindFirst(
-                ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrWhiteSpace(email))
-                return null;
-
-            return await _context.UserActives
-                .Where(x => x.Email == email)
-                .Select(x => (Guid?)x.UserActiveId)
-                .FirstOrDefaultAsync();
         }
     }
 }
