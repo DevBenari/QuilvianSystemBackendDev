@@ -321,7 +321,50 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                 {
                     return BadRequest(ModelState);
                 }
+                // Recurring Journal
+                if (!await _applicationDbContext.RecurringJournals
+                    .AnyAsync(x => x.TempRJId == vm.TempRJId &&
+                                   (x.IsDelete == false || x.IsDelete == null)))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Recurring Journal tidak ditemukan."
+                    });
+                }
 
+                // COA
+                if (!await _applicationDbContext.MasterCoas
+                    .AnyAsync(x => x.COAId == vm.COAId &&
+                                   (x.IsDelete == false || x.IsDelete == null)))
+                {
+                    return BadRequest(new
+                    {
+                        message = "COA tidak ditemukan."
+                    });
+                }
+
+                // Cost Center
+                if (vm.CostCenterId.HasValue &&
+                    !await _applicationDbContext.CostCenters
+                        .AnyAsync(x => x.CostCenterId == vm.CostCenterId &&
+                                       (x.IsDelete == false || x.IsDelete == null)))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Cost Center tidak ditemukan."
+                    });
+                }
+
+                // Kunjungan
+                if (vm.KunjunganId.HasValue &&
+                    !await _applicationDbContext.Kunjungans
+                        .AnyAsync(x => x.KunjunganID == vm.KunjunganId))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Kunjungan tidak ditemukan."
+                    });
+                }
                 var data = new RecurringJournalDetail
                 {
                     DetailTempRJId = Guid.NewGuid(),

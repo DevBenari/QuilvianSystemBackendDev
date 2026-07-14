@@ -323,6 +323,62 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                 {
                     return BadRequest(ModelState);
                 }
+                // Cek AccManualJurnalId
+                if (vm.AccManualJurnalId == Guid.Empty ||
+                    !await _applicationDbContext.AccManualJurnals.AnyAsync(x =>
+                        x.AccManualJurnalId == vm.AccManualJurnalId))
+                {
+                    return BadRequest(new
+                    {
+                        message = "AccManualJurnalId tidak valid atau tidak ditemukan."
+                    });
+                }
+
+                // Cek DetailTempRJId hanya jika diisi
+                if (vm.DetailTempRJId is Guid detailTempRJId &&
+                    (detailTempRJId == Guid.Empty ||
+                     !await _applicationDbContext.RecurringJournalDetails.AnyAsync(x =>
+                         x.DetailTempRJId == detailTempRJId)))
+                {
+                    return BadRequest(new
+                    {
+                        message = "DetailTempRJId tidak valid atau tidak ditemukan."
+                    });
+                }
+
+                // Cek COAId
+                if (vm.COAId == Guid.Empty ||
+                    !await _applicationDbContext.MasterCoas.AnyAsync(x =>
+                        x.COAId == vm.COAId))
+                {
+                    return BadRequest(new
+                    {
+                        message = "COAId tidak valid atau tidak ditemukan."
+                    });
+                }
+
+                // Cost Center
+                if (vm.CostCenterId.HasValue &&
+                    !await _applicationDbContext.CostCenters
+                        .AnyAsync(x => x.CostCenterId == vm.CostCenterId &&
+                                       (x.IsDelete == false || x.IsDelete == null)))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Cost Center tidak ditemukan."
+                    });
+                }
+
+                // Kunjungan
+                if (vm.KunjunganId.HasValue &&
+                    !await _applicationDbContext.Kunjungans
+                        .AnyAsync(x => x.KunjunganID == vm.KunjunganId))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Kunjungan tidak ditemukan."
+                    });
+                }
 
                 var data = new AccManualJurnalDetail
                 {
