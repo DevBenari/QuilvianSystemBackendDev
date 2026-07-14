@@ -16,6 +16,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         // Informasi Utama
         public string? KodePasien { get; set; }
         public string? NoRekamMedis { get; set; }
+        public string? NoRekamMedisAsal { get; set; }
         public string? TipePasien { get; set; }
         public string? TipePendaftaran { get; set; } // Rawat Jalan, Rawat Inap, Darurat, dll.
         // Informasi Pasien
