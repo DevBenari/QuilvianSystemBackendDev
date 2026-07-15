@@ -222,6 +222,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         NamaLengkap = a.Pasien != null
                             ? a.Pasien.NamaLengkap
                             : null,
+                        NoHandphone = a.NoHandphone,
+                        EmailKunjungan = a.Email,
 
                         TanggalLahir = a.Pasien != null
                             ? a.Pasien.TanggalLahir
@@ -418,6 +420,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.PasienId,
                         r.AsalKunjungan,
                         r.NamaLengkap,
+                        r.NoHandphone,
+                        r.EmailKunjungan,
                         r.TanggalLahir,
                         r.JenisKelamin,
                         r.NoPasien,
@@ -656,6 +660,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         NamaPasien = a.Pasien != null
                             ? a.Pasien.NamaLengkap
                             : null,
+                        NoHandphone = a.NoHandphone,
+                        EmailKunjungan = a.Email,
 
                         NoKaryawan = a.Pasien != null
                             ? a.Pasien.NoKaryawan
@@ -999,6 +1005,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         NamaPasien = a.Pasien != null
                             ? a.Pasien.NamaLengkap
                             : null,
+                        NoHandphone = a.NoHandphone,
+                        EmailKunjungan = a.Email,
 
                         NoKaryawan = a.Pasien != null
                             ? a.Pasien.NoKaryawan
@@ -1349,6 +1357,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         AsuransiId = request.AsuransiId,
                         AsuransiPasienId = request.AsuransiPasienId,
                         AsuransiExcessId = request.AsuransiExcessId,
+                        NoHandphone = request.NoHandphone,
+                        Email = request.Email,
                         JenisKunjungan = kodeJenis,
                         NoRegistrasi = noRegistrasi,
                         NoRekamMedis = request.NoRekamMedis,
@@ -1601,6 +1611,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 existing.AsuransiExcessId = request.AsuransiExcessId;
                 existing.AsuransiId = request.AsuransiId;
                 existing.AsuransiPasienId = request.AsuransiPasienId;
+                existing.NoHandphone = request.NoHandphone;
+                existing.Email = request.Email;
                 existing.JenisKunjungan = kodeJenis;
                 existing.NoRekamMedis = request.NoRekamMedis;
                 existing.TipePasien = request.TipePasien;
@@ -2502,6 +2514,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         NamaPasien = a.Pasien != null
                             ? a.Pasien.NamaLengkap
                             : null,
+                        NoHandphone = a.NoHandphone,
+                        EmailKunjungan = a.Email,
 
                         NoKaryawan = a.Pasien != null
                             ? a.Pasien.NoKaryawan
@@ -2911,11 +2925,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         r.DokterId,
                         r.NamaDokter,
-
+                       
                         r.PasienId,
                         r.NoKaryawan,
                         r.AsalKunjungan,
                         r.NamaPasien,
+                        r.NoHandphone,
+                        r.EmailKunjungan,
                         r.TanggalLahir,
                         r.JenisKelamin,
                         r.NoRegistrasi,

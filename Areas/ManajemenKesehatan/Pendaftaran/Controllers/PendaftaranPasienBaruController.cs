@@ -142,6 +142,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             PendaftaranPasienBaruId = a.PendaftaranPasienBaruId,
                             KodePasien = a.KodePasien,
                             NoRekamMedis = a.NoRekamMedis,
+                            NoRekamMedisAsal = a.NoRekamMedisAsal,
                             TipePasien = a.TipePasien,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
@@ -254,6 +255,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.PendaftaranPasienBaruId,
                     listdata.KodePasien,
                     listdata.NoRekamMedis,
+                    listdata.NoRekamMedisAsal,
                     listdata.TipePasien,
                     listdata.TipePendaftaran,
                     listdata.TitleId,
@@ -393,6 +395,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     pasien.PendaftaranPasienBaruId,
                     pasien.KodePasien,
                     pasien.NoRekamMedis,
+                    pasien.NoRekamMedisAsal,
                     pasien.TipePasien,
                     pasien.TitleId,
                     pasien.NamaLengkap,
@@ -531,6 +534,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     pasien.PendaftaranPasienBaruId,
                     pasien.KodePasien,
                     pasien.NoRekamMedis,
+                    pasien.NoRekamMedisAsal,
                     pasien.TipePasien,
                     pasien.TitleId,
                     pasien.NamaLengkap,
@@ -664,6 +668,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.PendaftaranPasienBaruId,
                     listdata.KodePasien,
                     listdata.NoRekamMedis,
+                    listdata.NoRekamMedisAsal,
                     listdata.TipePasien,
                     listdata.TitleId,
                     listdata.NamaLengkap,
@@ -965,6 +970,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     CreateBy = userActiveId,
                     KodePasien = kodePasien,
                     NoRekamMedis = noRekamMedis,
+                    NoRekamMedisAsal = vm.NoRekamMedisAsal,
                     TipePasien = vm.TipePasien,
                     TipePendaftaran = vm.TipePendaftaran,
                     TitleId = vm.TitleId,
@@ -1135,6 +1141,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 pasien.TipePendaftaran = vm.TipePendaftaran ?? pasien.TipePendaftaran;
                 pasien.TitleId = vm.TitleId ?? pasien.TitleId;
                 pasien.NamaLengkap = vm.NamaLengkap;
+                pasien.NoRekamMedisAsal = vm.NoRekamMedisAsal;
                 pasien.IdentitasId = vm.IdentitasId;
                 pasien.NoIdentitas = vm.NoIdentitas;
                 pasien.TempatLahir = vm.TempatLahir ?? pasien.TempatLahir;
@@ -1316,6 +1323,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             PendaftaranPasienBaruId = a.PendaftaranPasienBaruId,
                             KodePasien = a.KodePasien,
                             NoRekamMedis = a.NoRekamMedis,
+                            NoRekamMedisAsal = a.NoRekamMedisAsal,
                             TipePasien = a.TipePasien,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
@@ -1387,6 +1395,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     EF.Functions.ILike(u.NamaLengkap, search) ||
                     EF.Functions.ILike(u.KodePasien, search) ||
                     EF.Functions.ILike(u.NoRekamMedis, search) ||
+                    EF.Functions.ILike(u.NoRekamMedisAsal, search) ||
                     EF.Functions.ILike(u.NoIdentitas, search)
                 );
             }

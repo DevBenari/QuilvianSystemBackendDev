@@ -24,5 +24,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public bool? IsTriage { get; set; }
         public bool? IsCTTPasienIGD { get; set; }
         public decimal? DepositRanap { get; set; }
+        public string? NoHandphone { get; set; }
+        public string? Email { get; set; }
     }
 }
