@@ -26,5 +26,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public decimal? DepositRanap { get; set; }
         public string? NoHandphone { get; set; }
         public string? Email { get; set; }
+        public string? KategoriPendaftaran { get; set; }
     }
 }

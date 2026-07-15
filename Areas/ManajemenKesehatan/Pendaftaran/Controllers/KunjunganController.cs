@@ -285,6 +285,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.TipePasien,
                         a.TipePembayaran,
                         a.JenisKunjungan,
+                        a.KategoriPendaftaran,
                         a.StatusPengkajian,
                         a.CreateDateTime,
                         a.CreateBy,
@@ -440,6 +441,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.TipePasien,
                         r.TipePembayaran,
                         r.JenisKunjungan,
+                        r.KategoriPendaftaran,
                         r.StatusPengkajian,
                         r.CreateDateTime,
                         r.CreateBy,
@@ -730,6 +732,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.TipePasien,
                         a.TipePembayaran,
                         a.JenisKunjungan,
+                        a.KategoriPendaftaran,
                         a.StatusPengkajian,
                         a.CreateDateTime,
                         a.CreateBy,
@@ -1075,6 +1078,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.TipePasien,
                         a.TipePembayaran,
                         a.JenisKunjungan,
+                        a.KategoriPendaftaran,
                         a.StatusPengkajian,
                         a.CreateDateTime,
                         a.CreateBy,
@@ -1360,6 +1364,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         NoHandphone = request.NoHandphone,
                         Email = request.Email,
                         JenisKunjungan = kodeJenis,
+                        KategoriPendaftaran = request.KategoriPendaftaran,
                         NoRegistrasi = noRegistrasi,
                         NoRekamMedis = request.NoRekamMedis,
                         TipePasien = request.TipePasien,
@@ -1614,6 +1619,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 existing.NoHandphone = request.NoHandphone;
                 existing.Email = request.Email;
                 existing.JenisKunjungan = kodeJenis;
+                existing.KategoriPendaftaran = request.KategoriPendaftaran;
                 existing.NoRekamMedis = request.NoRekamMedis;
                 existing.TipePasien = request.TipePasien;
                 existing.DokterPerujuk = request.DokterPerujuk;
@@ -2314,7 +2320,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             [FromQuery] string? AsalKunjungan = null,
             [FromQuery] Guid? dokterId = null,
             [FromQuery] Guid? pasienId = null,
-            [FromQuery] string? namaKamar = null
+            [FromQuery] string? namaKamar = null,
+            [FromQuery] string? kategoriPendaftaran = null
         )
         {
             try
@@ -2580,6 +2587,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.TipePasien,
                         a.TipePembayaran,
                         a.JenisKunjungan,
+                        a.KategoriPendaftaran,
                         a.StatusPengkajian,
 
                         a.CreateDateTime,
@@ -2753,6 +2761,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                     baseQuery = baseQuery.Where(x =>
                         EF.Functions.ILike(x.KamarNama ?? "", pattern));
+                }
+
+                if (!string.IsNullOrWhiteSpace(kategoriPendaftaran))
+                {
+                    var pattern = $"%{kategoriPendaftaran.Trim()}%";
+
+                    baseQuery = baseQuery.Where(x =>
+                        EF.Functions.ILike(x.KategoriPendaftaran ?? "", pattern));
                 }
 
                 if (periode.HasValue)
