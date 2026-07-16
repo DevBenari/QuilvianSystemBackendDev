@@ -11,6 +11,7 @@ using QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Models;
 using QuilvianSystemBackendDev.Areas.Finance.COA.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Faktur.Models;
 using QuilvianSystemBackendDev.Areas.Finance.MasterFinance.Models;
+using QuilvianSystemBackendDev.Areas.Finance.Pajak.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
@@ -1370,6 +1371,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<AccManualJurnal> AccManualJurnals { get; set; }
         public DbSet<AccManualJurnalDetail> AccManualJurnalDetails { get; set; }
         public DbSet<MasterBank> MasterBanks { get; set; }
+        public DbSet<Pajak> Pajaks { get; set; }
+        public DbSet<PajakRelasi> PajakRelasis { get; set; }
 
         #endregion
     }
