@@ -1129,30 +1129,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 where b.KunjunganId.HasValue
                       && b.ItemId.HasValue
                       && (b.IsDelete == false || b.IsDelete == null)
-                      && (
-                          b.BillingKode == "LAB" ||
-                          b.JenisBilling == "Pemeriksaan Lab"
-                      )
+                      && b.BillingKode == "LAB"
+                      && b.JenisBilling == "Pemeriksaan Lab"
                 group b by new
                 {
-                    KunjunganId = b.KunjunganId.Value,
-                    PemeriksaanLabId = b.ItemId.Value
+                    KunjunganId = b.KunjunganId,
+                    PemeriksaanLabId = b.ItemId
                 }
                 into g
                 select new
                 {
-                    g.Key.KunjunganId,
-                    g.Key.PemeriksaanLabId,
+                    KunjunganId = g.Key.KunjunganId,
+                    PemeriksaanLabId = g.Key.PemeriksaanLabId,
 
-                    /*
-                     * Kalau semua billing untuk item ini sudah true,
-                     * maka dianggap lunas.
-                     * Kalau ada satu saja false/null, berarti belum lunas.
-                     */
-                    IsLunas = !g.Any(x => x.StatusBilling != true),
-
-                    IsCovered = g.Any(x => x.IsCovered == true),
-                    IsCoveredExcess = g.Any(x => x.IsCoveredExcess == true)
+                    IsLunas = (bool?)!g.Any(x => x.StatusBilling != true),
+                    IsCovered = (bool?)g.Any(x => x.IsCovered == true),
+                    IsCoveredExcess = (bool?)g.Any(x => x.IsCoveredExcess == true)
                 };
 
             // Base query lama + LEFT JOIN billing aggregate
@@ -1187,8 +1179,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     }
                     equals new
                     {
-                        KunjunganId = (Guid?)bill0.KunjunganId,
-                        PemeriksaanLabId = (Guid?)bill0.PemeriksaanLabId
+                        KunjunganId = bill0.KunjunganId,
+                        PemeriksaanLabId = bill0.PemeriksaanLabId
                     }
                     into billingJoin
                 from bill in billingJoin.DefaultIfEmpty()
@@ -1402,9 +1394,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      * Field billing yang ringan.
                      * Kalau tidak ada billing, default false.
                      */
-                    IsCovered = bill != null && bill.IsCovered,
-                    IsCoveredExcess = bill != null && bill.IsCoveredExcess,
-                    IsLunas = bill != null && bill.IsLunas
+                    IsCovered = bill != null ? bill.IsCovered : null,
+                    IsCoveredExcess = bill != null ? bill.IsCoveredExcess:null,
+                    IsLunas = bill != null ? bill.IsLunas : null
                 };
 
             // Filter kunjunganId
