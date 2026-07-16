@@ -2973,6 +2973,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.TipePasien,
                         r.TipePembayaran,
                         r.JenisKunjungan,
+                        r.KategoriPendaftaran,
                         r.StatusPengkajian,
 
                         r.CreateDateTime,

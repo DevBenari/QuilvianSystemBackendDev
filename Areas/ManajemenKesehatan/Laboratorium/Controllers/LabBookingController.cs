@@ -307,8 +307,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         {
+            if (id == Guid.Empty)
+            {
+                return BadRequest(new
+                {
+                    message = "Parameter ID tidak valid."
+                });
+            }
+
             try
             {
                 // =====================================================
@@ -320,10 +328,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     join u0 in _applicationDbContext.UserActives.AsNoTracking()
                         on b.CreateBy equals u0.UserActiveId into uGroup
                     from u in uGroup.DefaultIfEmpty()
-
-                    join k in _applicationDbContext.MainKasirs.AsNoTracking()
-                        on b.KunjunganId equals k.KunjunganId into kasirGroup
-                    from k in kasirGroup.DefaultIfEmpty()
 
                     where b.BookingLabId == id
                           && (b.IsDelete == false || b.IsDelete == null)
@@ -401,17 +405,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         CreateByName = u != null ? u.FullName : null,
                         b.CreateDateTime
                     }
-                ).FirstOrDefaultAsync();
+                ).FirstOrDefaultAsync(ct);
 
                 if (header == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan untuk LabBookingId tersebut." });
+                    return NotFound(new
+                    {
+                        message = "Data tidak ditemukan untuk LabBookingId tersebut."
+                    });
                 }
 
                 // =====================================================
-                // 2) Ambil detail berdasarkan BookingLabId
+                // 2) Ambil raw detail berdasarkan BookingLabId
                 // =====================================================
-                var details = await _applicationDbContext.LabBookingDetails
+                var rawDetails = await _applicationDbContext.LabBookingDetails
                     .AsNoTracking()
                     .Where(d =>
                         d.BookingLabId == id &&
@@ -419,20 +426,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     .Select(d => new
                     {
                         LabBookingDetailId = d.DetailBookingLabId,
+                        d.BookingLabId,
                         d.LabId,
                         NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
+
                         d.PemeriksaanLabId,
                         PemeriksaanNama = d.PemeriksaanLab != null
                             ? d.PemeriksaanLab.NamaPemeriksaan
                             : null,
 
                         HargaPemeriksaan = d.PemeriksaanLab != null
-                            ? d.PemeriksaanLab.HargaPemeriksaan
+                            ? (decimal?)d.PemeriksaanLab.HargaPemeriksaan
                             : null,
 
                         d.AsalSpecimenId,
-
-                        // Kalau kolom lama ini masih ada di entity, boleh tampilkan dulu.
                         d.SpecimenJenisId,
                         d.SpecimenMethodId,
 
@@ -456,12 +463,153 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         d.TipeLayanan,
                         d.AlasanPembatalan,
-                        d.TTDPembatalanPath
+                        d.TTDPembatalanPath,
+
+                        d.CreateDateTime,
+                        d.IsDelete
                     })
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 // =====================================================
-                // 3) Response
+                // 3) Ambil status lunas per detail dari Billing
+                // LabBooking.KunjunganId + PemeriksaanLabId
+                // <-> Billing.KunjunganId + Billing.ItemId
+                // =====================================================
+                var billingStatusDict = new Dictionary<Guid, object>();
+
+                if (header.KunjunganId.HasValue)
+                {
+                    var pemeriksaanIds = rawDetails
+                        .Where(x => x.PemeriksaanLabId.HasValue)
+                        .Select(x => x.PemeriksaanLabId!.Value)
+                        .Distinct()
+                        .ToList();
+
+                    if (pemeriksaanIds.Count > 0)
+                    {
+                        var billingStatusList = await (
+                            from bill in _applicationDbContext.Billings.AsNoTracking()
+                            where (bill.IsDelete == false || bill.IsDelete == null)
+                                  && bill.BillingKode == "LAB"
+                                  && bill.KunjunganId.HasValue
+                                  && bill.KunjunganId.Value == header.KunjunganId.Value
+                                  && bill.ItemId.HasValue
+                                  && pemeriksaanIds.Contains(bill.ItemId.Value)
+                            group bill by bill.ItemId.Value into g
+                            select new
+                            {
+                                PemeriksaanLabId = g.Key,
+
+                                IsLunas = !g.Any(x => x.StatusBilling != true),
+
+                                BillingId = g
+                                    .OrderByDescending(x => x.CreateDateTime)
+                                    .Select(x => (Guid?)x.BillingId)
+                                    .FirstOrDefault(),
+
+                                BillingKode = g
+                                    .OrderByDescending(x => x.CreateDateTime)
+                                    .Select(x => x.BillingKode)
+                                    .FirstOrDefault(),
+
+                                JenisBilling = g
+                                    .OrderByDescending(x => x.CreateDateTime)
+                                    .Select(x => x.JenisBilling)
+                                    .FirstOrDefault(),
+
+                                StatusBilling = g
+                                    .OrderByDescending(x => x.CreateDateTime)
+                                    .Select(x => x.StatusBilling)
+                                    .FirstOrDefault()
+                            }
+                        ).ToListAsync(ct);
+
+                        billingStatusDict = billingStatusList.ToDictionary(
+                            x => x.PemeriksaanLabId,
+                            x => (object)new
+                            {
+                                x.IsLunas,
+                                x.BillingId,
+                                x.BillingKode,
+                                x.JenisBilling,
+                                x.StatusBilling
+                            }
+                        );
+                    }
+                }
+
+                // =====================================================
+                // 4) Mapping detail + IsLunas
+                // =====================================================
+                var details = rawDetails
+                    .Select(d =>
+                    {
+                        var isLunas = false;
+                        Guid? billingId = null;
+                        string? billingKode = null;
+                        string? jenisBilling = null;
+                        bool? statusBilling = null;
+
+                        if (d.PemeriksaanLabId.HasValue &&
+                            billingStatusDict.TryGetValue(d.PemeriksaanLabId.Value, out var billingObj))
+                        {
+                            dynamic billing = billingObj;
+
+                            isLunas = billing.IsLunas;
+                            billingId = billing.BillingId;
+                            billingKode = billing.BillingKode;
+                            jenisBilling = billing.JenisBilling;
+                            statusBilling = billing.StatusBilling;
+                        }
+
+                        return new
+                        {
+                            d.LabBookingDetailId,
+                            d.BookingLabId,
+                            d.LabId,
+                            d.NamaLab,
+
+                            d.PemeriksaanLabId,
+                            d.PemeriksaanNama,
+                            d.HargaPemeriksaan,
+
+                            d.AsalSpecimenId,
+                            d.SpecimenJenisId,
+                            d.SpecimenMethodId,
+
+                            d.KategoriPatologiAnatomi,
+                            d.JenisSpecimen,
+                            d.LokasiSpecimen,
+                            d.KeteranganKlinik,
+                            d.PenyakitSebelumnya,
+                            d.PenggunaanFiksasi,
+                            d.JenisPemeriksaanGC,
+                            d.JenisGC,
+                            d.BahanNonGC,
+                            d.BahanMicrobiologi,
+                            d.MasaHaidTerakhir,
+
+                            d.QtyOrder,
+                            d.NoPhoto,
+                            d.StatusPemeriksaan,
+                            d.TanggalSelesai,
+                            d.StatusVerifikasi,
+
+                            d.TipeLayanan,
+                            d.AlasanPembatalan,
+                            d.TTDPembatalanPath,
+
+                            BillingId = billingId,
+                            BillingKode = billingKode,
+                            JenisBilling = jenisBilling,
+                            StatusBilling = statusBilling,
+                            IsLunas = isLunas
+                        };
+                    })
+                    .ToList();
+
+                // =====================================================
+                // 5) Response
                 // =====================================================
                 var result = new
                 {
@@ -505,6 +653,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.DokterPerujukId,
                     header.NamaDokterPerujuk,
 
+                    header.DokterPemeriksaId,
+                    header.NamaDokterPemeriksa,
+
                     header.KonfirmatorId,
                     header.NamaKonfirmator,
                     header.TglKonfrimasi,
@@ -543,7 +694,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             {
                 return StatusCode(500, new
                 {
-                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                    message = $"Terjadi kesalahan internal: {ex.Message}",
+                    innerError = ex.InnerException?.Message
                 });
             }
         }
