@@ -25,15 +25,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfac
             Guid? kunjunganId,
             Guid userActiveId,
             CancellationToken cancellationToken = default);
-
-        Task ApplyAdminTransferRanapAsync(
-            Guid? kunjunganId,
-            Guid userActiveId,
-            CancellationToken cancellationToken = default);
-
-        Task ApplyBillingAdmisiRanapBaruAsync(
-            Guid? kunjunganId,
-            Guid userActiveId,
-            CancellationToken cancellationToken = default);
     }
 }

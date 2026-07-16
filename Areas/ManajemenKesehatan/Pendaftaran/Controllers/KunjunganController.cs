@@ -1414,11 +1414,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         _applicationDbContext.DepositRanaps.Add(depo);
 
-                        await _kunjunganAdminBillingService.ApplyBillingAdmisiRanapBaruAsync(
-                                newKunjungan.KunjunganID,
-                                userActiveId,
-                                ct
-                        );
                     }
 
                     var noBill = await _noBillService.GenerateNoBillAsync(

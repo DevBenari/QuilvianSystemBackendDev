@@ -287,196 +287,364 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         {
+            if (id == Guid.Empty)
+            {
+                return BadRequest(new
+                {
+                    message = "Parameter ID tidak valid."
+                });
+            }
+
             try
             {
-                // ✅ Cek koneksi ke database
-                if (!_applicationDbContext.Database.CanConnect())
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "Tidak dapat terhubung ke database."
+                    });
+                }
 
-                // ✅ Query data lengkap dengan join
-                var data = await 
-                (from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
+                var data = await
+                (
+                    from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
 
-                 join u0 in _applicationDbContext.UserActives.AsNoTracking()
-                     on d.CreateBy equals u0.UserActiveId into userJoin
-                 from u in userJoin.DefaultIfEmpty()
+                    join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                        on d.CreateBy equals u0.UserActiveId into userJoin
+                    from u in userJoin.DefaultIfEmpty()
 
-                     // Join ke Lab Pemeriksaan
-                 join p0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                     on d.PemeriksaanLabId equals p0.PemeriksaanLabId into labPemeriksaans
-                 from p in labPemeriksaans.DefaultIfEmpty()
+                    join p0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                        on d.PemeriksaanLabId equals p0.PemeriksaanLabId into labPemeriksaans
+                    from p in labPemeriksaans.DefaultIfEmpty()
 
-                     // Join ke Booking Bed
-                 join bb0 in _applicationDbContext.BookingBedRanaps.AsNoTracking()
-                     on d.LabBooking.KunjunganId equals bb0.KunjunganId into labBookingBedRanaps
-                 from bb in labBookingBedRanaps.DefaultIfEmpty()
+                    join bb0 in _applicationDbContext.BookingBedRanaps.AsNoTracking()
+                        on d.LabBooking.KunjunganId equals bb0.KunjunganId into labBookingBedRanaps
+                    from bb in labBookingBedRanaps.DefaultIfEmpty()
 
-                     // Join ke Asuransi Pasien untuk ambil NoPolis, IsUtama, IsExcess
-                 join ap0 in _applicationDbContext.AsuransiPasiens.AsNoTracking()
-                     on d.LabBooking.Kunjungan.AsuransiPasienId equals (Guid?)ap0.AsuransiPasienId into asuransiPasienJoin
-                 from ap in asuransiPasienJoin.DefaultIfEmpty()
+                    join ap0 in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                        on d.LabBooking.Kunjungan.AsuransiPasienId equals (Guid?)ap0.AsuransiPasienId into asuransiPasienJoin
+                    from ap in asuransiPasienJoin.DefaultIfEmpty()
 
-                 where d.IsDelete == false && d.DetailBookingLabId == id
+                    join apx0 in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                        on d.LabBooking.Kunjungan.AsuransiPasienExcessId equals (Guid?)apx0.AsuransiPasienId into asuransiPasienExcessJoin
+                    from apx in asuransiPasienExcessJoin.DefaultIfEmpty()
 
-                 select new
-                 {
-                     d.CreateDateTime,
-                     d.CreateBy,
-                     CreateByName = u != null ? u.FullName : null,
+                    where d.IsDelete == false && d.DetailBookingLabId == id
 
-                     d.DetailBookingLabId,
-                     d.BookingLabId,
-                     NoOrder = d.LabBooking != null ? d.LabBooking.NoOrder : null,
-                     NamaLab = d.Lab != null
-                         ? d.Lab.NamaLab
-                         : null,
-                     Diagnosa = d.LabBooking != null ? d.LabBooking.DiagnosaAwal : null,
+                    select new
+                    {
+                        d.CreateDateTime,
+                        d.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
 
-                     NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
-                     TglBooking = d.LabBooking != null ? d.LabBooking.TglBooking : null,
-                     TglPemeriksaan = d.LabBooking != null ? d.LabBooking.TglPemeriksaan : null,
-                     TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
-                     TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
+                        d.DetailBookingLabId,
+                        d.BookingLabId,
 
-                     // Informasi dokter
-                     DokterPemeriksa = d.LabBooking != null ? d.LabBooking.DokterPemeriksa.NmDokter : null,
-                     DokterKonsulen = d.LabBooking != null ? d.LabBooking.DokterKonsulen.NmDokter : null,
-                     DokterRujukan = d.LabBooking != null ? d.LabBooking.DokterPerujuk.NmDokter : null,
+                        NoOrder = d.LabBooking != null
+                            ? d.LabBooking.NoOrder
+                            : null,
 
-                     // Informasi Pasien
-                     d.PasienId,
-                     NamaPasien = d.LabBooking != null && d.LabBooking.Pasien != null
-                         ? d.LabBooking.Pasien.NamaLengkap
-                         : null,
+                        NamaLab = d.Lab != null
+                            ? d.Lab.NamaLab
+                            : null,
 
-                     NoRM = d.LabBooking != null && d.LabBooking.Pasien != null
-                         ? d.LabBooking.Pasien.NoRekamMedis
-                         : null,
+                        Diagnosa = d.LabBooking != null
+                            ? d.LabBooking.DiagnosaAwal
+                            : null,
 
-                     Umur = d.LabBooking != null && d.LabBooking.Pasien != null && d.LabBooking.Pasien.TanggalLahir.HasValue
-                         ? HitungUmurLengkap(d.LabBooking.Pasien.TanggalLahir)
-                         : null,
+                        NamaKonfirmator = d.LabBooking != null &&
+                                           d.LabBooking.Konfirmator != null
+                            ? d.LabBooking.Konfirmator.FullName
+                            : null,
 
-                     JenisKelamin = d.LabBooking != null && d.LabBooking.Pasien != null
-                         ? d.LabBooking.Pasien.JenisKelamin
-                         : null,
+                        TglBooking = d.LabBooking != null
+                            ? d.LabBooking.TglBooking
+                            : null,
 
-                     Email = d.LabBooking != null && d.LabBooking.Pasien != null
-                         ? d.LabBooking.Pasien.Email
-                         : null,
+                        TglPemeriksaan = d.LabBooking != null
+                            ? d.LabBooking.TglPemeriksaan
+                            : null,
 
-                     d.IsCito,
+                        TglKonfirmasi = d.LabBooking != null
+                            ? d.LabBooking.TglKonfirmasi
+                            : null,
 
-                     // Informasi Kunjungan
-                     KunjunganId = d.LabBooking != null
-                         ? d.LabBooking.KunjunganId
-                         : null,
+                        TglSampling = d.LabBooking != null
+                            ? d.LabBooking.TglSampling
+                            : null,
 
-                     NoRegistrasi = d.LabBooking != null && d.LabBooking.Kunjungan != null
-                         ? d.LabBooking.Kunjungan.NoRegistrasi
-                         : null,
+                        DokterPemeriksa = d.LabBooking != null &&
+                                           d.LabBooking.DokterPemeriksa != null
+                            ? d.LabBooking.DokterPemeriksa.NmDokter
+                            : null,
 
-                     NamaPoli = d.LabBooking != null &&
-                                d.LabBooking.Kunjungan != null &&
-                                d.LabBooking.Kunjungan.Poliklinik != null
-                         ? d.LabBooking.Kunjungan.Poliklinik.NamaPoliklinik
-                         : null,
-                     JenisKunjungan = d.LabBooking != null && d.LabBooking.Kunjungan != null
-                      ? d.LabBooking.Kunjungan.JenisKunjungan
-                      : null,
+                        DokterKonsulen = d.LabBooking != null &&
+                                          d.LabBooking.DokterKonsulen != null
+                            ? d.LabBooking.DokterKonsulen.NmDokter
+                            : null,
 
-                     // kamar
-                     Kamarid = bb.KamarId,
-                     NamaKamar = bb.Kamar != null ? bb.Kamar.NamaKamar : null,
-                     NamaKelas = bb.Kamar.Kelas != null ? bb.Kamar.Kelas.NamaKelas : null,
+                        DokterRujukan = d.LabBooking != null &&
+                                         d.LabBooking.DokterPerujuk != null
+                            ? d.LabBooking.DokterPerujuk.NmDokter
+                            : null,
 
-                     // Informasi Asuransi
-                     AsuransiId = d.LabBooking != null && d.LabBooking.Kunjungan != null
-                         ? d.LabBooking.Kunjungan.AsuransiId
-                         : null,
+                        d.PasienId,
 
-                     AsuransiPasienId = ap != null
-                         ? ap.AsuransiPasienId
-                         : d.LabBooking.Kunjungan.AsuransiPasienId,
+                        NamaPasien = d.LabBooking != null &&
+                                      d.LabBooking.Pasien != null
+                            ? d.LabBooking.Pasien.NamaLengkap
+                            : null,
 
-                     NamaAsuransi = d.LabBooking != null &&
+                        NoRM = d.LabBooking != null &&
+                               d.LabBooking.Pasien != null
+                            ? d.LabBooking.Pasien.NoRekamMedis
+                            : null,
+
+                        Umur = d.LabBooking != null &&
+                               d.LabBooking.Pasien != null &&
+                               d.LabBooking.Pasien.TanggalLahir.HasValue
+                            ? HitungUmurLengkap(d.LabBooking.Pasien.TanggalLahir)
+                            : null,
+
+                        JenisKelamin = d.LabBooking != null &&
+                                        d.LabBooking.Pasien != null
+                            ? d.LabBooking.Pasien.JenisKelamin
+                            : null,
+
+                        Email = d.LabBooking != null &&
+                                d.LabBooking.Pasien != null
+                            ? d.LabBooking.Pasien.Email
+                            : null,
+
+                        d.IsCito,
+
+                        KunjunganId = d.LabBooking != null
+                            ? d.LabBooking.KunjunganId
+                            : null,
+
+                        NoRegistrasi = d.LabBooking != null &&
+                                       d.LabBooking.Kunjungan != null
+                            ? d.LabBooking.Kunjungan.NoRegistrasi
+                            : null,
+
+                        NamaPoli = d.LabBooking != null &&
                                     d.LabBooking.Kunjungan != null &&
-                                    d.LabBooking.Kunjungan.Asuransi != null
-                         ? d.LabBooking.Kunjungan.Asuransi.NamaAsuransi
-                         : null,
+                                    d.LabBooking.Kunjungan.Poliklinik != null
+                            ? d.LabBooking.Kunjungan.Poliklinik.NamaPoliklinik
+                            : null,
 
-                     NoPolis = ap != null
-                         ? ap.NoPolis
-                         : null,
+                        JenisKunjungan = d.LabBooking != null &&
+                                          d.LabBooking.Kunjungan != null
+                            ? d.LabBooking.Kunjungan.JenisKunjungan
+                            : null,
 
-                     IsUtama = ap != null
-                         ? ap.IsUtama
-                         : null,
+                        Kamarid = bb != null
+                            ? bb.KamarId
+                            : null,
 
-                     // asuransi excess
-                     AsuransiExcessId = d.LabBooking != null && d.LabBooking.Kunjungan != null
-                         ? d.LabBooking.Kunjungan.AsuransiExcessId
-                         : null,
+                        NamaKamar = bb != null &&
+                                    bb.Kamar != null
+                            ? bb.Kamar.NamaKamar
+                            : null,
 
-                     AsuransiPasienExcessId = ap != null
-                         ? ap.AsuransiPasienId
-                         : d.LabBooking.Kunjungan.AsuransiPasienExcessId,
+                        NamaKelas = bb != null &&
+                                    bb.Kamar != null &&
+                                    bb.Kamar.Kelas != null
+                            ? bb.Kamar.Kelas.NamaKelas
+                            : null,
 
-                     NamaAsuransiExcess = d.LabBooking != null &&
-                                    d.LabBooking.Kunjungan != null &&
-                                    d.LabBooking.Kunjungan.Asuransi != null
-                         ? d.LabBooking.Kunjungan.Asuransi.NamaAsuransi
-                         : null,
-                     NoPolisExcess = ap != null
-                         ? ap.NoPolis
-                         : null,
-                     IsUtamaExcess = ap != null
-                         ? ap.IsUtama
-                         : null,
-                     IsExcess = ap != null
-                         ? ap.IsExcess
-                         : null,
+                        AsuransiId = d.LabBooking != null &&
+                                     d.LabBooking.Kunjungan != null
+                            ? d.LabBooking.Kunjungan.AsuransiId
+                            : null,
 
+                        AsuransiPasienId = ap != null
+                            ? ap.AsuransiPasienId
+                            : d.LabBooking.Kunjungan.AsuransiPasienId,
 
-                     // =========================
-                     // Informasi Pemeriksaan
-                     // =========================
+                        NamaAsuransi = d.LabBooking != null &&
+                                        d.LabBooking.Kunjungan != null &&
+                                        d.LabBooking.Kunjungan.Asuransi != null
+                            ? d.LabBooking.Kunjungan.Asuransi.NamaAsuransi
+                            : null,
 
-                     d.PemeriksaanLabId,
+                        NoPolis = ap != null
+                            ? ap.NoPolis
+                            : null,
 
-                     NamaPemeriksaan = p != null
-                         ? p.NamaPemeriksaan
-                         : null,
+                        IsUtama = ap != null
+                            ? ap.IsUtama
+                            : null,
 
-                     NamaKategori = p != null ? p.KategoriPemeriksaan.NamaKategori : null,
+                        AsuransiExcessId = d.LabBooking != null &&
+                                            d.LabBooking.Kunjungan != null
+                            ? d.LabBooking.Kunjungan.AsuransiExcessId
+                            : null,
 
-                     HargaPemeriksaan = p != null
-                         ? p.HargaPemeriksaan
-                         : null,
+                        AsuransiPasienExcessId = apx != null
+                            ? apx.AsuransiPasienId
+                            : d.LabBooking.Kunjungan.AsuransiPasienExcessId,
 
-                     d.NoPhoto,
-                     d.StatusPemeriksaan,
-                     d.TanggalSelesai,
-                     d.QtyOrder
-                 }).FirstOrDefaultAsync();
+                        NamaAsuransiExcess = d.LabBooking != null &&
+                                              d.LabBooking.Kunjungan != null &&
+                                              d.LabBooking.Kunjungan.AsuransiExcess != null
+                            ? d.LabBooking.Kunjungan.AsuransiExcess.NamaAsuransi
+                            : null,
 
-                // ✅ Cek apakah data ditemukan
+                        NoPolisExcess = apx != null
+                            ? apx.NoPolis
+                            : null,
+
+                        IsUtamaExcess = apx != null
+                            ? apx.IsUtama
+                            : null,
+
+                        IsExcess = apx != null
+                            ? apx.IsExcess
+                            : null,
+
+                        d.PemeriksaanLabId,
+
+                        NamaPemeriksaan = p != null
+                            ? p.NamaPemeriksaan
+                            : null,
+
+                        NamaKategori = p != null &&
+                                       p.KategoriPemeriksaan != null
+                            ? p.KategoriPemeriksaan.NamaKategori
+                            : null,
+
+                        HargaPemeriksaan = p != null
+                            ? p.HargaPemeriksaan
+                            : null,
+
+                        d.NoPhoto,
+                        d.StatusPemeriksaan,
+                        d.TanggalSelesai,
+                        d.QtyOrder
+                    }
+                ).FirstOrDefaultAsync(ct);
+
                 if (data == null)
-                    return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                {
+                    return NotFound(new
+                    {
+                        message = $"Data dengan ID {id} tidak ditemukan."
+                    });
+                }
 
-                // ✅ Return sukses
+                // =====================================================
+                // Ambil informasi billing untuk IsCovered dan IsLunas
+                // Matching:
+                // KunjunganId + PemeriksaanLabId
+                // <-> Billing.KunjunganId + Billing.ItemId
+                // =====================================================
+                var billing = data.KunjunganId.HasValue && data.PemeriksaanLabId.HasValue
+                    ? await _applicationDbContext.Billings
+                        .AsNoTracking()
+                        .Where(b =>
+                            b.KunjunganId.HasValue &&
+                            b.KunjunganId.Value == data.KunjunganId.Value &&
+                            b.ItemId.HasValue &&
+                            b.ItemId.Value == data.PemeriksaanLabId.Value &&
+                            (b.IsDelete == false || b.IsDelete == null) &&
+                            (
+                                b.BillingKode == "LAB" ||
+                                b.JenisBilling == "Pemeriksaan Lab"
+                            ))
+                        .OrderByDescending(b => b.CreateDateTime)
+                        .Select(b => new
+                        {
+                            b.StatusBilling,
+                            b.IsCovered,
+                            b.IsCoveredExcess,
+                        })
+                        .FirstOrDefaultAsync(ct)
+                    : null;
+
+                var result = new
+                {
+                    data.CreateDateTime,
+                    data.CreateBy,
+                    data.CreateByName,
+
+                    data.DetailBookingLabId,
+                    data.BookingLabId,
+                    data.NoOrder,
+                    data.NamaLab,
+                    data.Diagnosa,
+
+                    data.NamaKonfirmator,
+                    data.TglBooking,
+                    data.TglPemeriksaan,
+                    data.TglKonfirmasi,
+                    data.TglSampling,
+
+                    data.DokterPemeriksa,
+                    data.DokterKonsulen,
+                    data.DokterRujukan,
+
+                    data.PasienId,
+                    data.NamaPasien,
+                    data.NoRM,
+                    data.Umur,
+                    data.JenisKelamin,
+                    data.Email,
+                    data.IsCito,
+
+                    data.KunjunganId,
+                    data.NoRegistrasi,
+                    data.NamaPoli,
+                    data.JenisKunjungan,
+
+                    data.Kamarid,
+                    data.NamaKamar,
+                    data.NamaKelas,
+
+                    data.AsuransiId,
+                    data.AsuransiPasienId,
+                    data.NamaAsuransi,
+                    data.NoPolis,
+                    data.IsUtama,
+
+                    data.AsuransiExcessId,
+                    data.AsuransiPasienExcessId,
+                    data.NamaAsuransiExcess,
+                    data.NoPolisExcess,
+                    data.IsUtamaExcess,
+                    data.IsExcess,
+
+                    data.PemeriksaanLabId,
+                    data.NamaPemeriksaan,
+                    data.NamaKategori,
+                    data.HargaPemeriksaan,
+
+                    data.NoPhoto,
+                    data.StatusPemeriksaan,
+                    data.TanggalSelesai,
+                    data.QtyOrder,
+
+                    IsLunas = billing?.StatusBilling,
+                    IsCovered = billing?.IsCovered ?? false,
+                    IsCoveredExcess = billing?.IsCoveredExcess ?? false,
+                };
+
                 return Ok(new
                 {
                     status = "success",
                     message = "Data retrieved successfully",
-                    data
+                    data = result
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}",
+                    innerError = ex.InnerException?.Message
+                });
             }
         }
 
@@ -938,206 +1106,324 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // guard
             if (page <= 0) page = 1;
             if (perPage <= 0) perPage = 10;
-            if (perPage > 200) perPage = 200; // hard cap biar server aman
+            if (perPage > 200) perPage = 200;
 
-            // Base query (no tracking => ringan)
+            /*
+             * =====================================================
+             * Billing aggregate.
+             * Dibuat sekali, lalu di-left join ke query utama.
+             *
+             * Matching:
+             * LabBooking.KunjunganId + LabBookingDetail.PemeriksaanLabId
+             * =
+             * Billing.KunjunganId + Billing.ItemId
+             *
+             * Hanya ambil field penting:
+             * - IsLunas dari StatusBilling
+             * - IsCovered
+             * - IsCoveredExcess
+             * =====================================================
+             */
+            var billingAggQuery =
+                from b in _applicationDbContext.Billings.AsNoTracking()
+                where b.KunjunganId.HasValue
+                      && b.ItemId.HasValue
+                      && (b.IsDelete == false || b.IsDelete == null)
+                      && (
+                          b.BillingKode == "LAB" ||
+                          b.JenisBilling == "Pemeriksaan Lab"
+                      )
+                group b by new
+                {
+                    KunjunganId = b.KunjunganId.Value,
+                    PemeriksaanLabId = b.ItemId.Value
+                }
+                into g
+                select new
+                {
+                    g.Key.KunjunganId,
+                    g.Key.PemeriksaanLabId,
+
+                    /*
+                     * Kalau semua billing untuk item ini sudah true,
+                     * maka dianggap lunas.
+                     * Kalau ada satu saja false/null, berarti belum lunas.
+                     */
+                    IsLunas = !g.Any(x => x.StatusBilling != true),
+
+                    IsCovered = g.Any(x => x.IsCovered == true),
+                    IsCoveredExcess = g.Any(x => x.IsCoveredExcess == true)
+                };
+
+            // Base query lama + LEFT JOIN billing aggregate
             var query =
-             (from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
+                from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
 
-              join u0 in _applicationDbContext.UserActives.AsNoTracking()
-                  on d.CreateBy equals u0.UserActiveId into userJoin
-              from u in userJoin.DefaultIfEmpty()
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into userJoin
+                from u in userJoin.DefaultIfEmpty()
 
-                  // Join ke Lab Pemeriksaan
-              join p0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                  on d.PemeriksaanLabId equals p0.PemeriksaanLabId into labPemeriksaans
-              from p in labPemeriksaans.DefaultIfEmpty()
+                join p0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals p0.PemeriksaanLabId into labPemeriksaans
+                from p in labPemeriksaans.DefaultIfEmpty()
 
-                  // Join ke Booking Bed
-              join bb0 in _applicationDbContext.BookingBedRanaps.AsNoTracking()
-                  on d.LabBooking.KunjunganId equals bb0.KunjunganId into labBookingBedRanaps
-              from bb in labBookingBedRanaps.DefaultIfEmpty()
+                join bb0 in _applicationDbContext.BookingBedRanaps.AsNoTracking()
+                    on d.LabBooking.KunjunganId equals bb0.KunjunganId into labBookingBedRanaps
+                from bb in labBookingBedRanaps.DefaultIfEmpty()
 
-                  // Join ke Asuransi Pasien untuk ambil NoPolis, IsUtama, IsExcess
-              join ap0 in _applicationDbContext.AsuransiPasiens.AsNoTracking()
-                  on d.LabBooking.Kunjungan.AsuransiPasienId equals (Guid?)ap0.AsuransiPasienId into asuransiPasienJoin
-              from ap in asuransiPasienJoin.DefaultIfEmpty()
-              where d.IsDelete == false || d.IsDelete == null
+                join ap0 in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                    on d.LabBooking.Kunjungan.AsuransiPasienId equals (Guid?)ap0.AsuransiPasienId into asuransiPasienJoin
+                from ap in asuransiPasienJoin.DefaultIfEmpty()
 
-              select new
-              {
-                  d.CreateDateTime,
-                  d.CreateBy,
-                  CreateByName = u != null ? u.FullName : null,
+                join apx0 in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                    on d.LabBooking.Kunjungan.AsuransiPasienExcessId equals (Guid?)apx0.AsuransiPasienId into asuransiPasienExcessJoin
+                from apx in asuransiPasienExcessJoin.DefaultIfEmpty()
 
-                  d.DetailBookingLabId,
-                  d.BookingLabId,
-                  NoOrder = d.LabBooking != null ? d.LabBooking.NoOrder : null,
-                  d.LabId,
-                  NamaLab = d.Lab != null
-                      ? d.Lab.NamaLab
-                      : null,
-                  Diagnosa = d.LabBooking != null ? d.LabBooking.DiagnosaAwal : null,
+                join bill0 in billingAggQuery
+                    on new
+                    {
+                        KunjunganId = d.LabBooking.KunjunganId,
+                        PemeriksaanLabId = d.PemeriksaanLabId
+                    }
+                    equals new
+                    {
+                        KunjunganId = (Guid?)bill0.KunjunganId,
+                        PemeriksaanLabId = (Guid?)bill0.PemeriksaanLabId
+                    }
+                    into billingJoin
+                from bill in billingJoin.DefaultIfEmpty()
 
-                  NamaKonfirmator = d.LabBooking != null ? d.LabBooking.Konfirmator.FullName : null,
-                  TglBooking = d.LabBooking != null ? d.LabBooking.TglBooking : null,
-                  TglPemeriksaan = d.LabBooking != null ? d.LabBooking.TglPemeriksaan : null,
-                  TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
-                  TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
+                where d.IsDelete == false || d.IsDelete == null
 
-                  // informasi dokter
-                  DokterPemeriksa = d.LabBooking != null ? d.LabBooking.DokterPemeriksa.NmDokter : null,
-                  DokterKonsulen = d.LabBooking != null ? d.LabBooking.DokterKonsulen.NmDokter : null,
-                  DokterRujukan = d.LabBooking != null ? d.LabBooking.DokterPerujuk.NmDokter : null,
+                select new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
 
-                  // Informasi Pasien
-                  d.PasienId,
+                    d.DetailBookingLabId,
+                    d.BookingLabId,
 
-                  NamaPasien = d.LabBooking != null && d.LabBooking.Pasien != null
-                      ? d.LabBooking.Pasien.NamaLengkap
-                      : null,
+                    NoOrder = d.LabBooking != null
+                        ? d.LabBooking.NoOrder
+                        : null,
 
-                  Umur = d.LabBooking != null && d.LabBooking.Pasien != null && d.LabBooking.Pasien.TanggalLahir.HasValue
-                         ? HitungUmurLengkap(d.LabBooking.Pasien.TanggalLahir)
-                         : null,
+                    d.LabId,
 
-                  NoRM = d.LabBooking != null && d.LabBooking.Pasien != null
-                      ? d.LabBooking.Pasien.NoRekamMedis
-                      : null,
+                    NamaLab = d.Lab != null
+                        ? d.Lab.NamaLab
+                        : null,
 
-                  NoIdentitas = d.LabBooking != null && d.LabBooking.Pasien != null
-                      ? d.LabBooking.Pasien.NoIdentitas
-                      : null,
+                    Diagnosa = d.LabBooking != null
+                        ? d.LabBooking.DiagnosaAwal
+                        : null,
 
-                  JenisKelamin = d.LabBooking != null && d.LabBooking.Pasien != null
-                      ? d.LabBooking.Pasien.JenisKelamin
-                      : null,
+                    NamaKonfirmator = d.LabBooking != null &&
+                                       d.LabBooking.Konfirmator != null
+                        ? d.LabBooking.Konfirmator.FullName
+                        : null,
 
-                  Email = d.LabBooking != null && d.LabBooking.Pasien != null
-                      ? d.LabBooking.Pasien.Email
-                      : null,
+                    TglBooking = d.LabBooking != null
+                        ? d.LabBooking.TglBooking
+                        : null,
 
-                  d.IsCito,
+                    TglPemeriksaan = d.LabBooking != null
+                        ? d.LabBooking.TglPemeriksaan
+                        : null,
 
-                  // Informasi Kunjungan
-                  KunjunganId = d.LabBooking != null
-                      ? d.LabBooking.KunjunganId
-                      : null,
+                    TglKonfirmasi = d.LabBooking != null
+                        ? d.LabBooking.TglKonfirmasi
+                        : null,
 
-                  NoRegistrasi = d.LabBooking != null && d.LabBooking.Kunjungan != null
-                      ? d.LabBooking.Kunjungan.NoRegistrasi
-                      : null,
-                  NamaPoli = d.LabBooking != null &&
-                             d.LabBooking.Kunjungan != null &&
-                             d.LabBooking.Kunjungan.Poliklinik != null
-                      ? d.LabBooking.Kunjungan.Poliklinik.NamaPoliklinik
-                      : null,
-                  JenisKunjungan = d.LabBooking != null && d.LabBooking.Kunjungan != null
-                      ? d.LabBooking.Kunjungan.JenisKunjungan
-                      : null,
+                    TglSampling = d.LabBooking != null
+                        ? d.LabBooking.TglSampling
+                        : null,
 
-                  // kamar
-                  Kamarid =bb.KamarId,
-                  NamaKamar = bb.Kamar != null ? bb.Kamar.NamaKamar : null,
-                  NamaKelas = bb.Kamar.Kelas != null ? bb.Kamar.Kelas.NamaKelas : null,
+                    DokterPemeriksa = d.LabBooking != null &&
+                                       d.LabBooking.DokterPemeriksa != null
+                        ? d.LabBooking.DokterPemeriksa.NmDokter
+                        : null,
 
-                  // Informasi Asuransi
-                  AsuransiId = d.LabBooking != null && d.LabBooking.Kunjungan != null
-                      ? d.LabBooking.Kunjungan.AsuransiId
-                      : null,
+                    DokterKonsulen = d.LabBooking != null &&
+                                      d.LabBooking.DokterKonsulen != null
+                        ? d.LabBooking.DokterKonsulen.NmDokter
+                        : null,
 
-                  AsuransiPasienId = ap != null
-                      ? ap.AsuransiPasienId
-                      : d.LabBooking.Kunjungan.AsuransiPasienId,
+                    DokterRujukan = d.LabBooking != null &&
+                                     d.LabBooking.DokterPerujuk != null
+                        ? d.LabBooking.DokterPerujuk.NmDokter
+                        : null,
 
-                  NamaAsuransi = d.LabBooking != null &&
-                                 d.LabBooking.Kunjungan != null &&
-                                 d.LabBooking.Kunjungan.Asuransi != null
-                      ? d.LabBooking.Kunjungan.Asuransi.NamaAsuransi
-                      : null,
+                    d.PasienId,
 
-                  NoPolis = ap != null
-                      ? ap.NoPolis
-                      : null,
+                    NamaPasien = d.LabBooking != null &&
+                                  d.LabBooking.Pasien != null
+                        ? d.LabBooking.Pasien.NamaLengkap
+                        : null,
 
-                  IsUtama = ap != null
-                      ? ap.IsUtama
-                      : null,
+                    Umur = d.LabBooking != null &&
+                           d.LabBooking.Pasien != null &&
+                           d.LabBooking.Pasien.TanggalLahir.HasValue
+                        ? HitungUmurLengkap(d.LabBooking.Pasien.TanggalLahir)
+                        : null,
 
-                  // asuransi excess
-                  AsuransiExcessId = d.LabBooking != null && d.LabBooking.Kunjungan != null
-                      ? d.LabBooking.Kunjungan.AsuransiExcessId
-                      : null,
+                    NoRM = d.LabBooking != null &&
+                           d.LabBooking.Pasien != null
+                        ? d.LabBooking.Pasien.NoRekamMedis
+                        : null,
 
-                  AsuransiPasienExcessId = ap != null
-                      ? ap.AsuransiPasienId
-                      : d.LabBooking.Kunjungan.AsuransiPasienExcessId,
+                    NoIdentitas = d.LabBooking != null &&
+                                  d.LabBooking.Pasien != null
+                        ? d.LabBooking.Pasien.NoIdentitas
+                        : null,
 
-                  NamaAsuransiExcess = d.LabBooking != null &&
-                                 d.LabBooking.Kunjungan != null &&
-                                 d.LabBooking.Kunjungan.Asuransi != null
-                      ? d.LabBooking.Kunjungan.Asuransi.NamaAsuransi
-                      : null,
-                  NoPolisExcess = ap != null
-                      ? ap.NoPolis
-                      : null,
-                  IsUtamaExcess = ap != null
-                      ? ap.IsUtama
-                      : null,
-                  IsExcess = ap != null
-                      ? ap.IsExcess
-                      : null,
+                    JenisKelamin = d.LabBooking != null &&
+                                    d.LabBooking.Pasien != null
+                        ? d.LabBooking.Pasien.JenisKelamin
+                        : null,
 
+                    Email = d.LabBooking != null &&
+                            d.LabBooking.Pasien != null
+                        ? d.LabBooking.Pasien.Email
+                        : null,
 
-                  // =========================
-                  // Informasi Pemeriksaan
-                  // =========================
+                    d.IsCito,
 
-                  d.PemeriksaanLabId,
+                    KunjunganId = d.LabBooking != null
+                        ? d.LabBooking.KunjunganId
+                        : null,
 
-                  NamaPemeriksaan = p != null
-                      ? p.NamaPemeriksaan
-                      : null,
-                  
-                  NamaKategori = p!= null ? p.KategoriPemeriksaan.NamaKategori :null,
+                    NoRegistrasi = d.LabBooking != null &&
+                                   d.LabBooking.Kunjungan != null
+                        ? d.LabBooking.Kunjungan.NoRegistrasi
+                        : null,
 
-                  HargaPemeriksaan = p != null
-                      ? p.HargaPemeriksaan
-                      : null,
+                    NamaPoli = d.LabBooking != null &&
+                                d.LabBooking.Kunjungan != null &&
+                                d.LabBooking.Kunjungan.Poliklinik != null
+                        ? d.LabBooking.Kunjungan.Poliklinik.NamaPoliklinik
+                        : null,
 
-                  d.NoPhoto,
-                  d.StatusPemeriksaan,
-                  d.TanggalSelesai,
-                  IsLunas = _applicationDbContext.Billings
-                        .AsNoTracking()
-                        .Where(b =>
-                            b.KunjunganId == d.LabBooking.KunjunganId &&
-                            b.ItemId == d.PemeriksaanLabId &&
-                            b.JenisBilling == "Pemeriksaan Lab" &&
-                            (b.IsDelete == false || b.IsDelete == null))
-                        .Select(b => (bool?)b.StatusBilling)
-                        .FirstOrDefault(),
-                  d.QtyOrder,
-                  
-              });
+                    JenisKunjungan = d.LabBooking != null &&
+                                      d.LabBooking.Kunjungan != null
+                        ? d.LabBooking.Kunjungan.JenisKunjungan
+                        : null,
+
+                    // kamar
+                    Kamarid = bb != null
+                        ? bb.KamarId
+                        : null,
+
+                    NamaKamar = bb != null &&
+                                bb.Kamar != null
+                        ? bb.Kamar.NamaKamar
+                        : null,
+
+                    NamaKelas = bb != null &&
+                                bb.Kamar != null &&
+                                bb.Kamar.Kelas != null
+                        ? bb.Kamar.Kelas.NamaKelas
+                        : null,
+
+                    // Informasi Asuransi utama
+                    AsuransiId = d.LabBooking != null &&
+                                 d.LabBooking.Kunjungan != null
+                        ? d.LabBooking.Kunjungan.AsuransiId
+                        : null,
+
+                    AsuransiPasienId = ap != null
+                        ? ap.AsuransiPasienId
+                        : d.LabBooking.Kunjungan.AsuransiPasienId,
+
+                    NamaAsuransi = d.LabBooking != null &&
+                                    d.LabBooking.Kunjungan != null &&
+                                    d.LabBooking.Kunjungan.Asuransi != null
+                        ? d.LabBooking.Kunjungan.Asuransi.NamaAsuransi
+                        : null,
+
+                    NoPolis = ap != null
+                        ? ap.NoPolis
+                        : null,
+
+                    IsUtama = ap != null
+                        ? ap.IsUtama
+                        : null,
+
+                    // Informasi asuransi excess
+                    AsuransiExcessId = d.LabBooking != null &&
+                                        d.LabBooking.Kunjungan != null
+                        ? d.LabBooking.Kunjungan.AsuransiExcessId
+                        : null,
+
+                    AsuransiPasienExcessId = apx != null
+                        ? apx.AsuransiPasienId
+                        : d.LabBooking.Kunjungan.AsuransiPasienExcessId,
+
+                    NamaAsuransiExcess = d.LabBooking != null &&
+                                          d.LabBooking.Kunjungan != null &&
+                                          d.LabBooking.Kunjungan.AsuransiExcess != null
+                        ? d.LabBooking.Kunjungan.AsuransiExcess.NamaAsuransi
+                        : null,
+
+                    NoPolisExcess = apx != null
+                        ? apx.NoPolis
+                        : null,
+
+                    IsUtamaExcess = apx != null
+                        ? apx.IsUtama
+                        : null,
+
+                    IsExcess = apx != null
+                        ? apx.IsExcess
+                        : null,
+
+                    // Informasi Pemeriksaan
+                    d.PemeriksaanLabId,
+
+                    NamaPemeriksaan = p != null
+                        ? p.NamaPemeriksaan
+                        : null,
+
+                    NamaKategori = p != null &&
+                                    p.KategoriPemeriksaan != null
+                        ? p.KategoriPemeriksaan.NamaKategori
+                        : null,
+
+                    HargaPemeriksaan = p != null
+                        ? p.HargaPemeriksaan
+                        : null,
+
+                    d.NoPhoto,
+                    d.StatusPemeriksaan,
+                    d.TanggalSelesai,
+                    d.QtyOrder,
+
+                    /*
+                     * Field billing yang ringan.
+                     * Kalau tidak ada billing, default false.
+                     */
+                    IsCovered = bill != null && bill.IsCovered,
+                    IsCoveredExcess = bill != null && bill.IsCoveredExcess,
+                    IsLunas = bill != null && bill.IsLunas
+                };
 
             // Filter kunjunganId
             if (kunjunganId.HasValue)
                 query = query.Where(x => x.KunjunganId == kunjunganId.Value);
 
-            // Filter lab booking id
+            // Filter lab booking detail id
             if (labbookingdeatilId.HasValue)
                 query = query.Where(x => x.DetailBookingLabId == labbookingdeatilId.Value);
 
             // filter based on status billing
             if (isLunas.HasValue)
-                query = query.Where(x=>x.IsLunas == isLunas.Value);
+                query = query.Where(x => x.IsLunas == isLunas.Value);
 
             if (kamarId.HasValue)
-                query = query.Where(x=>x.Kamarid == kamarId.Value);
+                query = query.Where(x => x.Kamarid == kamarId.Value);
 
             if (labId.HasValue)
-                query = query.Where(x=>x.LabId == labId.Value);
+                query = query.Where(x => x.LabId == labId.Value);
 
             if (!string.IsNullOrWhiteSpace(namaKamar))
             {
@@ -1151,8 +1437,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             {
                 var pattern = $"%{noRM.Trim()}%";
 
-                query = query.Where
-                    (x =>EF.Functions.ILike(x.NoRM ?? "", pattern) ||
+                query = query.Where(x =>
+                    EF.Functions.ILike(x.NoRM ?? "", pattern) ||
                     EF.Functions.ILike(x.NoIdentitas ?? "", pattern));
             }
 
@@ -1168,14 +1454,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             {
                 var jk = JenisKunjungan.Value.ToString();
 
-                query = query.Where(b =>
-                    b.JenisKunjungan == jk);
+                query = query.Where(x =>
+                    x.JenisKunjungan == jk);
             }
 
             var selectedOrderBy = orderBy?.Trim() ?? "CreateDateTime";
 
-            // Filter periode/date range (gunakan range, jangan .Date)
-            // Kita pakai UTC date boundary agar index CreateDateTime kepakai.
             DateTimeOffset? startUtc = null;
             DateTimeOffset? endUtcExclusive = null;
 
@@ -1197,11 +1481,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         (todayUtc, todayUtc.AddDays(1)),
 
                     PeriodeFilter.Yesterday =>
-                       (todayUtc, todayUtc.AddDays(-1)),
+                        (todayUtc.AddDays(-1), todayUtc),
 
                     PeriodeFilter.ThisWeek =>
-                        (todayUtc.AddDays(-(int)todayUtc.DayOfWeek),
-                         todayUtc.AddDays(1)),
+                        (
+                            todayUtc.AddDays(-(int)todayUtc.DayOfWeek),
+                            todayUtc.AddDays(1)
+                        ),
 
                     PeriodeFilter.LastWeek =>
                         (
@@ -1299,7 +1585,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             var desc = (sortDirection ?? "desc")
                 .Equals("desc", StringComparison.OrdinalIgnoreCase);
 
-
             query = desc
                 ? selectedOrderBy switch
                 {
@@ -1357,7 +1642,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     _ => query
                         .OrderBy(x => x.CreateDateTime)
                 };
-            // Total count (async)
+
             var totalRows = await query.CountAsync(ct);
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
@@ -1367,14 +1652,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     status = "success",
                     message = "Data retrieved successfully",
-                    data = new { Rows = Array.Empty<object>(), TotalRows = 0, CurrentPage = page, PerPage = perPage, TotalPages = 0 }
+                    data = new
+                    {
+                        Rows = Array.Empty<object>(),
+                        TotalRows = 0,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = 0
+                    }
                 });
             }
 
             if (page > totalPages)
-                return NotFound(new { message = "Page not found." });
+            {
+                return NotFound(new
+                {
+                    message = "Page not found."
+                });
+            }
 
-            // Page data (async)
             var rows = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)

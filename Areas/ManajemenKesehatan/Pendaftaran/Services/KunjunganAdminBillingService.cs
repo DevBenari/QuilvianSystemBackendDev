@@ -65,7 +65,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             Guid userActiveId,
             CancellationToken cancellationToken = default)
         {
-            if (IsLabRujukan(jenisKunjungan) || IsRadRujukan(jenisKunjungan))
+            if (IsLabRujukan(jenisKunjungan) || IsRadRujukan(jenisKunjungan) || IsRanap(jenisKunjungan))
                 return;
 
             var kodeJenis = ResolveKodeBiayaAdmin(
@@ -181,49 +181,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             );
         }
 
-        // =====================================================
-        // BARU: TRANSFER KE RANAP
-        // Ketentuan:
-        // Biaya admin ranap masuk billing ketika transfer pasien.
-        // Biaya admin rajal/IGD yang lama diubah menjadi admin ranap.
-        // =====================================================
-        public async Task ApplyAdminTransferRanapAsync(
-            Guid? kunjunganId,
-            Guid userActiveId,
-            CancellationToken cancellationToken = default)
-        {
-            await ApplyBiayaAdministrasiByKodeAsync(
-                kunjunganId: kunjunganId,
-                kodeJenis: ADMIN_RANAP_CODE,
-                userActiveId: userActiveId,
-                cancellationToken: cancellationToken
-            );
-        }
-
-        // =====================================================
-        // BARU: ADMISI RANAP BARU
-        // Ketentuan:
-        // Biaya admin ranap masuk saat pembuatan pasien/kunjungan ranap baru.
-        // =====================================================
-        public async Task ApplyBillingAdmisiRanapBaruAsync(
-            Guid? kunjunganId,
-            Guid userActiveId,
-            CancellationToken cancellationToken = default)
-        {
-            await ApplyBiayaAdministrasiByKodeAsync(
-                kunjunganId: kunjunganId,
-                kodeJenis: ADMIN_RANAP_CODE,
-                userActiveId: userActiveId,
-                cancellationToken: cancellationToken
-            );
-        }
-
         #region HELPERS
 
         #region Apply biaya admin generic
         // =====================================================
         // HELPER: BIAYA ADMIN GENERIC
-        // Bisa untuk OP, IGD, IP/RANAP.
+        // Bisa untuk OP, IGD.
         // =====================================================
 
         private async Task ApplyBiayaAdministrasiByKodeAsync(
@@ -235,10 +198,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             if (!kunjunganId.HasValue || kunjunganId.Value == Guid.Empty)
                 throw new ArgumentException("KunjunganId tidak valid.");
 
-            kodeJenis = kodeJenis?.Trim().ToUpperInvariant();
+            kodeJenis = (kodeJenis ?? "").Trim().ToUpperInvariant();
 
             if (string.IsNullOrWhiteSpace(kodeJenis))
                 throw new ArgumentException("Kode jenis biaya administrasi tidak valid.");
+
+            /*
+             * Rule baru:
+             * Rawat Inap / IP / Ranap tidak dikenakan biaya admin.
+             * Jangan insert billing admin IP.
+             * Jangan update admin OP/IGD menjadi IP.
+             */
+            if (kodeJenis == ADMIN_RANAP_CODE || kodeJenis == "IP" || kodeJenis == "RANAP")
+                return;
 
             var now = DateTime.Now;
             var startToday = now.Date;
@@ -253,8 +225,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
                     cancellationToken);
 
             if (kunjungan == null)
+            {
                 throw new InvalidOperationException(
                     "Data kunjungan tidak ditemukan. Pastikan kunjungan sudah tersimpan sebelum membuat billing biaya admin.");
+            }
 
             if (!kunjungan.PasienId.HasValue || kunjungan.PasienId.Value == Guid.Empty)
                 throw new InvalidOperationException("PasienId pada kunjungan tidak valid.");
@@ -268,18 +242,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             if (targetBiayaAdmin == null)
                 return;
 
-            var targetIsRanap =
-                kodeJenis == ADMIN_RANAP_CODE ||
-                kodeJenis == "IP" ||
-                kodeJenis == "RANAP";
-
             /*
              * =====================================================
              * 1. Cek biaya admin pada KunjunganId yang sama.
              * =====================================================
-             * Ini penting untuk rawat inap:
-             * SOAP ranap hari ke-1, ke-2, ke-3 tidak membuat admin IP berulang,
-             * selama KunjunganId rawat inap masih sama.
+             * Jika sudah ada biaya admin pada kunjungan ini,
+             * jangan insert lagi dan jangan update item-nya.
              */
             var existingSameKunjungan = await _applicationDbContext.Billings
                 .FirstOrDefaultAsync(b =>
@@ -288,6 +256,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
                     b.BillingKode == BILLING_KODE_BIAYA_ADMIN &&
                     (b.IsDelete == false || b.IsDelete == null),
                     cancellationToken);
+
+            if (existingSameKunjungan != null)
+                return;
 
             var trackedSameKunjungan = _applicationDbContext.ChangeTracker
                 .Entries<Billing>()
@@ -300,53 +271,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
                 .Select(e => e.Entity)
                 .FirstOrDefault();
 
-            var adminSameKunjungan = existingSameKunjungan ?? trackedSameKunjungan;
-
-            if (adminSameKunjungan != null)
-            {
-                // Kalau admin yang sama sudah ada, stop.
-                if (adminSameKunjungan.ItemId == targetBiayaAdmin.BiayaAdministrasiId)
-                    return;
-
-                // Kalau request OP/IGD tapi sudah ada admin lain di kunjungan ini, jangan timpa.
-                if (!targetIsRanap)
-                    return;
-
-                /*
-                 * Kalau target IP/RANAP dan billing lama belum dibayar,
-                 * boleh update OP/IGD menjadi IP.
-                 *
-                 * Kalau sudah dibayar, jangan diubah supaya invoice paid tidak berubah.
-                 */
-                if (adminSameKunjungan.StatusBilling == false)
-                {
-                    await UpdateBillingToBiayaAdminAsync(
-                        billing: adminSameKunjungan,
-                        targetBiayaAdmin: targetBiayaAdmin,
-                        kunjunganId: kunjunganId.Value,
-                        userActiveId: userActiveId,
-                        now: now,
-                        dueDate: dueDate,
-                        nowOffset: nowOffset,
-                        cancellationToken: cancellationToken
-                    );
-                }
-
+            if (trackedSameKunjungan != null)
                 return;
-            }
 
             /*
              * =====================================================
              * 2. Cek biaya admin pasien pada hari yang sama.
              * =====================================================
-             * Rule bisnis:
+             * Rule:
              * 1 pasien hanya punya 1 biaya admin per hari untuk OP/IGD.
              *
-             * Untuk IP/RANAP:
-             * - kalau ada admin OP/IGD hari ini dan belum dibayar,
-             *   ubah menjadi admin IP.
-             * - kalau sudah dibayar, jangan diubah dan jangan tambah
-             *   supaya tidak double.
+             * Jika pasien sudah punya admin OP/IGD hari ini,
+             * jangan insert biaya admin baru.
              */
             var existingAdminSamePatientToday = await (
                 from b in _applicationDbContext.Billings
@@ -365,41 +301,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             ).FirstOrDefaultAsync(cancellationToken);
 
             if (existingAdminSamePatientToday != null)
-            {
-                // Kalau item admin sudah sama, stop.
-                if (existingAdminSamePatientToday.ItemId == targetBiayaAdmin.BiayaAdministrasiId)
-                    return;
-
-                // Untuk OP/IGD, jangan tambah dan jangan timpa.
-                if (!targetIsRanap)
-                    return;
-
-                /*
-                 * Untuk IP/RANAP:
-                 * OP/IGD boleh berubah menjadi IP hanya kalau belum dibayar.
-                 */
-                if (existingAdminSamePatientToday.StatusBilling == false)
-                {
-                    await UpdateBillingToBiayaAdminAsync(
-                        billing: existingAdminSamePatientToday,
-                        targetBiayaAdmin: targetBiayaAdmin,
-                        kunjunganId: kunjunganId.Value,
-                        userActiveId: userActiveId,
-                        now: now,
-                        dueDate: dueDate,
-                        nowOffset: nowOffset,
-                        cancellationToken: cancellationToken
-                    );
-                }
-
                 return;
-            }
 
             /*
              * =====================================================
              * 3. Cek billing admin yang sudah di-Add tapi belum SaveChanges.
              * =====================================================
-             * Ini mencegah double insert dalam 1 request yang sama.
              */
             var trackedAdminTodaySameKunjungan = _applicationDbContext.ChangeTracker
                 .Entries<Billing>()
@@ -417,33 +324,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
                 .FirstOrDefault();
 
             if (trackedAdminTodaySameKunjungan != null)
-            {
-                if (trackedAdminTodaySameKunjungan.ItemId == targetBiayaAdmin.BiayaAdministrasiId)
-                    return;
-
-                if (!targetIsRanap)
-                    return;
-
-                if (trackedAdminTodaySameKunjungan.StatusBilling == false)
-                {
-                    await UpdateBillingToBiayaAdminAsync(
-                        billing: trackedAdminTodaySameKunjungan,
-                        targetBiayaAdmin: targetBiayaAdmin,
-                        kunjunganId: kunjunganId.Value,
-                        userActiveId: userActiveId,
-                        now: now,
-                        dueDate: dueDate,
-                        nowOffset: nowOffset,
-                        cancellationToken: cancellationToken
-                    );
-                }
-
                 return;
-            }
 
             /*
              * =====================================================
-             * 4. Kalau belum ada biaya admin, insert billing admin baru.
+             * 4. Insert billing biaya admin OP/IGD
              * =====================================================
              */
             var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
@@ -808,20 +693,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
                 $"Jenis kunjungan tidak dikenali. JenisKunjungan={jenisKunjungan}, AsalKunjungan={asalKunjungan}");
         }
 
-        private static bool IsRanap(string value)
+        private static bool IsRanap(string? value)
         {
             return value == "IP" ||
                    value == "RANAP" ||
                    value == "RAWAT INAP";
         }
 
-        private static bool IsIgd(string value)
+        private static bool IsIgd(string? value)
         {
             return value == "IGD" ||
                    value.Contains("GAWAT DARURAT");
         }
 
-        private static bool IsRajal(string value)
+        private static bool IsRajal(string? value)
         {
             return value == "OP" ||
                    value == "RAJAL" ||
