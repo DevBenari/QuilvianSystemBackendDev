@@ -551,7 +551,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             b.ItemId.Value == data.PemeriksaanLabId.Value &&
                             (b.IsDelete == false || b.IsDelete == null) &&
                             (
-                                b.BillingKode == "LAB" ||
+                                b.BillingKode == "LAB" &&
                                 b.JenisBilling == "Pemeriksaan Lab"
                             ))
                         .OrderByDescending(b => b.CreateDateTime)

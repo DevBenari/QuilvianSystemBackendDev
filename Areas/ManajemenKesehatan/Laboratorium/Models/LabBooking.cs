@@ -47,7 +47,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? ProsesBooking {  get; set; }
         public string? TindakLanjut {  get; set; }
         public string? HasilPenunjangLab { get; set; }
-        public string? AnjuranDiet {  get; set; }
+        public string? AnjuranDiet { get; set; }
+        public TimeOnly? WaktuKonfirmasi { get; set; }
         public DateTime? TglKonfirmasi {  get; set; }
         // Tambahan baru
         public TimeOnly? WaktuPemeriksaan { get; set; }

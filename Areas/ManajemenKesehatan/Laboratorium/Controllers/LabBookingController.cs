@@ -399,6 +399,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         KonfirmatorId = b.KonfirmatorId,
                         NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                         TglKonfrimasi = b.TglKonfirmasi,
+                        b.WaktuKonfirmasi,
                         b.StatusKonfirmasi,
 
                         b.CreateBy,
@@ -659,6 +660,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.KonfirmatorId,
                     header.NamaKonfirmator,
                     header.TglKonfrimasi,
+                    header.WaktuKonfirmasi,
                     header.StatusKonfirmasi,
 
                     header.WaktuPemeriksaan,
@@ -848,6 +850,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.DokterPerujukId = vm.DokterPerujukId;
                 entity.SuratRujukan = vm.SuratRujukan;
                 entity.KonfirmatorId = vm.KonfirmatorId;
+                entity.WaktuKonfirmasi = vm.WaktuKonfirmasi;
                 entity.TglKonfirmasi = DateTime.UtcNow;
                 entity.Keterangan = vm.Keterangan;
                 entity.WaktuPemeriksaan = vm.WaktuPemeriksaan;
@@ -1242,7 +1245,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ======================================
                 entity.StatusKonfirmasi = vm.Status;
                 entity.KonfirmatorId = vm.KonfirmatorId;
+                entity.TglKonfirmasi = DateTime.UtcNow;
                 entity.DokterPemeriksaId = vm.DokterPemeriksaId;
+                entity.WaktuKonfirmasi = vm.WaktuKonfirmasi;
                 entity.TglSampling = vm.TglSampling;
 
                 entity.UpdateBy = userActiveId;
@@ -1881,6 +1886,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                     TglKonfrimasi = b.TglKonfirmasi,
+                    b.WaktuKonfirmasi,
                     b.WaktuPemeriksaan,
                     b.WaktuPemeriksaanPersiapan,
                     b.StatusKonfirmasi,
@@ -2309,6 +2315,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
+                    b.WaktuKonfirmasi,
                     TglKonfirmasi = b.TglKonfirmasi,
                     b.WaktuPemeriksaan,
                     b.WaktuPemeriksaanPersiapan,
@@ -2814,6 +2821,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                     TglKonfirmasi = b.TglKonfirmasi,
+                    b.WaktuKonfirmasi,
                     b.StatusKonfirmasi,
                     b.WaktuPemeriksaan,
                     b.WaktuPemeriksaanPersiapan,
@@ -3246,6 +3254,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                     TglKonfirmasi = b.TglKonfirmasi,
+                    b.WaktuKonfirmasi,
                     b.StatusKonfirmasi,
                     b.WaktuPemeriksaan,
                     b.WaktuPemeriksaanPersiapan,
@@ -3661,6 +3670,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                     TglKonfirmasi = b.TglKonfirmasi,
+                    b.WaktuKonfirmasi,
                     b.StatusKonfirmasi,
                     b.WaktuPemeriksaan,
                     b.WaktuPemeriksaanPersiapan,

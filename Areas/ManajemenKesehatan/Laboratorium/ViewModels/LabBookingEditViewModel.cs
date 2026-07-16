@@ -17,7 +17,7 @@
 
         // konfrimasi
         public Guid? KonfirmatorId { get; set; }
-
+        public TimeOnly? WaktuKonfirmasi { get; set; }
         public TimeOnly? WaktuPemeriksaan { get; set; }
         public TimeOnly? WaktuPemeriksaanPersiapan { get; set; }
         public string? Keterangan { get; set; } // Catatan atau keterangan tambahan
