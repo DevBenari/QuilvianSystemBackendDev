@@ -4,7 +4,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.ViewModels
 {
     public class MasterGrupViewModel
     {
-        public Guid? TipeAkunCOAId { get; set; }
+        public Guid GrupCOAId { get; set; }
+
+        //public Guid? TipeAkunCOAId { get; set; }
 
         [MaxLength(200)]
         public string? NamaGrupCOA { get; set; }

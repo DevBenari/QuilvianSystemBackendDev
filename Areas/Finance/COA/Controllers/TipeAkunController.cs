@@ -184,8 +184,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                 search = $"%{search.ToLower()}%";
 
                 query = query.Where(x =>
-                    EF.Functions.ILike(x.NamaTipeAkunCOA, search) ||
-                    EF.Functions.ILike(x.KodeTipeAkunCOA, search));
+                    EF.Functions.ILike(x.NamaTipeAkunCOA, search));
             }
 
             var totalRows = await query.CountAsync();

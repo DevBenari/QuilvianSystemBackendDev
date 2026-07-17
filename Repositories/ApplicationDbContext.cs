@@ -1306,7 +1306,7 @@ namespace QuilvianSystemBackendDev.Repositories
 
             #region COA
             public DbSet<MasterCoa> MasterCoas { get; set; }
-            public DbSet<MasterGrup> MasterGrups { get; set; }
+            public DbSet<GrupCoa> MasterGrups { get; set; }
             public DbSet<TipeAkun> TipeAkuns { get; set; }
 
             #endregion

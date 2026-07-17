@@ -4,13 +4,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.COA.Models
 {
-    [Table("Fin_MasterGrup", Schema = "public")]
-    public class MasterGrup : UserActivity
+    [Table("Fin_GrupCoa", Schema = "public")]
+    public class GrupCoa : UserActivity
     {
         [Key]
         public Guid GrupCOAId { get; set; }
 
-        public Guid? TipeAkunCOAId { get; set; }
+        //public Guid? TipeAkunCOAId { get; set; }
 
         [MaxLength(200)]
         public string? NamaGrupCOA { get; set; }

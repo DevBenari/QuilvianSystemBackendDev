@@ -11,6 +11,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Models
         public Guid COAId { get; set; }
 
         public Guid? GrupCOAId { get; set; }
+        
+        public Guid TipeAkunCOAId { get; set; }
+
 
         [MaxLength(200)]
         public string? NamaCOA { get; set; }

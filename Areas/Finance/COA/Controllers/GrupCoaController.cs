@@ -12,14 +12,14 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("FrontendCorsPolicy")]
-    public class MasterGrupController : Controller
+    public class GrupCoaController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly ILogger<MasterGrupController> _logger;
+        private readonly ILogger<GrupCoaController> _logger;
 
-        public MasterGrupController(
+        public GrupCoaController(
             ApplicationDbContext context,
-            ILogger<MasterGrupController> logger)
+            ILogger<GrupCoaController> logger)
         {
             _context = context;
             _logger = logger;
@@ -35,15 +35,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             var query = from g in _context.MasterGrups
                         join u in _context.UserActives
                         on g.CreateBy equals u.UserActiveId
-                        join t in _context.TipeAkuns
-                        on g.TipeAkunCOAId equals t.TipeAkunCOAId into tipeJoin
-                        from t in tipeJoin.DefaultIfEmpty()
                         where g.IsDelete == false
                         select new
                         {
                             g.GrupCOAId,
-                            g.TipeAkunCOAId,
-                            NamaTipeAkunCOA = t != null ? t.NamaTipeAkunCOA : null,
                             g.NamaGrupCOA,
                             g.KodeGrupCOA,
                             g.Keterangan,
@@ -88,7 +83,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
 
         // ================= CREATE =================
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] MasterGrup model)
+        public async Task<IActionResult> Create([FromBody] GrupCoa model)
         {
             var email = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -111,7 +106,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
 
         // ================= UPDATE =================
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] MasterGrup model)
+        public async Task<IActionResult> Update(Guid id, [FromBody] GrupCoa model)
         {
             var data = await _context.MasterGrups
                 .FirstOrDefaultAsync(x => x.GrupCOAId == id && x.IsDelete == false);
@@ -124,7 +119,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             var user = await _context.UserActives
                 .FirstOrDefaultAsync(x => x.Email == email);
 
-            data.TipeAkunCOAId = model.TipeAkunCOAId;
             data.NamaGrupCOA = model.NamaGrupCOA;
             data.KodeGrupCOA = model.KodeGrupCOA;
             data.Keterangan = model.Keterangan;
@@ -174,16 +168,12 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             var query = from g in _context.MasterGrups
                         join u in _context.UserActives
                         on g.CreateBy equals u.UserActiveId
-                        join t in _context.TipeAkuns
-                        on g.TipeAkunCOAId equals t.TipeAkunCOAId into tipeJoin
-                        from t in tipeJoin.DefaultIfEmpty()
                         where g.IsDelete == false
                         select new
                         {
                             g.GrupCOAId,
                             g.NamaGrupCOA,
                             g.KodeGrupCOA,
-                            NamaTipeAkunCOA = t != null ? t.NamaTipeAkunCOA : null,
                             g.Keterangan,
                             g.CreateDateTime,
                             CreateByName = u.FullName
