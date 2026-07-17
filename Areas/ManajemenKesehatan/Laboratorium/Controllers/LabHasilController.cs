@@ -241,10 +241,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KunjunganId =  vm.KunjunganId,
                     LabId =  vm.LabId,
                     LabBookingId = vm.LabBookingId,
-                    DokterPerujukId = vm.DokterPerujukId,
-                    DokterKonfirmatorId = vm.DokterKonfirmatorId,
-                    NoPhoneKonfirmator = vm.NoPhoneKonfirmator,
-                    IsKonfirmatorDPJP = vm.IsKonfirmatorDPJP,
                     UserActiveId = vm.UserActiveId,
                     PenanggungJawabAnalisId = vm.PenanggungJawabId,
                     PenanggungJawabId = vm.PenanggungJawabId,
@@ -320,10 +316,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.KunjunganId = vm.KunjunganId;
                 data.LabId = vm.LabId;
                 data.LabBookingId = vm.LabBookingId;
-                data.DokterPerujukId = vm.DokterPerujukId;
-                data.DokterKonfirmatorId = vm.DokterKonfirmatorId;
-                data.NoPhoneKonfirmator = vm.NoPhoneKonfirmator;
-                data.IsKonfirmatorDPJP = vm.IsKonfirmatorDPJP;
                 data.UserActiveId = vm.UserActiveId;
                 data.PenanggungJawabAnalisId = vm.PenanggungJawabId;
                 data.PenanggungJawabId = vm.PenanggungJawabId;
@@ -354,6 +346,286 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+        //[HttpPost("LabHasilKonfirmasi/{id}")]
+        //public async Task<IActionResult> KirimWaKonfirmasi(
+        //    Guid hasilLabId,
+        //    [FromBody] LabHasilKonfirmasiViewModel request,
+        //    CancellationToken cancellationToken)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return ValidationProblem(ModelState);
+        //    }
+
+        //    if (!request.LabBookingId.HasValue)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            message = "LabBookingId wajib diisi."
+        //        });
+        //    }
+
+        //    if (string.IsNullOrWhiteSpace(
+        //        request.NoPhoneKonfirmator))
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            message = "NoPhoneKonfirmator wajib diisi."
+        //        });
+        //    }
+
+        //    try
+        //    {
+        //        var emailLogin =
+        //            User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        //        if (string.IsNullOrWhiteSpace(emailLogin))
+        //        {
+        //            return Unauthorized(new
+        //            {
+        //                message = "User tidak terautentikasi."
+        //            });
+        //        }
+
+        //        var userActive =
+        //            await _applicationDbContext.UserActives
+        //                .FirstOrDefaultAsync(
+        //                    x => x.Email == emailLogin,
+        //                    cancellationToken);
+
+        //        if (userActive == null)
+        //        {
+        //            return Unauthorized(new
+        //            {
+        //                message = "User aktif tidak ditemukan."
+        //            });
+        //        }
+
+        //        var labHasil =
+        //            await _applicationDbContext.LabHasils
+        //                .FirstOrDefaultAsync(
+        //                    x =>
+        //                        x.HasilLabId == hasilLabId &&
+        //                        (x.IsDelete == false ||
+        //                         x.IsDelete == null),
+        //                    cancellationToken);
+
+        //        if (labHasil == null)
+        //        {
+        //            return NotFound(new
+        //            {
+        //                message = "Data LabHasil tidak ditemukan."
+        //            });
+        //        }
+
+        //        if (labHasil.LabBookingId.HasValue &&
+        //            labHasil.LabBookingId.Value !=
+        //            request.LabBookingId.Value)
+        //        {
+        //            return Conflict(new
+        //            {
+        //                message =
+        //                    "LabBookingId pada request tidak sesuai dengan LabHasil."
+        //            });
+        //        }
+
+        //        var labBooking =
+        //            await _applicationDbContext.LabBookings
+        //                .FirstOrDefaultAsync(
+        //                    x =>
+        //                        x.BookingLabId ==
+        //                        request.LabBookingId.Value,
+        //                    cancellationToken);
+
+        //        if (labBooking == null)
+        //        {
+        //            return NotFound(new
+        //            {
+        //                message = "Data LabBooking tidak ditemukan."
+        //            });
+        //        }
+
+        //        var jenisKonfirmator =
+        //            request.IsKonfirmatorDPJP.Value
+        //                ? "Dokter DPJP"
+        //                : "Dokter Lantai";
+
+        //        var statusPemeriksaan =
+        //            request.IsKonfirmatorDPJP.Value
+        //                ? "Terkonfirmasi Dokter DPJP"
+        //                : "Terkonfirmasi Dokter Lantai";
+
+        //        /*
+        //         * Sementara tanpa link karena halaman frontend
+        //         * masih dalam proses pembuatan.
+        //         */
+        //        var message =
+        //            "Yth. Dokter Konfirmator,\n\n" +
+        //            "Hasil pemeriksaan laboratorium telah selesai " +
+        //            "dan membutuhkan konfirmasi.\n\n" +
+        //            $"ID Hasil Lab: {hasilLabId}\n" +
+        //            $"ID Booking Lab: {request.LabBookingId.Value}\n" +
+        //            $"Jenis Konfirmator: {jenisKonfirmator}\n\n" +
+        //            "Pesan ini merupakan pemberitahuan otomatis dari " +
+        //            "Sistem Informasi Rumah Sakit.";
+
+        //        var whatsappResult =
+        //            await _whatsAppBotService.SendTextAsync(
+        //                request.NoPhoneKonfirmator,
+        //                message,
+        //                cancellationToken);
+
+        //        if (!whatsappResult.Success)
+        //        {
+        //            _logger.LogWarning(
+        //                "WhatsApp konfirmasi gagal untuk HasilLabId {HasilLabId}. " +
+        //                "Error: {Error}. Response: {Response}",
+        //                hasilLabId,
+        //                whatsappResult.ErrorMessage,
+        //                whatsappResult.ResponseBody);
+
+        //            return StatusCode(
+        //                StatusCodes.Status502BadGateway,
+        //                new
+        //                {
+        //                    message =
+        //                        "Data ditemukan, tetapi WhatsApp gagal dikirim.",
+        //                    data = new
+        //                    {
+        //                        hasilLabId,
+        //                        labBookingId =
+        //                            request.LabBookingId
+        //                    },
+        //                    whatsapp = new
+        //                    {
+        //                        sent = false,
+        //                        statusCode =
+        //                            whatsappResult.StatusCode,
+        //                        error =
+        //                            whatsappResult.ErrorMessage,
+        //                        response =
+        //                            whatsappResult.ResponseBody
+        //                    }
+        //                });
+        //        }
+
+        //        /*
+        //         * Update LabHasil hanya setelah pesan WA berhasil.
+        //         */
+        //        labHasil.LabBookingId =
+        //            request.LabBookingId;
+
+        //        labHasil.DokterPerujukId =
+        //            request.DokterPerujukId;
+
+        //        labHasil.DokterKonfirmatorId =
+        //            request.DokterKonfirmatorId;
+
+        //        labHasil.NoPhoneKonfirmator =
+        //            request.NoPhoneKonfirmator.Trim();
+
+        //        labHasil.IsKonfirmatorDPJP =
+        //            request.IsKonfirmatorDPJP;
+
+        //        labHasil.UpdateBy =
+        //            userActive.UserActiveId;
+
+        //        labHasil.UpdateDateTime =
+        //            DateTimeOffset.UtcNow;
+
+        //        /*
+        //         * Diasumsikan StatusPemeriksaan pada LabBooking
+        //         * bertipe string.
+        //         */
+        //        labBooking.StatusPemeriksaan =
+        //            statusPemeriksaan;
+
+        //        try
+        //        {
+        //            await _applicationDbContext.SaveChangesAsync(
+        //                cancellationToken);
+        //        }
+        //        catch (DbUpdateException dbException)
+        //        {
+        //            _logger.LogError(
+        //                dbException,
+        //                "WhatsApp sudah terkirim tetapi database gagal diperbarui. " +
+        //                "HasilLabId: {HasilLabId}",
+        //                hasilLabId);
+
+        //            return StatusCode(
+        //                StatusCodes.Status500InternalServerError,
+        //                new
+        //                {
+        //                    message =
+        //                        "WhatsApp berhasil dikirim, tetapi status database gagal diperbarui.",
+        //                    whatsapp = new
+        //                    {
+        //                        sent = true
+        //                    },
+        //                    error =
+        //                        dbException.InnerException?.Message ??
+        //                        dbException.Message
+        //                });
+        //        }
+
+        //        return Ok(new
+        //        {
+        //            message =
+        //                "WhatsApp konfirmasi berhasil dikirim dan status berhasil diperbarui.",
+        //            data = new
+        //            {
+        //                hasilLabId,
+        //                labBookingId =
+        //                    request.LabBookingId,
+        //                dokterPerujukId =
+        //                    request.DokterPerujukId,
+        //                dokterKonfirmatorId =
+        //                    request.DokterKonfirmatorId,
+        //                noPhoneKonfirmator =
+        //                    request.NoPhoneKonfirmator,
+        //                isKonfirmatorDPJP =
+        //                    request.IsKonfirmatorDPJP,
+        //                jenisKonfirmator,
+        //                statusPemeriksaan
+        //            },
+        //            whatsapp = new
+        //            {
+        //                sent = true,
+        //                statusCode =
+        //                    whatsappResult.StatusCode
+        //            }
+        //        });
+        //    }
+        //    catch (OperationCanceledException)
+        //    {
+        //        return StatusCode(
+        //            StatusCodes.Status408RequestTimeout,
+        //            new
+        //            {
+        //                message =
+        //                    "Proses pengiriman WhatsApp dibatalkan atau timeout."
+        //            });
+        //    }
+        //    catch (Exception exception)
+        //    {
+        //        _logger.LogError(
+        //            exception,
+        //            "Gagal memproses WhatsApp konfirmasi. " +
+        //            "HasilLabId: {HasilLabId}",
+        //            hasilLabId);
+
+        //        return StatusCode(
+        //            StatusCodes.Status500InternalServerError,
+        //            new
+        //            {
+        //                message =
+        //                    "Terjadi kesalahan saat mengirim WhatsApp konfirmasi.",
+        //                error = exception.Message
+        //            });
+        //    }
+        //}
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
