@@ -105,6 +105,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.LabId,
                              a.LabBookingId,
                              a.UserActiveId,
+                             a.DokterPerujukId,
+                             DokterPerujukNama = a.DokterPerujuk.NmDokter,
+                             a.DokterKonfirmatorId,
+                             DokterKonfirmatorNama = a.DokterKonfirmator.NmDokter,
+                             a.NoPhoneKonfirmator,
+                             a.IsKonfirmatorDPJP,
                              a.PenanggungJawabId,
                              a.PenanggungJawabAnalisId,
                              a.TanggalPemeriksaan,
@@ -164,6 +170,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 k.JenisKunjungan,
                                 a.LabId,
                                 a.LabBookingId,
+                                a.DokterPerujukId,
+                                DokterPerujukNama = a.DokterPerujuk.NmDokter,
+                                a.DokterKonfirmatorId,
+                                DokterKonfirmatorNama = a.DokterKonfirmator.NmDokter,
+                                a.NoPhoneKonfirmator,
+                                a.IsKonfirmatorDPJP,
                                 a.UserActiveId,
                                 a.PenanggungJawabId,
                                 a.PenanggungJawabAnalisId,
@@ -229,6 +241,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KunjunganId =  vm.KunjunganId,
                     LabId =  vm.LabId,
                     LabBookingId = vm.LabBookingId,
+                    DokterPerujukId = vm.DokterPerujukId,
+                    DokterKonfirmatorId = vm.DokterKonfirmatorId,
+                    NoPhoneKonfirmator = vm.NoPhoneKonfirmator,
+                    IsKonfirmatorDPJP = vm.IsKonfirmatorDPJP,
                     UserActiveId = vm.UserActiveId,
                     PenanggungJawabAnalisId = vm.PenanggungJawabId,
                     PenanggungJawabId = vm.PenanggungJawabId,
@@ -304,6 +320,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.KunjunganId = vm.KunjunganId;
                 data.LabId = vm.LabId;
                 data.LabBookingId = vm.LabBookingId;
+                data.DokterPerujukId = vm.DokterPerujukId;
+                data.DokterKonfirmatorId = vm.DokterKonfirmatorId;
+                data.NoPhoneKonfirmator = vm.NoPhoneKonfirmator;
+                data.IsKonfirmatorDPJP = vm.IsKonfirmatorDPJP;
                 data.UserActiveId = vm.UserActiveId;
                 data.PenanggungJawabAnalisId = vm.PenanggungJawabId;
                 data.PenanggungJawabId = vm.PenanggungJawabId;
@@ -443,7 +463,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                             a.LabId,
                             NamaLab = l.NamaLab,
-
+                            a.DokterPerujukId,
+                            DokterPerujukNama = a.DokterPerujuk.NmDokter,
+                            a.DokterKonfirmatorId,
+                            DokterKonfirmatorNama = a.DokterKonfirmator.NmDokter,
+                            a.NoPhoneKonfirmator,
+                            a.IsKonfirmatorDPJP,
                             a.LabBookingId,
                             a.UserActiveId,
                             a.PenanggungJawabId,
