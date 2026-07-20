@@ -5,10 +5,6 @@
         public Guid? KunjunganId { get; set; }
         public Guid? LabId { get; set; }
         public Guid? LabBookingId { get; set; }
-        public Guid? DokterPerujukId { get; set; }
-        public Guid? DokterKonfirmatorId { get; set; }
-        public string? NoPhoneKonfirmator { get; set; }
-        public bool? IsKonfirmatorDPJP { get; set; }
         public List<Guid>? UserActiveId { get; set; } = new List<Guid>();
         public Guid? PenanggungJawabId { get; set; }
         public Guid? PenanggungJawabAnalisId { get; set; }
