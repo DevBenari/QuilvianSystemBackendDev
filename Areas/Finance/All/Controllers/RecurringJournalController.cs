@@ -28,14 +28,16 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
         // =====================================================
         // PAGED
         // =====================================================
-
         [HttpGet("paged")]
         public async Task<IActionResult> PagedRecurringJournal(
-            int page = 1,
-            int perPage = 10,
-            string? search = null,
-            string? orderBy = "RecurringJournalDate",
-            string? sortDirection = "desc")
+    int page = 1,
+    int perPage = 10,
+    string? search = null,
+    string? periode = null,
+    DateTime? startDate = null,
+    DateTime? endDate = null,
+    string? orderBy = "RecurringJournalDate",
+    string? sortDirection = "desc")
         {
             try
             {
@@ -50,60 +52,95 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                     .AsNoTracking()
                     .AsQueryable();
 
-                // SEARCH
+                // SEARCH TEXT
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     var keyword = $"%{search.Trim()}%";
 
                     query = query.Where(x =>
-                        EF.Functions.ILike(
-                            x.RecurringJournalName ?? "",
-                            keyword) ||
+                        EF.Functions.ILike(x.RecurringJournalName ?? "", keyword) ||
+                        EF.Functions.ILike(x.Keterangan ?? "", keyword));
+                }
 
-                        EF.Functions.ILike(
-                            x.Keterangan ?? "",
-                            keyword));
+                // FILTER PERIODE
+                if (!string.IsNullOrWhiteSpace(periode))
+                {
+                    switch (periode.Trim().ToLower())
+                    {
+                        case "today":
+                            var today = DateTime.Today;
+                            query = query.Where(x =>
+                                x.RecurringJournalDate.Date == today);
+                            break;
+
+                        case "thisweek":
+                            var startWeek = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek);
+                            var endWeek = startWeek.AddDays(7);
+
+                            query = query.Where(x =>
+                                x.RecurringJournalDate >= startWeek &&
+                                x.RecurringJournalDate < endWeek);
+                            break;
+
+                        case "thismonth":
+                            var startMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                            var endMonth = startMonth.AddMonths(1);
+
+                            query = query.Where(x =>
+                                x.RecurringJournalDate >= startMonth &&
+                                x.RecurringJournalDate < endMonth);
+                            break;
+
+                        case "thisyear":
+                            var startYear = new DateTime(DateTime.Today.Year, 1, 1);
+                            var endYear = startYear.AddYears(1);
+
+                            query = query.Where(x =>
+                                x.RecurringJournalDate >= startYear &&
+                                x.RecurringJournalDate < endYear);
+                            break;
+                    }
+                }
+
+                // FILTER RANGE TANGGAL
+                if (startDate.HasValue)
+                {
+                    query = query.Where(x =>
+                        x.RecurringJournalDate >= startDate.Value.Date);
+                }
+
+                if (endDate.HasValue)
+                {
+                    query = query.Where(x =>
+                        x.RecurringJournalDate < endDate.Value.Date.AddDays(1));
                 }
 
                 // SORTING
-                var sortColumn =
-                    orderBy?.Trim().ToLower()
-                    ?? "recurringjournaldate";
-
-                var isDescending =
-                    sortDirection?.Trim().ToLower()
-                    == "desc";
+                var sortColumn = orderBy?.Trim().ToLower() ?? "recurringjournaldate";
+                var isDescending = sortDirection?.Trim().ToLower() == "desc";
 
                 query = sortColumn switch
                 {
                     "recurringjournalname" =>
                         isDescending
-                            ? query.OrderByDescending(x =>
-                                x.RecurringJournalName)
-                            : query.OrderBy(x =>
-                                x.RecurringJournalName),
+                            ? query.OrderByDescending(x => x.RecurringJournalName)
+                            : query.OrderBy(x => x.RecurringJournalName),
 
                     "recurringjournaldate" =>
                         isDescending
-                            ? query.OrderByDescending(x =>
-                                x.RecurringJournalDate)
-                            : query.OrderBy(x =>
-                                x.RecurringJournalDate),
+                            ? query.OrderByDescending(x => x.RecurringJournalDate)
+                            : query.OrderBy(x => x.RecurringJournalDate),
 
                     _ =>
                         isDescending
-                            ? query.OrderByDescending(x =>
-                                x.RecurringJournalDate)
-                            : query.OrderBy(x =>
-                                x.RecurringJournalDate)
+                            ? query.OrderByDescending(x => x.RecurringJournalDate)
+                            : query.OrderBy(x => x.RecurringJournalDate)
                 };
 
                 // PAGINATION
                 var totalRows = await query.CountAsync();
 
-                var totalPages =
-                    (int)Math.Ceiling(
-                        totalRows / (double)perPage);
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
                 var rows = await query
                     .Skip((page - 1) * perPage)
@@ -121,7 +158,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                 {
                     status = "success",
                     message = "Data berhasil diambil.",
-
                     data = new
                     {
                         Rows = rows,
@@ -143,6 +179,120 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                 });
             }
         }
+        //[HttpGet("paged")]
+        //public async Task<IActionResult> PagedRecurringJournal(
+        //    int page = 1,
+        //    int perPage = 10,
+        //    string? search = null,
+        //    string? orderBy = "RecurringJournalDate",
+        //    string? sortDirection = "desc")
+        //{
+        //    try
+        //    {
+        //        if (page < 1)
+        //            page = 1;
+
+        //        if (perPage < 1)
+        //            perPage = 10;
+
+        //        var query = _applicationDbContext
+        //            .RecurringJournals
+        //            .AsNoTracking()
+        //            .AsQueryable();
+
+        //        // SEARCH
+        //        if (!string.IsNullOrWhiteSpace(search))
+        //        {
+        //            var keyword = $"%{search.Trim()}%";
+
+        //            query = query.Where(x =>
+        //                EF.Functions.ILike(
+        //                    x.RecurringJournalName ?? "",
+        //                    keyword) ||
+
+        //                EF.Functions.ILike(
+        //                    x.Keterangan ?? "",
+        //                    keyword));
+        //        }
+
+        //        // SORTING
+        //        var sortColumn =
+        //            orderBy?.Trim().ToLower()
+        //            ?? "recurringjournaldate";
+
+        //        var isDescending =
+        //            sortDirection?.Trim().ToLower()
+        //            == "desc";
+
+        //        query = sortColumn switch
+        //        {
+        //            "recurringjournalname" =>
+        //                isDescending
+        //                    ? query.OrderByDescending(x =>
+        //                        x.RecurringJournalName)
+        //                    : query.OrderBy(x =>
+        //                        x.RecurringJournalName),
+
+        //            "recurringjournaldate" =>
+        //                isDescending
+        //                    ? query.OrderByDescending(x =>
+        //                        x.RecurringJournalDate)
+        //                    : query.OrderBy(x =>
+        //                        x.RecurringJournalDate),
+
+        //            _ =>
+        //                isDescending
+        //                    ? query.OrderByDescending(x =>
+        //                        x.RecurringJournalDate)
+        //                    : query.OrderBy(x =>
+        //                        x.RecurringJournalDate)
+        //        };
+
+        //        // PAGINATION
+        //        var totalRows = await query.CountAsync();
+
+        //        var totalPages =
+        //            (int)Math.Ceiling(
+        //                totalRows / (double)perPage);
+
+        //        var rows = await query
+        //            .Skip((page - 1) * perPage)
+        //            .Take(perPage)
+        //            .Select(x => new
+        //            {
+        //                x.TempRJId,
+        //                x.RecurringJournalName,
+        //                x.RecurringJournalDate,
+        //                x.Keterangan
+        //            })
+        //            .ToListAsync();
+
+        //        return Ok(new
+        //        {
+        //            status = "success",
+        //            message = "Data berhasil diambil.",
+
+        //            data = new
+        //            {
+        //                Rows = rows,
+        //                TotalRows = totalRows,
+        //                CurrentPage = page,
+        //                PerPage = perPage,
+        //                TotalPages = totalPages
+        //            }
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.ToString());
+
+        //        return StatusCode(500, new
+        //        {
+        //            message = ex.Message,
+        //            inner = ex.InnerException?.Message
+        //        });
+        //    }
+        //}
 
         // =====================================================
         // GET BY ID

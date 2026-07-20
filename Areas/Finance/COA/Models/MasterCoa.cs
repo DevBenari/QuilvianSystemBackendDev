@@ -14,6 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Models
         
         public Guid TipeAkunCOAId { get; set; }
 
+        public string? TipeTransaksi { get; set; }
 
         [MaxLength(200)]
         public string? NamaCOA { get; set; }
