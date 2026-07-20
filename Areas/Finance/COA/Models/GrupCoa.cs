@@ -10,8 +10,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Models
         [Key]
         public Guid GrupCOAId { get; set; }
 
-        //public Guid? TipeAkunCOAId { get; set; }
-
         [MaxLength(200)]
         public string? NamaGrupCOA { get; set; }
 
@@ -20,5 +18,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Models
 
         [MaxLength(500)]
         public string? Keterangan { get; set; }
+        [MaxLength(200)]
+        public string? test { get; set; }
     }
 }

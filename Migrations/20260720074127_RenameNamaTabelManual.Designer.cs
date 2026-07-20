@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720074127_RenameNamaTabelManual")]
+    partial class RenameNamaTabelManual
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1607,10 +1609,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("UpdateDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("test")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
                     b.HasKey("GrupCOAId");
 
                     b.ToTable("Fin_GrupCoa", "public");
@@ -1633,9 +1631,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("GrupCOAId")
-                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
@@ -1664,9 +1659,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NomalBalance")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
-
-                    b.Property<Guid>("TipeAkunCOAId")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("TipeTransaksi")
                         .HasColumnType("text");

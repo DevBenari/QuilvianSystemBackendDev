@@ -2,7 +2,7 @@
 
 namespace QuilvianSystemBackendDev.Areas.Finance.COA.ViewModels
 {
-    public class MasterGrupViewModel
+    public class GrupCoaViewModel
     {
         public Guid GrupCOAId { get; set; }
 

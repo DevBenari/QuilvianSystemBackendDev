@@ -32,7 +32,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from g in _context.MasterGrups
+            var query = from g in _context.GrupCoas
                         join u in _context.UserActives
                         on g.CreateBy equals u.UserActiveId
                         where g.IsDelete == false
@@ -72,7 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var data = await _context.MasterGrups
+            var data = await _context.GrupCoas
                 .FirstOrDefaultAsync(x => x.GrupCOAId == id && x.IsDelete == false);
 
             if (data == null)
@@ -98,7 +98,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             model.CreateDateTime = DateTime.UtcNow;
             model.IsDelete = false;
 
-            _context.MasterGrups.Add(model);
+            _context.GrupCoas.Add(model);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "created" });
@@ -108,7 +108,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] GrupCoa model)
         {
-            var data = await _context.MasterGrups
+            var data = await _context.GrupCoas
                 .FirstOrDefaultAsync(x => x.GrupCOAId == id && x.IsDelete == false);
 
             if (data == null)
@@ -135,7 +135,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var data = await _context.MasterGrups
+            var data = await _context.GrupCoas
                 .FirstOrDefaultAsync(x => x.GrupCOAId == id && x.IsDelete == false);
 
             if (data == null)
@@ -165,7 +165,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             int perPage = 10,
             string? search = null)
         {
-            var query = from g in _context.MasterGrups
+            var query = from g in _context.GrupCoas
                         join u in _context.UserActives
                         on g.CreateBy equals u.UserActiveId
                         where g.IsDelete == false

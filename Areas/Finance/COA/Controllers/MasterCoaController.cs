@@ -26,56 +26,56 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
         }
 
         // ================= GET ALL =================
-        [HttpGet]
-        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
-        {
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
+        //[HttpGet]
+        //public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
+        //{
+        //    if (page < 1) page = 1;
+        //    if (perPage < 1) perPage = 10;
 
-            var query = from c in _context.MasterCoas
-                        join g in _context.MasterGrups
-                        on c.GrupCOAId equals g.GrupCOAId into grupJoin
-                        from g in grupJoin.DefaultIfEmpty()
-                        join u in _context.UserActives
-                        on c.CreateBy equals u.UserActiveId
-                        where c.IsDelete == false
-                        select new
-                        {
-                            c.COAId,
-                            c.GrupCOAId,
-                            NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
-                            c.NamaCOA,
-                            c.KodeCOA,
-                            c.IsPostable,
-                            c.IsValid,
-                            c.IsPLACC,
-                            c.NomalBalance,
-                            c.Keterangan,
-                            c.CreateDateTime,
-                            CreateByName = u.FullName
-                        };
+        //    var query = from c in _context.MasterCoas
+        //                join g in _context.GrupCoas
+        //                on c.GrupCOAId equals g.GrupCOAId into grupJoin
+        //                from g in grupJoin.DefaultIfEmpty()
+        //                join u in _context.UserActives
+        //                on c.CreateBy equals u.UserActiveId
+        //                where c.IsDelete == false
+        //                select new
+        //                {
+        //                    c.COAId,
+        //                    c.GrupCOAId,
+        //                    NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
+        //                    c.NamaCOA,
+        //                    c.KodeCOA,
+        //                    c.IsPostable,
+        //                    c.IsValid,
+        //                    c.IsPLACC,
+        //                    c.NomalBalance,
+        //                    c.Keterangan,
+        //                    c.CreateDateTime,
+        //                    CreateByName = u.FullName
+        //                };
 
-            var totalRows = await query.CountAsync();
+        //    var totalRows = await query.CountAsync();
 
-            var data = await query
-                .OrderByDescending(x => x.CreateDateTime)
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToListAsync();
+        //    var data = await query
+        //        .OrderByDescending(x => x.CreateDateTime)
+        //        .Skip((page - 1) * perPage)
+        //        .Take(perPage)
+        //        .ToListAsync();
 
-            return Ok(new
-            {
-                message = "success",
-                data,
-                pagination = new
-                {
-                    page,
-                    perPage,
-                    totalRows,
-                    totalPages = (int)Math.Ceiling(totalRows / (double)perPage)
-                }
-            });
-        }
+        //    return Ok(new
+        //    {
+        //        message = "success",
+        //        data,
+        //        pagination = new
+        //        {
+        //            page,
+        //            perPage,
+        //            totalRows,
+        //            totalPages = (int)Math.Ceiling(totalRows / (double)perPage)
+        //        }
+        //    });
+        //}
 
         // ================= GET BY ID =================
         [HttpGet("{id}")]
@@ -128,7 +128,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             var user = await _context.UserActives
                 .FirstOrDefaultAsync(x => x.Email == email);
 
-            data.GrupCOAId = model.GrupCOAId;
+            //data.GrupCOAId = model.GrupCOAId;
             data.NamaCOA = model.NamaCOA;
             data.KodeCOA = model.KodeCOA;
             data.IsPostable = model.IsPostable;
@@ -180,7 +180,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             string? search = null)
         {
             var query = from c in _context.MasterCoas
-                        join g in _context.MasterGrups
+                        join g in _context.GrupCoas
                         on c.GrupCOAId equals g.GrupCOAId into grupJoin
                         from g in grupJoin.DefaultIfEmpty()
                         join u in _context.UserActives
