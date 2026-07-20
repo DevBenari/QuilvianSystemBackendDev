@@ -10,6 +10,7 @@ using QuilvianSystemBackendDev.Areas.Finance.AR.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Models;
 using QuilvianSystemBackendDev.Areas.Finance.COA.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Faktur.Models;
+using QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Models;
 using QuilvianSystemBackendDev.Areas.Finance.MasterFinance.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Pajak.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers;
@@ -1308,13 +1309,14 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<MasterCoa> MasterCoas { get; set; }
             public DbSet<GrupCoa> GrupCoas { get; set; }
             public DbSet<TipeAkun> TipeAkuns { get; set; }
+            public DbSet<COAMapping> COAMappings { get; set; }
 
             #endregion
 
 
 
-            #region Pembayaran
-            public DbSet<DetailDokumenReceived> DetailDokumenReceiveds { get; set; }
+        #region Pembayaran
+        public DbSet<DetailDokumenReceived> DetailDokumenReceiveds { get; set; }
             public DbSet<DetailInvoiceReceived> DetailInvoiceReceiveds { get; set; }
             public DbSet<DetailReceivedPayment> DetailReceivedPayments { get; set; }
             public DbSet<ReceivedPayment> ReceivedPayments { get; set; }
@@ -1373,7 +1375,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<MasterBank> MasterBanks { get; set; }
         public DbSet<Pajak> Pajaks { get; set; }
         public DbSet<PajakRelasi> PajakRelasis { get; set; }
-
+        public DbSet<GLHeader> GLHeaders { get; set; }
+        public DbSet<GLDetail> GLDetails { get; set; }
         #endregion
     }
 }

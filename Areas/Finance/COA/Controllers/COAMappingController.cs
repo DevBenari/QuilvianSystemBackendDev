@@ -12,14 +12,14 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("FrontendCorsPolicy")]
-    public class MasterCoaController : Controller
+    public class COAMappingController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly ILogger<MasterCoaController> _logger;
+        private readonly ILogger<COAMappingController> _logger;
 
-        public MasterCoaController(
+        public COAMappingController(
             ApplicationDbContext context,
-            ILogger<MasterCoaController> logger)
+            ILogger<COAMappingController> logger)
         {
             _context = context;
             _logger = logger;
@@ -32,28 +32,24 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from c in _context.MasterCoas
-                        join g in _context.GrupCoas
-                        on c.GrupCOAId equals g.GrupCOAId into grupJoin
-                        from g in grupJoin.DefaultIfEmpty()
-                        join u in _context.UserActives
-                        on c.CreateBy equals u.UserActiveId
-                        where c.IsDelete == false
-                        select new
-                        {
-                            c.COAId,
-                            c.GrupCOAId,
-                            NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
-                            c.NamaCOA,
-                            c.KodeCOA,
-                            c.IsPostable,
-                            c.IsValid,
-                            c.IsPLACC,
-                            c.NomalBalance,
-                            c.Keterangan,
-                            c.CreateDateTime,
-                            CreateByName = u.FullName
-                        };
+            var query =
+                from m in _context.COAMappings
+                join coa in _context.MasterCoas
+                    on m.COAId equals coa.COAId
+                join u in _context.UserActives
+                    on m.CreateBy equals u.UserActiveId
+                where m.IsDelete == false
+                select new
+                {
+                    m.COAMappingId,
+                    m.TransaksiId,
+                    m.NamaTransaksi,
+                    m.COAId,
+                    NamaCOA = coa.NamaCOA,
+                    m.Keterangan,
+                    m.CreateDateTime,
+                    CreateByName = u.FullName
+                };
 
             var totalRows = await query.CountAsync();
 
@@ -81,18 +77,34 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var data = await _context.MasterCoas
-                .FirstOrDefaultAsync(x => x.COAId == id && x.IsDelete == false);
+            var data =
+                await (from m in _context.COAMappings
+                       join coa in _context.MasterCoas
+                            on m.COAId equals coa.COAId
+                       where m.COAMappingId == id && m.IsDelete == false
+                       select new
+                       {
+                           m.COAMappingId,
+                           m.TransaksiId,
+                           m.NamaTransaksi,
+                           m.COAId,
+                           NamaCOA = coa.NamaCOA,
+                           m.Keterangan
+                       }).FirstOrDefaultAsync();
 
             if (data == null)
                 return NotFound(new { message = "Data tidak ditemukan" });
 
-            return Ok(new { message = "success", data });
+            return Ok(new
+            {
+                message = "success",
+                data
+            });
         }
 
         // ================= CREATE =================
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] MasterCoa model)
+        public async Task<IActionResult> Create([FromBody] COAMapping model)
         {
             var email = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -102,23 +114,41 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             if (user == null)
                 return Unauthorized();
 
-            model.COAId = Guid.NewGuid();
+            var coa = await _context.MasterCoas
+                .FirstOrDefaultAsync(x => x.COAId == model.COAId && x.IsDelete == false);
+
+            if (coa == null)
+                return BadRequest(new
+                {
+                    message = "COA tidak ditemukan"
+                });
+
+            model.COAMappingId = Guid.NewGuid();
+            model.NamaCOA = coa.NamaCOA;
+
+            // Ambil NamaTransaksi dari tabel transaksi sesuai kebutuhan Anda
+            // model.NamaTransaksi = ...
+
             model.CreateBy = user.UserActiveId;
             model.CreateDateTime = DateTime.UtcNow;
             model.IsDelete = false;
 
-            _context.MasterCoas.Add(model);
+            _context.COAMappings.Add(model);
+
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "created" });
+            return Ok(new
+            {
+                message = "created"
+            });
         }
 
         // ================= UPDATE =================
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] MasterCoa model)
+        public async Task<IActionResult> Update(Guid id, [FromBody] COAMapping model)
         {
-            var data = await _context.MasterCoas
-                .FirstOrDefaultAsync(x => x.COAId == id && x.IsDelete == false);
+            var data = await _context.COAMappings
+                .FirstOrDefaultAsync(x => x.COAMappingId == id && x.IsDelete == false);
 
             if (data == null)
                 return NotFound();
@@ -128,13 +158,19 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             var user = await _context.UserActives
                 .FirstOrDefaultAsync(x => x.Email == email);
 
-            //data.GrupCOAId = model.GrupCOAId;
-            data.NamaCOA = model.NamaCOA;
-            data.KodeCOA = model.KodeCOA;
-            data.IsPostable = model.IsPostable;
-            data.IsValid = model.IsValid;
-            data.IsPLACC = model.IsPLACC;
-            data.NomalBalance = model.NomalBalance;
+            var coa = await _context.MasterCoas
+                .FirstOrDefaultAsync(x => x.COAId == model.COAId && x.IsDelete == false);
+
+            if (coa == null)
+                return BadRequest(new
+                {
+                    message = "COA tidak ditemukan"
+                });
+
+            data.TransaksiId = model.TransaksiId;
+            data.NamaTransaksi = model.NamaTransaksi;
+            data.COAId = model.COAId;
+            data.NamaCOA = coa.NamaCOA;
             data.Keterangan = model.Keterangan;
 
             data.UpdateBy = user?.UserActiveId ?? data.UpdateBy;
@@ -142,15 +178,18 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "updated" });
+            return Ok(new
+            {
+                message = "updated"
+            });
         }
 
-        // ================= DELETE (SOFT) =================
+        // ================= DELETE =================
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var data = await _context.MasterCoas
-                .FirstOrDefaultAsync(x => x.COAId == id && x.IsDelete == false);
+            var data = await _context.COAMappings
+                .FirstOrDefaultAsync(x => x.COAMappingId == id && x.IsDelete == false);
 
             if (data == null)
                 return NotFound();
@@ -169,7 +208,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "deleted" });
+            return Ok(new
+            {
+                message = "deleted"
+            });
         }
 
         // ================= PAGED =================
@@ -179,33 +221,32 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             int perPage = 10,
             string? search = null)
         {
-            var query = from c in _context.MasterCoas
-                        join g in _context.GrupCoas
-                        on c.GrupCOAId equals g.GrupCOAId into grupJoin
-                        from g in grupJoin.DefaultIfEmpty()
-                        join u in _context.UserActives
-                        on c.CreateBy equals u.UserActiveId
-                        where c.IsDelete == false
-                        select new
-                        {
-                            c.COAId,
-                            c.NamaCOA,
-                            c.KodeCOA,
-                            NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
-                            c.IsPostable,
-                            c.IsValid,
-                            c.NomalBalance,
-                            c.CreateDateTime,
-                            CreateByName = u.FullName
-                        };
+            var query =
+                from m in _context.COAMappings
+                join coa in _context.MasterCoas
+                    on m.COAId equals coa.COAId
+                join u in _context.UserActives
+                    on m.CreateBy equals u.UserActiveId
+                where m.IsDelete == false
+                select new
+                {
+                    m.COAMappingId,
+                    m.TransaksiId,
+                    m.NamaTransaksi,
+                    m.COAId,
+                    NamaCOA = coa.NamaCOA,
+                    m.Keterangan,
+                    m.CreateDateTime,
+                    CreateByName = u.FullName
+                };
 
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = $"%{search.ToLower()}%";
 
                 query = query.Where(x =>
-                    EF.Functions.ILike(x.NamaCOA, search) ||
-                    EF.Functions.ILike(x.KodeCOA, search));
+                    EF.Functions.ILike(x.NamaTransaksi!, search) ||
+                    EF.Functions.ILike(x.NamaCOA!, search));
             }
 
             var totalRows = await query.CountAsync();
@@ -230,5 +271,4 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             });
         }
     }
-
 }

@@ -18,7 +18,5 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Models
 
         [MaxLength(500)]
         public string? Keterangan { get; set; }
-        [MaxLength(200)]
-        public string? test { get; set; }
     }
 }
