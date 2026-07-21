@@ -50,6 +50,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                             c.IsValid,
                             c.IsPLACC,
                             c.NomalBalance,
+
+                            c.TipeAkunCOAId,
+                            c.TipeTransaksi,
+
                             c.Keterangan,
                             c.CreateDateTime,
                             CreateByName = u.FullName
@@ -135,6 +139,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             data.IsValid = model.IsValid;
             data.IsPLACC = model.IsPLACC;
             data.NomalBalance = model.NomalBalance;
+            data.TipeAkunCOAId = model.TipeAkunCOAId;
+            data.TipeTransaksi = model.TipeTransaksi;
+            data.GrupCOAId = model.GrupCOAId;
             data.Keterangan = model.Keterangan;
 
             data.UpdateBy = user?.UserActiveId ?? data.UpdateBy;
@@ -189,12 +196,19 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                         select new
                         {
                             c.COAId,
+                            c.GrupCOAId,
+                            NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
                             c.NamaCOA,
                             c.KodeCOA,
-                            NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
                             c.IsPostable,
                             c.IsValid,
+                            c.IsPLACC,
                             c.NomalBalance,
+
+                            c.TipeAkunCOAId,
+                            c.TipeTransaksi,
+
+                            c.Keterangan,
                             c.CreateDateTime,
                             CreateByName = u.FullName
                         };

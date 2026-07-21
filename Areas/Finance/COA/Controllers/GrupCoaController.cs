@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.Finance.COA.Models;
+using QuilvianSystemBackendDev.Areas.Finance.COA.ViewModels;
 using QuilvianSystemBackendDev.Repositories;
 using System.Security.Claims;
 
@@ -83,7 +84,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
 
         // ================= CREATE =================
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] GrupCoa model)
+        public async Task<IActionResult> Create([FromBody] GrupCoaViewModel model)
         {
             var email = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -93,16 +94,41 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             if (user == null)
                 return Unauthorized();
 
-            model.GrupCOAId = Guid.NewGuid();
-            model.CreateBy = user.UserActiveId;
-            model.CreateDateTime = DateTime.UtcNow;
-            model.IsDelete = false;
+            var grupCoa = new GrupCoa
+            {
+                GrupCOAId = Guid.NewGuid(),
+                NamaGrupCOA = model.NamaGrupCOA,
+                CreateBy = user.UserActiveId,
+                CreateDateTime = DateTime.UtcNow,
+                IsDelete = false
+            };
 
-            _context.GrupCoas.Add(model);
+            _context.GrupCoas.Add(grupCoa);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "created" });
         }
+        //[HttpPost]
+        //public async Task<IActionResult> Create([FromBody] GrupCoa model)
+        //{
+        //    var email = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        //    var user = await _context.UserActives
+        //        .FirstOrDefaultAsync(x => x.Email == email);
+
+        //    if (user == null)
+        //        return Unauthorized();
+
+        //    model.GrupCOAId = Guid.NewGuid();
+        //    model.CreateBy = user.UserActiveId;
+        //    model.CreateDateTime = DateTime.UtcNow;
+        //    model.IsDelete = false;
+
+        //    _context.GrupCoas.Add(model);
+        //    await _context.SaveChangesAsync();
+
+        //    return Ok(new { message = "created" });
+        //}
 
         // ================= UPDATE =================
         [HttpPut("{id}")]

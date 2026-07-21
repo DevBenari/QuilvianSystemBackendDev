@@ -4,9 +4,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.ViewModels
 {
     public class GrupCoaViewModel
     {
-        public Guid GrupCOAId { get; set; }
-
-        //public Guid? TipeAkunCOAId { get; set; }
 
         [MaxLength(200)]
         public string? NamaGrupCOA { get; set; }
@@ -16,5 +13,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.ViewModels
 
         [MaxLength(500)]
         public string? Keterangan { get; set; }
+        public Guid? CreateBy { get; set; }
+        public DateTime? CreateDateTime { get; set; }
+        public bool? IsDelete { get; set; }
     }
 }
