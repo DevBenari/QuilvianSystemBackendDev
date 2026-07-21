@@ -356,10 +356,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         $"Terdapat permintaan approval diskon dokter / FoC yang menunggu tindak lanjut.\n" +
                         $"Silakan klik link berikut untuk membuka detail approval:\n\n{autoLoginUrl}";
 
-                    waResult = await _serviceNotification.SendWhatsAppAsync(
-                        userApproval.NoHandphone,
-                        waMsg
-                    );
+                    //waResult = await _serviceNotification.SendWhatsAppAsync(
+                    //    userApproval.NoHandphone,
+                    //    waMsg
+                    //);
                 }
 
                 return Created("", new
@@ -379,8 +379,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         },
                         TargetUrl = $"{_optAutoLogin.BaseUrl.TrimEnd('/')}{targetUrl}",
                         AutoLoginUrl = autoLoginUrl,
-                        WhatsAppSent = waResult.Success,
-                        WhatsAppDebug = waResult
+                        //WhatsAppSent = waResult.Success,
+                        //WhatsAppDebug = waResult
                     }
                 });
             }
