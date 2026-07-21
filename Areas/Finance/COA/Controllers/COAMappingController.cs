@@ -612,6 +612,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                     EF.Functions.ILike(x.Keterangan!, keyword));
             }
 
+
             var totalRows = await query.CountAsync();
 
             var data = await query
