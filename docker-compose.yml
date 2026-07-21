@@ -11,8 +11,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres-container;Port=5432;Username=sa;Password=Admin@1234;Database=QuilvianSystemBackendDev
-      - WhatsApp__ApiUrl=https://wa-staging.quilvian-mmchospital.com/send-message
-      - WhatsApp__x-api-key=kynd_X2n91cA38Dz73k5Mf81aZLq8Ld_f9083da98dfd092a8c5
+      # - WhatsApp__ApiUrl=https://wa-staging.quilvian-mmchospital.com/send-message
+      # - WhatsApp__x-api-key=kynd_X2n91cA38Dz73k5Mf81aZLq8Ld_f9083da98dfd092a8c5
     depends_on:
       - postgres-container
     volumes:
