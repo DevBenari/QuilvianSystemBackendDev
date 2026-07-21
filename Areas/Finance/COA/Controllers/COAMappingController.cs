@@ -110,6 +110,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                         ? coa.NamaCOA
                         : m.NamaCOA,
 
+                    coa.NomalBalance,
                     m.Keterangan,
                     m.CreateDateTime,
 
@@ -220,6 +221,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                             ? coa.NamaCOA
                             : m.NamaCOA,
 
+                        coa.NomalBalance,
                         m.Keterangan,
                         m.CreateDateTime,
                         m.UpdateDateTime,
@@ -589,6 +591,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                         ? coa.NamaCOA
                         : m.NamaCOA,
 
+                    coa.NomalBalance,
                     m.Keterangan,
                     m.CreateDateTime,
 
@@ -631,60 +634,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                 }
             });
         }
-        //[HttpGet("paged")]
-        //public async Task<IActionResult> Paged(
-        //    int page = 1,
-        //    int perPage = 10,
-        //    string? search = null)
-        //{
-        //    var query =
-        //        from m in _context.COAMappings
-        //        join coa in _context.MasterCoas
-        //            on m.COAId equals coa.COAId
-        //        join u in _context.UserActives
-        //            on m.CreateBy equals u.UserActiveId
-        //        where m.IsDelete == false
-        //        select new
-        //        {
-        //            m.COAMappingId,
-        //            m.TransaksiId,
-        //            m.NamaTransaksi,
-        //            m.COAId,
-        //            NamaCOA = coa.NamaCOA,
-        //            m.Keterangan,
-        //            m.CreateDateTime,
-        //            CreateByName = u.FullName
-        //        };
-
-        //    if (!string.IsNullOrWhiteSpace(search))
-        //    {
-        //        search = $"%{search.ToLower()}%";
-
-        //        query = query.Where(x =>
-        //            EF.Functions.ILike(x.NamaTransaksi!, search) ||
-        //            EF.Functions.ILike(x.NamaCOA!, search));
-        //    }
-
-        //    var totalRows = await query.CountAsync();
-
-        //    var data = await query
-        //        .OrderByDescending(x => x.CreateDateTime)
-        //        .Skip((page - 1) * perPage)
-        //        .Take(perPage)
-        //        .ToListAsync();
-
-        //    return Ok(new
-        //    {
-        //        message = "success",
-        //        data,
-        //        pagination = new
-        //        {
-        //            page,
-        //            perPage,
-        //            totalRows,
-        //            totalPages = (int)Math.Ceiling(totalRows / (double)perPage)
-        //        }
-        //    });
-        //}
+        
     }
 }

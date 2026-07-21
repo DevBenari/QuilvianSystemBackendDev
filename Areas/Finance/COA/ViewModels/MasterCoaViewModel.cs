@@ -7,11 +7,13 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.ViewModels
 
         public Guid? GrupCOAId { get; set; }
 
+        public Guid? CostCenterId { get; set; }
         [MaxLength(200)]
         public string? NamaCOA { get; set; }
 
         [MaxLength(50)]
         public string? KodeCOA { get; set; }
+        public string? LokasiCostCenter { get; set; }
 
         public bool? IsPostable { get; set; }
         public bool? IsValid { get; set; }

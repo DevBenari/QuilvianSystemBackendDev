@@ -13,6 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Models
         public Guid? GrupCOAId { get; set; }
         
         public Guid TipeAkunCOAId { get; set; }
+        public Guid? CostCenterId { get; set; }
 
         public string? TipeTransaksi { get; set; }
 
