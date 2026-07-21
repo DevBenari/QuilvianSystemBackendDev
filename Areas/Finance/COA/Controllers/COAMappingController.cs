@@ -602,7 +602,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                 var keyword = $"%{search.Trim()}%";
 
                 query = query.Where(x =>
-                    EF.Functions.ILike(x.NamaTransaksi!, keyword) ||
+                    EF.Functions.ILike(x.JenisTransaksi!, keyword) ||
                     EF.Functions.ILike(x.NamaItem!, keyword) ||
                     EF.Functions.ILike(x.NamaCOA!, keyword) ||
                     EF.Functions.ILike(x.KodeCOA!, keyword) ||
