@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Cors;
 [Route("api/[controller]")]
 [Authorize]
 [EnableCors("FrontendCorsPolicy")]
+
 public class AiController : ControllerBase
 {
     private readonly HttpClient _httpClient;
