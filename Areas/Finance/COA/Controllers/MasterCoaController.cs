@@ -26,42 +26,75 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
         }
 
         // ================= GET ALL =================
+        // ================= GET ALL =================
         [HttpGet]
-        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAll(
+            int page = 1,
+            int perPage = 10)
         {
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
+            if (page < 1)
+                page = 1;
 
-            var query = from c in _context.MasterCoas
-                        join g in _context.GrupCoas
-                        on c.GrupCOAId equals g.GrupCOAId into grupJoin
-                        join co in _context.CostCenters
-                            on c.CostCenterId equals co.CostCenterId
-                        from g in grupJoin.DefaultIfEmpty()
-                        join u in _context.UserActives
-                        on c.CreateBy equals u.UserActiveId
-                        where c.IsDelete == false
-                        select new
-                        {
-                            c.COAId,
-                            c.GrupCOAId,
-                            NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
-                            c.CostCenterId,
-                            co.LokasiCostCenter,
-                            c.NamaCOA,
-                            c.KodeCOA,
-                            c.IsPostable,
-                            c.IsValid,
-                            c.IsPLACC,
-                            c.NomalBalance,
+            if (perPage < 1)
+                perPage = 10;
 
-                            c.TipeAkunCOAId,
-                            c.TipeTransaksi,
+            var query =
+                from c in _context.MasterCoas
 
-                            c.Keterangan,
-                            c.CreateDateTime,
-                            CreateByName = u.FullName
-                        };
+                join grupData in _context.GrupCoas
+                        .Where(x => x.IsDelete == false)
+                    on c.GrupCOAId equals (Guid?)grupData.GrupCOAId
+                    into grupJoin
+
+                from g in grupJoin.DefaultIfEmpty()
+
+                join costCenterData in _context.CostCenters
+                        .Where(x => x.IsDelete == false)
+                    on c.CostCenterId equals (Guid?)costCenterData.CostCenterId
+                    into costCenterJoin
+
+                from co in costCenterJoin.DefaultIfEmpty()
+
+                join userData in _context.UserActives
+                    on c.CreateBy equals userData.UserActiveId
+                    into userJoin
+
+                from u in userJoin.DefaultIfEmpty()
+
+                where c.IsDelete == false
+
+                select new
+                {
+                    c.COAId,
+                    c.GrupCOAId,
+
+                    NamaGrupCOA = g != null
+                        ? g.NamaGrupCOA
+                        : null,
+
+                    c.CostCenterId,
+
+                    LokasiCostCenter = co != null
+                        ? co.LokasiCostCenter
+                        : null,
+
+                    c.NamaCOA,
+                    c.KodeCOA,
+                    c.IsPostable,
+                    c.IsValid,
+                    c.IsPLACC,
+                    c.NomalBalance,
+
+                    c.TipeAkunCOAId,
+                    c.TipeTransaksi,
+
+                    c.Keterangan,
+                    c.CreateDateTime,
+
+                    CreateByName = u != null
+                        ? u.FullName
+                        : null
+                };
 
             var totalRows = await query.CountAsync();
 
@@ -80,10 +113,69 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                     page,
                     perPage,
                     totalRows,
-                    totalPages = (int)Math.Ceiling(totalRows / (double)perPage)
+                    totalPages = (int)Math.Ceiling(
+                        totalRows / (double)perPage)
                 }
             });
         }
+        //[HttpGet]
+        //public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
+        //{
+        //    if (page < 1) page = 1;
+        //    if (perPage < 1) perPage = 10;
+
+        //    var query = from c in _context.MasterCoas
+        //                join g in _context.GrupCoas
+        //                on c.GrupCOAId equals g.GrupCOAId into grupJoin
+        //                join co in _context.CostCenters
+        //                    on c.CostCenterId equals co.CostCenterId
+        //                from g in grupJoin.DefaultIfEmpty()
+        //                join u in _context.UserActives
+        //                on c.CreateBy equals u.UserActiveId
+        //                where c.IsDelete == false
+        //                select new
+        //                {
+        //                    c.COAId,
+        //                    c.GrupCOAId,
+        //                    NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
+        //                    c.CostCenterId,
+        //                    co.LokasiCostCenter,
+        //                    c.NamaCOA,
+        //                    c.KodeCOA,
+        //                    c.IsPostable,
+        //                    c.IsValid,
+        //                    c.IsPLACC,
+        //                    c.NomalBalance,
+
+        //                    c.TipeAkunCOAId,
+        //                    c.TipeTransaksi,
+
+        //                    c.Keterangan,
+        //                    c.CreateDateTime,
+        //                    CreateByName = u.FullName
+        //                };
+
+        //    var totalRows = await query.CountAsync();
+
+        //    var data = await query
+        //        .OrderByDescending(x => x.CreateDateTime)
+        //        .Skip((page - 1) * perPage)
+        //        .Take(perPage)
+        //        .ToListAsync();
+
+        //    return Ok(new
+        //    {
+        //        message = "success",
+        //        data,
+        //        pagination = new
+        //        {
+        //            page,
+        //            perPage,
+        //            totalRows,
+        //            totalPages = (int)Math.Ceiling(totalRows / (double)perPage)
+        //        }
+        //    });
+        //}
 
         // ================= GET BY ID =================
         [HttpGet("{id}")]
@@ -185,50 +277,87 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
         }
 
         // ================= PAGED =================
+        // ================= PAGED =================
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
             int page = 1,
             int perPage = 10,
             string? search = null)
         {
-            var query = from c in _context.MasterCoas
-                        join g in _context.GrupCoas
-                        on c.GrupCOAId equals g.GrupCOAId into grupJoin
-                        join co in _context.CostCenters
-                            on c.CostCenterId equals co.CostCenterId
-                        from g in grupJoin.DefaultIfEmpty()
-                        join u in _context.UserActives
-                        on c.CreateBy equals u.UserActiveId
-                        where c.IsDelete == false
-                        select new
-                        {
-                            c.COAId,
-                            c.GrupCOAId,
-                            NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
-                            c.CostCenterId,
-                            co.LokasiCostCenter,
-                            c.NamaCOA,
-                            c.KodeCOA,
-                            c.IsPostable,
-                            c.IsValid,
-                            c.IsPLACC,
-                            c.NomalBalance,
+            if (page < 1)
+                page = 1;
 
-                            c.TipeAkunCOAId,
-                            c.TipeTransaksi,
+            if (perPage < 1)
+                perPage = 10;
 
-                            c.Keterangan,
-                            c.CreateDateTime,
-                            CreateByName = u.FullName
-                        };
+            var query =
+                from c in _context.MasterCoas
+
+                join grupData in _context.GrupCoas
+                        .Where(x => x.IsDelete == false)
+                    on c.GrupCOAId equals (Guid?)grupData.GrupCOAId
+                    into grupJoin
+
+                from g in grupJoin.DefaultIfEmpty()
+
+                join costCenterData in _context.CostCenters
+                        .Where(x => x.IsDelete == false)
+                    on c.CostCenterId equals (Guid?)costCenterData.CostCenterId
+                    into costCenterJoin
+
+                from co in costCenterJoin.DefaultIfEmpty()
+
+                join userData in _context.UserActives
+                    on c.CreateBy equals userData.UserActiveId
+                    into userJoin
+
+                from u in userJoin.DefaultIfEmpty()
+
+                where c.IsDelete == false
+
+                select new
+                {
+                    c.COAId,
+                    c.GrupCOAId,
+
+                    NamaGrupCOA = g != null
+                        ? g.NamaGrupCOA
+                        : null,
+
+                    c.CostCenterId,
+
+                    LokasiCostCenter = co != null
+                        ? co.LokasiCostCenter
+                        : null,
+
+                    c.NamaCOA,
+                    c.KodeCOA,
+                    c.IsPostable,
+                    c.IsValid,
+                    c.IsPLACC,
+                    c.NomalBalance,
+
+                    c.TipeAkunCOAId,
+                    c.TipeTransaksi,
+
+                    c.Keterangan,
+                    c.CreateDateTime,
+
+                    CreateByName = u != null
+                        ? u.FullName
+                        : null
+                };
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                search = $"%{search.ToLower()}%";
+                var keyword = $"%{search.Trim()}%";
 
                 query = query.Where(x =>
-                    EF.Functions.ILike(x.NamaCOA, search) ||
-                    EF.Functions.ILike(x.KodeCOA, search));
+                    EF.Functions.ILike(x.NamaCOA!, keyword) ||
+                    EF.Functions.ILike(x.KodeCOA!, keyword) ||
+                    EF.Functions.ILike(x.NamaGrupCOA!, keyword) ||
+                    EF.Functions.ILike(x.LokasiCostCenter!, keyword) ||
+                    EF.Functions.ILike(x.TipeTransaksi!, keyword));
             }
 
             var totalRows = await query.CountAsync();
@@ -248,10 +377,78 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                     page,
                     perPage,
                     totalRows,
-                    totalPages = (int)Math.Ceiling(totalRows / (double)perPage)
+                    totalPages = (int)Math.Ceiling(
+                        totalRows / (double)perPage)
                 }
             });
         }
+        //[HttpGet("paged")]
+        //public async Task<IActionResult> Paged(
+        //    int page = 1,
+        //    int perPage = 10,
+        //    string? search = null)
+        //{
+        //    var query = from c in _context.MasterCoas
+        //                join g in _context.GrupCoas
+        //                on c.GrupCOAId equals g.GrupCOAId into grupJoin
+        //                join co in _context.CostCenters
+        //                    on c.CostCenterId equals co.CostCenterId
+        //                from g in grupJoin.DefaultIfEmpty()
+        //                join u in _context.UserActives
+        //                on c.CreateBy equals u.UserActiveId
+        //                where c.IsDelete == false
+        //                select new
+        //                {
+        //                    c.COAId,
+        //                    c.GrupCOAId,
+        //                    NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
+        //                    c.CostCenterId,
+        //                    co.LokasiCostCenter,
+        //                    c.NamaCOA,
+        //                    c.KodeCOA,
+        //                    c.IsPostable,
+        //                    c.IsValid,
+        //                    c.IsPLACC,
+        //                    c.NomalBalance,
+
+        //                    c.TipeAkunCOAId,
+        //                    c.TipeTransaksi,
+
+        //                    c.Keterangan,
+        //                    c.CreateDateTime,
+        //                    CreateByName = u.FullName
+        //                };
+
+        //    if (!string.IsNullOrWhiteSpace(search))
+        //    {
+        //        search = $"%{search.ToLower()}%";
+
+        //        query = query.Where(x =>
+        //            EF.Functions.ILike(x.NamaCOA, search) ||
+        //            EF.Functions.ILike(x.KodeCOA, search));
+        //    }
+
+        //    var totalRows = await query.CountAsync();
+
+        //    var data = await query
+        //        .OrderByDescending(x => x.CreateDateTime)
+        //        .Skip((page - 1) * perPage)
+        //        .Take(perPage)
+        //        .ToListAsync();
+
+        //    return Ok(new
+        //    {
+        //        message = "success",
+        //        data,
+        //        pagination = new
+        //        {
+        //            page,
+        //            perPage,
+        //            totalRows,
+        //            totalPages = (int)Math.Ceiling(totalRows / (double)perPage)
+        //        }
+        //    });
+        //}
     }
 
 }
