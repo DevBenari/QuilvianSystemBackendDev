@@ -1647,6 +1647,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 .AsNoTracking()
                 .Where(b => b.IsDelete == false || b.IsDelete == null);
 
+            // tampungan nama lab filters
+            var namaLabFilters = (namaLab ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.ToUpper())
+                .Distinct()
+                .ToList();
+
             if (kunjunganId.HasValue)
                 parentQuery = parentQuery.Where(b => b.KunjunganId == kunjunganId.Value);
 
@@ -1780,6 +1789,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 parentQuery = parentQuery.Where(b =>
                     b.CreateDateTime >= start && b.CreateDateTime < endExclusive);
+            }
+
+            // filter nama lab multi value
+            // contoh query: ?namaLab=Microbiologi,Patologi Anatomi,Patologi Klinik
+            if (namaLabFilters.Count > 0)
+            {
+                parentQuery = parentQuery.Where(b =>
+                    _applicationDbContext.LabBookingDetails.AsNoTracking()
+                        .Any(d =>
+                            d.BookingLabId.HasValue &&
+                            d.BookingLabId.Value == b.BookingLabId &&
+                            (d.IsDelete == false || d.IsDelete == null) &&
+                            d.Lab != null &&
+                            d.Lab.NamaLab != null &&
+                            namaLabFilters.Contains(d.Lab.NamaLab.ToUpper())
+                        )
+                );
             }
 
             // =========================================
@@ -1953,10 +1979,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.IsDelete
                 };
 
-            if (!string.IsNullOrWhiteSpace(namaLab))
+            if (namaLabFilters.Count > 0)
             {
-                var nl = namaLab.Trim();
-                detailQ = detailQ.Where(x => x.NamaLab != null && EF.Functions.ILike(x.NamaLab, $"%{nl}%"));
+                detailQ = detailQ.Where(x =>
+                    x.NamaLab != null &&
+                    namaLabFilters.Contains(x.NamaLab.ToUpper())
+                );
             }
 
             if (labId.HasValue)
