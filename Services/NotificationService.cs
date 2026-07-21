@@ -7,107 +7,203 @@ namespace QuilvianSystemBackendDev.Services
 {
     public class NotificationService : INotification
     {
+        private readonly HttpClient _httpClient;
         private readonly IConfiguration _config;
         private readonly ILogger<NotificationService> _logger;
 
-        public NotificationService(IConfiguration config, ILogger<NotificationService> logger)
+        public NotificationService(
+            HttpClient httpClient,
+            IConfiguration config,
+            ILogger<NotificationService> logger)
         {
+            _httpClient = httpClient;
             _config = config;
             _logger = logger;
         }
 
-        public async Task<WhatsAppResultDto> SendWhatsAppAsync(string phoneNumber, string message)
+        public async Task<WhatsAppResultDto> SendWhatsAppAsync(
+            string phoneNumber,
+            string message,
+            CancellationToken cancellationToken = default)
         {
-            using var client = new HttpClient();
-
-            var apiKey = _config["WhatsApp:x-api-key"];
-            if (!string.IsNullOrWhiteSpace(apiKey))
+            if (string.IsNullOrWhiteSpace(phoneNumber))
             {
-                client.DefaultRequestHeaders.Add("x-api-key", apiKey);
+                return new WhatsAppResultDto
+                {
+                    Success = false,
+                    Message = "Nomor WhatsApp wajib diisi."
+                };
             }
 
-            var normalizedPhone = NormalizePhoneNumber(phoneNumber);
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return new WhatsAppResultDto
+                {
+                    Success = false,
+                    Message = "Pesan WhatsApp wajib diisi."
+                };
+            }
+
+            var apiUrl = _config["WhatsApp:ApiUrl"];
+            var apiKey = _config["WhatsApp:x-api-key"];
+
+            if (string.IsNullOrWhiteSpace(apiUrl))
+            {
+                return new WhatsAppResultDto
+                {
+                    Success = false,
+                    Message = "Konfigurasi WhatsApp:ApiUrl belum tersedia."
+                };
+            }
+
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                return new WhatsAppResultDto
+                {
+                    Success = false,
+                    Message = "Konfigurasi WhatsApp:x-api-key belum tersedia."
+                };
+            }
 
             var payload = new
             {
-                number = normalizedPhone,
-                message = message
+                // Tidak perlu normalisasi di backend.
+                // WebJS sudah menangani 08, +62, dan 62.
+                number = phoneNumber.Trim(),
+                message = message.Trim()
             };
 
             var json = JsonConvert.SerializeObject(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var apiUrl = _config["WhatsApp:ApiUrl"] ?? string.Empty;
+            using var content = new StringContent(
+                json,
+                Encoding.UTF8,
+                "application/json");
+
+            using var httpRequest = new HttpRequestMessage(
+                HttpMethod.Post,
+                apiUrl);
+
+            httpRequest.Headers.TryAddWithoutValidation(
+                "x-api-key",
+                apiKey);
+
+            httpRequest.Content = content;
 
             try
             {
-                _logger.LogInformation("WA Request URL: {ApiUrl}", apiUrl);
-                _logger.LogInformation("WA Request Body: {Json}", json);
+                _logger.LogInformation(
+                    "Mengirim WhatsApp melalui {ApiUrl}.",
+                    apiUrl);
 
-                var response = await client.PostAsync(apiUrl, content);
-                var responseContent = await response.Content.ReadAsStringAsync();
+                using var response =
+                    await _httpClient.SendAsync(
+                        httpRequest,
+                        cancellationToken);
+
+                var responseContent =
+                    await response.Content.ReadAsStringAsync(
+                        cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError("❌ WA gagal dikirim ke {PhoneNumber}: {StatusCode} - {ResponseContent}",
-                        normalizedPhone, (int)response.StatusCode, responseContent);
+                    _logger.LogError(
+                        "WhatsApp gagal dikirim. StatusCode: {StatusCode}. Response: {Response}",
+                        (int)response.StatusCode,
+                        responseContent);
 
                     return new WhatsAppResultDto
                     {
                         Success = false,
                         StatusCode = (int)response.StatusCode,
-                        Message = "WA gagal dikirim",
+                        Message = "WhatsApp gagal dikirim.",
                         ResponseBody = responseContent,
-                        RequestUrl = apiUrl,
-                        RequestBody = json,
-                        //PhoneNumber = normalizedPhone
+                        RequestUrl = apiUrl
                     };
                 }
 
-                _logger.LogInformation("✅ WA berhasil dikirim ke {PhoneNumber}: {ResponseContent}",
-                    normalizedPhone, responseContent);
+                var webJsResult =
+                    JsonConvert.DeserializeObject<WebJsResponseDto>(
+                        responseContent);
+
+                if (webJsResult?.Success == false)
+                {
+                    return new WhatsAppResultDto
+                    {
+                        Success = false,
+                        StatusCode = (int)response.StatusCode,
+                        Message =
+                            webJsResult.Message ??
+                            "WebJS gagal mengirim WhatsApp.",
+                        ResponseBody = responseContent,
+                        RequestUrl = apiUrl
+                    };
+                }
+
+                _logger.LogInformation(
+                    "WhatsApp berhasil dikirim. StatusCode: {StatusCode}.",
+                    (int)response.StatusCode);
 
                 return new WhatsAppResultDto
                 {
                     Success = true,
                     StatusCode = (int)response.StatusCode,
-                    Message = "WA berhasil dikirim",
+                    Message =
+                        webJsResult?.Message ??
+                        "WhatsApp berhasil dikirim.",
                     ResponseBody = responseContent,
-                    RequestUrl = apiUrl,
-                    RequestBody = json,
-                    //PhoneNumber = normalizedPhone
+                    RequestUrl = apiUrl
                 };
             }
-            catch (Exception ex)
+            catch (OperationCanceledException)
+                when (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(ex, "❌ Exception saat kirim WA ke {PhoneNumber}", normalizedPhone);
+                _logger.LogError(
+                    "Request ke WebJS mengalami timeout.");
 
                 return new WhatsAppResultDto
                 {
                     Success = false,
-                    Message = $"Exception: {ex.Message}",
-                    ResponseBody = ex.ToString(),
-                    RequestUrl = apiUrl,
-                    RequestBody = json,
-                    //PhoneNumber = normalizedPhone
+                    Message = "Request ke WebJS mengalami timeout.",
+                    RequestUrl = apiUrl
+                };
+            }
+            catch (HttpRequestException exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Tidak dapat terhubung ke WebJS.");
+
+                return new WhatsAppResultDto
+                {
+                    Success = false,
+                    Message =
+                        $"Tidak dapat terhubung ke WebJS: {exception.Message}",
+                    RequestUrl = apiUrl
+                };
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Exception saat mengirim WhatsApp.");
+
+                return new WhatsAppResultDto
+                {
+                    Success = false,
+                    Message = $"Exception: {exception.Message}",
+                    RequestUrl = apiUrl
                 };
             }
         }
 
-        private static string NormalizePhoneNumber(string phoneNumber)
+        private sealed class WebJsResponseDto
         {
-            if (string.IsNullOrWhiteSpace(phoneNumber))
-                return string.Empty;
+            public bool Success { get; set; }
 
-            phoneNumber = phoneNumber.Trim().Replace(" ", "").Replace("-", "");
+            public string? Message { get; set; }
 
-            if (phoneNumber.StartsWith("+62"))
-                return "62" + phoneNumber.Substring(3);
-
-            if (phoneNumber.StartsWith("08"))
-                return "62" + phoneNumber.Substring(1);
-
-            return phoneNumber;
+            public string? Error { get; set; }
         }
     }
 }

@@ -310,7 +310,11 @@ builder.Services.AddScoped<IBillingKunjunganReadService, BillingKunjunganReadSer
 builder.Services.AddScoped<IPerkiraanBillingRanapService, PerkiraanBillingRanapService>();
 builder.Services.AddScoped<IDepositRanapNumberService, DepositRanapNumberService>();
 builder.Services.AddScoped<IAsuransiCoverageService, AsuransiCoverageService>();
-builder.Services.AddScoped<INotification, NotificationService>();
+builder.Services.AddHttpClient<INotification, NotificationService>(
+    client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(30);
+    });
 builder.Services.AddScoped<IKunjunganAdminBillingService, KunjunganAdminBillingService>();
 builder.Services.AddScoped<IKunjunganNoRegistrasiService, KunjunganNoRegistrasiService>();
 builder.Services.AddScoped<INoBillService, NoBillService>();
