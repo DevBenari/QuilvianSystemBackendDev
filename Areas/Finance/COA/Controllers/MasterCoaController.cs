@@ -35,6 +35,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             var query = from c in _context.MasterCoas
                         join g in _context.GrupCoas
                         on c.GrupCOAId equals g.GrupCOAId into grupJoin
+                        join co in _context.CostCenters
+                            on c.CostCenterId equals co.CostCenterId
                         from g in grupJoin.DefaultIfEmpty()
                         join u in _context.UserActives
                         on c.CreateBy equals u.UserActiveId
@@ -44,6 +46,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                             c.COAId,
                             c.GrupCOAId,
                             NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
+                            c.CostCenterId,
+                            co.LokasiCostCenter,
                             c.NamaCOA,
                             c.KodeCOA,
                             c.IsPostable,
@@ -135,6 +139,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             //data.GrupCOAId = model.GrupCOAId;
             data.NamaCOA = model.NamaCOA;
             data.KodeCOA = model.KodeCOA;
+            data.CostCenterId = model.CostCenterId;
             data.IsPostable = model.IsPostable;
             data.IsValid = model.IsValid;
             data.IsPLACC = model.IsPLACC;
@@ -189,6 +194,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             var query = from c in _context.MasterCoas
                         join g in _context.GrupCoas
                         on c.GrupCOAId equals g.GrupCOAId into grupJoin
+                        join co in _context.CostCenters
+                            on c.CostCenterId equals co.CostCenterId
                         from g in grupJoin.DefaultIfEmpty()
                         join u in _context.UserActives
                         on c.CreateBy equals u.UserActiveId
@@ -198,6 +205,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                             c.COAId,
                             c.GrupCOAId,
                             NamaGrupCOA = g != null ? g.NamaGrupCOA : null,
+                            c.CostCenterId,
+                            co.LokasiCostCenter,
                             c.NamaCOA,
                             c.KodeCOA,
                             c.IsPostable,
