@@ -935,8 +935,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
-            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
-                (IsolationLevel.ReadCommitted, ct);
+            //await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
+            //    (IsolationLevel.ReadCommitted, ct);
 
             try
             {
@@ -957,7 +957,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
+                //await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
                 // ==========================================================
                 // 🔍 Cari data detail booking berdasarkan ID
                 // ==========================================================

@@ -922,17 +922,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         }
                     }
                 }
-                int result = await _applicationDbContext.SaveChangesAsync();
-                await _hubContext.Clients.All.SendAsync("ResepChanged", new
+                int result = await _applicationDbContext.SaveChangesAsync(ct);
+
+                if (result <= 0)
                 {
-                    Action = "create",
-                    ResepId = resep.ResepId
+                    await transaction.RollbackAsync(ct);
+
+                    return StatusCode(500, new
+                    {
+                        message = "Data tidak berhasil disimpan ke database."
+                    });
+                }
+
+                // Wajib commit agar data benar-benar tersimpan
+                await transaction.CommitAsync(ct);
+
+                // SignalR dijalankan setelah commit berhasil
+                await _hubContext.Clients.All.SendAsync("ResepChanged",new
+                    {
+                        Action = "create",
+                        ResepId = resep.ResepId
+                    },ct);
+
+                return Created("", new
+                {
+                    message = "Tambah Data Berhasil || 201 Created"
                 });
-
-                if (result > 0)
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-
-                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }
             catch (DbUpdateException dbEx)
             {
@@ -949,6 +964,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid!" });
+
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
 
             try
             {
@@ -1234,14 +1251,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     });
                 }
 
-                await _applicationDbContext.SaveChangesAsync();
-                await _hubContext.Clients.All.SendAsync("ResepChanged", new
-                {
-                    Action = "update",
-                    ResepId = id
-                });
+                int result = await _applicationDbContext
+                    .SaveChangesAsync(ct);
 
-                return Ok(new { message = "Update resep berhasil!" });
+                if (result <= 0)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return StatusCode(500, new
+                    {
+                        message = "Data tidak berhasil disimpan ke database."
+                    });
+                }
+                await transaction.CommitAsync(ct);
+
+                // SignalR dijalankan setelah commit berhasil
+                await _hubContext.Clients.All.SendAsync(
+                    "ResepChanged",
+                    new
+                    {
+                        Action = "update",
+                        ResepId = resep.ResepId
+                    },
+                    ct);
+
+                return Created("", new
+                {
+                    message = "Tambah Data Berhasil || 201 Created"
+                });
             }
             catch (DbUpdateException dbEx)
             {

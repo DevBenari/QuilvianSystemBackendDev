@@ -809,20 +809,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 _applicationDbContext.Billings.Add(billing);
 
-                int result = await _applicationDbContext.SaveChangesAsync();
-                await _hubContext.Clients.All.SendAsync("ResepDetailCreated", new
+                int result = await _applicationDbContext
+                    .SaveChangesAsync(ct);
+
+                if (result <= 0)
                 {
-                    Action = "create",
-                    DetailResepId = data.DetailResepId
+                    await transaction.RollbackAsync(ct);
+
+                    return StatusCode(500, new
+                    {
+                        message = "Data tidak berhasil disimpan ke database."
+                    });
+                }
+
+                // Wajib commit terlebih dahulu
+                await transaction.CommitAsync(ct);
+
+                // SignalR dikirim setelah data benar-benar tersimpan
+                await _hubContext.Clients.All.SendAsync(
+                    "ResepDetailCreated",
+                    new
+                    {
+                        Action = "create",
+                        DetailResepId = data.DetailResepId
+                    },
+                    ct);
+
+                return Created("", new
+                {
+                    message = "Tambah Data Berhasil || 201 Created"
                 });
-                if (result > 0)
-                {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
             }
             catch (DbUpdateException dbEx)
             {

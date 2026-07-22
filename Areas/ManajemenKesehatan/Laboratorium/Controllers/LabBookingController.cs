@@ -772,32 +772,45 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 };
 
                 _applicationDbContext.LabBookings.Add(entity);
-                int result = await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
+                int result = await _applicationDbContext
+                    .SaveChangesAsync(ct);
+
+                if (result <= 0)
                 {
-                    await _hubContext.Clients.All.SendAsync("Lab booking Created", new
-                    {
-                        Action = "create",
-                        id = entity.BookingLabId
-                    });
+                    await transaction.RollbackAsync(ct);
 
-                    return Created("", new
+                    return StatusCode(500, new
                     {
-                        message = "Tambah Data Berhasil || 201 Created",
-                        data = new
-                        {
-                            entity.BookingLabId,
-                            entity.NoOrder,
-                            entity.NomorSuratJaminan,
-                            entity.CatatanJaminan,
-                            entity.TglBooking,
-                            entity.CreateDateTime
-                        }
+                        message = "Gagal menyimpan data ke database."
                     });
                 }
 
-                return StatusCode(500, new { message = "Gagal menyimpan data ke database." });
+                await transaction.CommitAsync(ct);
+
+                // SignalR sebaiknya dijalankan setelah commit berhasil
+                await _hubContext.Clients.All.SendAsync(
+                    "Lab booking Created",
+                    new
+                    {
+                        Action = "create",
+                        id = entity.BookingLabId
+                    },
+                    ct);
+
+                return Created("", new
+                {
+                    message = "Tambah Data Berhasil || 201 Created",
+                    data = new
+                    {
+                        entity.BookingLabId,
+                        entity.NoOrder,
+                        entity.NomorSuratJaminan,
+                        entity.CatatanJaminan,
+                        entity.TglBooking,
+                        entity.CreateDateTime
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {

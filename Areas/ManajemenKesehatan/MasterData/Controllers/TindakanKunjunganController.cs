@@ -361,22 +361,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     _applicationDbContext.Billings.Add(billing);
                 }
 
-                int result = await _applicationDbContext.SaveChangesAsync();
+                int result = await _applicationDbContext.SaveChangesAsync(ct);
 
-                if (result > 0)
+                if (result <= 0)
                 {
-                    // Notifikasi SignalR
-                    await _hubContext.Clients.All.SendAsync("TindakanKunjungan Added", new
+                    await transaction.RollbackAsync(ct);
+
+                    return StatusCode(500, new
                     {
-                        action = "AddTindakanKunjungan",
+                        message = "Data tidak berhasil disimpan ke database."
                     });
+                }
 
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                else
+                // Pastikan data benar-benar tersimpan
+                await transaction.CommitAsync(ct);
+
+                // Notifikasi SignalR setelah commit berhasil
+                await _hubContext.Clients.All.SendAsync(
+                    "TindakanKunjungan Added",
+                    new
+                    {
+                        action = "AddTindakanKunjungan"
+                    },
+                    ct);
+
+                return Created("", new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
+                    message = "Tambah Data Berhasil || 201 Created"
+                });
             }
             catch (DbUpdateException dbEx)
             {
@@ -395,6 +407,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
+
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
 
             try
             {
@@ -553,22 +567,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     _applicationDbContext.Billings.Update(existingBilling);
                 }
-                int result = await _applicationDbContext.SaveChangesAsync();
+                int result = await _applicationDbContext.SaveChangesAsync(ct);
 
-                if (result > 0)
+                if (result <= 0)
                 {
-                    // Notifikasi SignalR
-                    await _hubContext.Clients.All.SendAsync("TindakanKunjungan Changed", new
+                    await transaction.RollbackAsync(ct);
+
+                    return StatusCode(500, new
                     {
-                        action = "EditTindakanKunjungan",
+                        message = "Data tidak berhasil disimpan ke database."
                     });
+                }
 
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
-                }
-                else
+                // Pastikan data benar-benar tersimpan
+                await transaction.CommitAsync(ct);
+
+                // Notifikasi SignalR setelah commit berhasil
+                await _hubContext.Clients.All.SendAsync(
+                    "TindakanKunjungan Change",
+                    new
+                    {
+                        action = "EditTindakanKunjungan"
+                    },
+                    ct);
+
+                return Created("", new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
+                    message = "Tambah Data Berhasil || 201 Created"
+                });
             }
             catch (DbUpdateException dbEx)
             {
