@@ -1000,6 +1000,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 foreach (var detail in entity.LabBookingDetails.Where(x => x.IsDelete != true))
                 {
                     detail.StatusPemeriksaan = vm.Status;
+                    detail.TanggalSelesai = vm.TglSelesai;
                     detail.UpdateBy = userActiveId;
                     detail.UpdateDateTime = now;
                 }
