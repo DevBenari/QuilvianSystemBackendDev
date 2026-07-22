@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Data;
+using System.Security.Claims;
 using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -156,6 +157,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return BadRequest(new { message = "Data tidak valid." });
             }
 
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(
+                IsolationLevel.ReadCommitted, ct);
             try
             {
                 // **Cek koneksi ke database**

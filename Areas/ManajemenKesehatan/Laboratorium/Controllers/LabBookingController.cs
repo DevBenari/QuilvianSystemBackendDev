@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -815,7 +816,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
-            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(ct);
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
+                (IsolationLevel.ReadCommitted, ct);
 
             await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
             try
