@@ -400,5 +400,92 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
 
             return $"GL-{nowJakarta:yyMMdd}-{sequenceBaru:00000}";
         }
+        // ================= PAGED =================
+        [HttpGet("paged")]
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            string? search = null)
+        {
+            if (page < 1)
+                page = 1;
+
+            if (perPage < 1)
+                perPage = 10;
+
+            if (perPage > 100)
+                perPage = 100;
+
+            var query =
+                from gl in _context.GLHeaders
+
+                join userData in _context.UserActives
+                    on gl.CreateBy equals userData.UserActiveId
+                    into userJoin
+
+                from user in userJoin.DefaultIfEmpty()
+
+                where gl.IsDelete == false
+
+                select new
+                {
+                    gl.GLHeaderId,
+                    gl.GLKode,
+                    gl.KunjunganId,
+                    gl.NoRegistrasi,
+                    gl.JenisKunjungan,
+                    gl.PasienId,
+                    gl.TglTransaksi,
+                    gl.TglPosting,
+                    gl.SourceGL,
+                    gl.SourceTypeGL,
+                    gl.SourceId,
+                    gl.SourceNumber,
+                    gl.GLStatus,
+                    gl.Keterangan,
+                    gl.CreateDateTime,
+
+                    CreateByName = user != null
+                        ? user.FullName
+                        : null
+                };
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var keyword = $"%{search.Trim()}%";
+
+                query = query.Where(x =>
+                    EF.Functions.ILike(x.GLKode!, keyword) ||
+                    EF.Functions.ILike(x.NoRegistrasi!, keyword) ||
+                    EF.Functions.ILike(x.JenisKunjungan!, keyword) ||
+                    EF.Functions.ILike(x.SourceGL!, keyword) ||
+                    EF.Functions.ILike(x.SourceTypeGL!, keyword) ||
+                    EF.Functions.ILike(x.SourceNumber!, keyword) ||
+                    EF.Functions.ILike(x.GLStatus!, keyword) ||
+                    EF.Functions.ILike(x.Keterangan!, keyword));
+            }
+
+            var totalRows = await query.CountAsync();
+
+            var data = await query
+                .OrderByDescending(x => x.TglPosting)
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                message = "success",
+                data,
+                pagination = new
+                {
+                    page,
+                    perPage,
+                    totalRows,
+                    totalPages = (int)Math.Ceiling(
+                        totalRows / (double)perPage)
+                }
+            });
+        }
     }
 }

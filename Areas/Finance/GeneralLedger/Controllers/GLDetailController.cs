@@ -540,5 +540,132 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
                 message = "GL Detail berhasil dihapus"
             });
         }
+        // ================= PAGED =================
+        [HttpGet("paged")]
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            Guid? glHeaderId = null,
+            string? search = null)
+        {
+            if (page < 1)
+                page = 1;
+
+            if (perPage < 1)
+                perPage = 10;
+
+            if (perPage > 100)
+                perPage = 100;
+
+            var query =
+                from detail in _context.GLDetails
+
+                join header in _context.GLHeaders
+                    on detail.GLHeaderId equals header.GLHeaderId
+
+                join coa in _context.MasterCoas
+                    on detail.COAId equals coa.COAId
+
+                join userData in _context.UserActives
+                    on detail.CreateBy equals userData.UserActiveId
+                    into userJoin
+
+                from user in userJoin.DefaultIfEmpty()
+
+                where detail.IsDelete == false &&
+                      header.IsDelete == false &&
+                      coa.IsDelete == false
+
+                select new
+                {
+                    detail.GLDetailId,
+                    detail.GLHeaderId,
+
+                    header.GLKode,
+                    header.KunjunganId,
+                    header.NoRegistrasi,
+                    header.JenisKunjungan,
+                    header.PasienId,
+                    header.TglTransaksi,
+                    header.TglPosting,
+                    header.SourceGL,
+                    header.SourceTypeGL,
+                    HeaderSourceId = header.SourceId,
+                    HeaderSourceNumber = header.SourceNumber,
+                    header.GLStatus,
+
+                    detail.COAId,
+                    coa.KodeCOA,
+                    coa.NamaCOA,
+
+                    detail.NilaiDebit,
+                    detail.NilaiKredit,
+
+                    detail.SourceItemType,
+                    detail.SourceId,
+                    detail.SourceNumber,
+                    detail.SourceItemId,
+                    detail.SourceItem,
+
+                    detail.CostCenterId,
+                    detail.CostCenterName,
+                    detail.Keterangan,
+                    detail.CreateDateTime,
+
+                    CreateByName = user != null
+                        ? user.FullName
+                        : null
+                };
+
+            if (glHeaderId.HasValue &&
+                glHeaderId.Value != Guid.Empty)
+            {
+                query = query.Where(x =>
+                    x.GLHeaderId == glHeaderId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var keyword = $"%{search.Trim()}%";
+
+                query = query.Where(x =>
+                    EF.Functions.ILike(x.GLKode!, keyword) ||
+                    EF.Functions.ILike(x.NoRegistrasi!, keyword) ||
+                    EF.Functions.ILike(x.JenisKunjungan!, keyword) ||
+                    EF.Functions.ILike(x.SourceGL!, keyword) ||
+                    EF.Functions.ILike(x.SourceTypeGL!, keyword) ||
+                    EF.Functions.ILike(x.HeaderSourceNumber!, keyword) ||
+                    EF.Functions.ILike(x.GLStatus!, keyword) ||
+                    EF.Functions.ILike(x.KodeCOA!, keyword) ||
+                    EF.Functions.ILike(x.NamaCOA!, keyword) ||
+                    EF.Functions.ILike(x.SourceItemType!, keyword) ||
+                    EF.Functions.ILike(x.SourceNumber!, keyword) ||
+                    EF.Functions.ILike(x.SourceItem!, keyword) ||
+                    EF.Functions.ILike(x.CostCenterName!, keyword) ||
+                    EF.Functions.ILike(x.Keterangan!, keyword));
+            }
+
+            var totalRows = await query.CountAsync();
+
+            var data = await query
+                .OrderByDescending(x => x.CreateDateTime)
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                message = "success",
+                data,
+                pagination = new
+                {
+                    page,
+                    perPage,
+                    totalRows,
+                    totalPages = (int)Math.Ceiling(
+                        totalRows / (double)perPage)
+                }
+            });
+        }
     }
 }
