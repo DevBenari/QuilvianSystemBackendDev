@@ -935,6 +935,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
+                (IsolationLevel.ReadCommitted, ct);
+
             try
             {
                 // ==========================================================

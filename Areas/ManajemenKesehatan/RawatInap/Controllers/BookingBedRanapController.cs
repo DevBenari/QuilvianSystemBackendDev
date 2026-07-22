@@ -168,8 +168,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (vm.KunjunganId == null || vm.KamarId == null || vm.BedId == null)
                 return BadRequest(new { message = "KunjunganId, KamarId, dan BedId wajib diisi." });
             
-            await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
-
             await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
 
             try
@@ -202,6 +200,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 if (!kunjunganExist)
                     return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
                 // validasi kamar + ambil tarif & kelas
                 var kamar = await _applicationDbContext.Kamars

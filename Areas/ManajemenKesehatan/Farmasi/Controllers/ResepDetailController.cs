@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
@@ -680,7 +681,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
-
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
+                (IsolationLevel.ReadCommitted, ct);
             try
             {
                 // **Cek koneksi ke database**

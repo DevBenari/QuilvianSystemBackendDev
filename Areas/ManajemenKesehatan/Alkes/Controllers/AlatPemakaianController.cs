@@ -184,11 +184,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
             var userId = user.UserActiveId;
-            await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId,ct);
+
 
             await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
             try
             {
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
                 // =========================
                 // 1) billingIndex awal (khusus kunjungan & jenis billing)
                 // =========================
@@ -364,10 +365,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
             var userId = user.UserActiveId;
-            await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
-            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
+            
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync(ct);
             try
             {
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
                 // =========================
                 // 1) Ambil header yang akan diupdate
                 // =========================

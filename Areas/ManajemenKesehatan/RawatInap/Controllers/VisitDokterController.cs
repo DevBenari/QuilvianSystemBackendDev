@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Data;
+using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -138,7 +139,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 return BadRequest(new { message = "Data tidak valid." });
             }
 
-            await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
+                (IsolationLevel.ReadCommitted, ct);
 
             try
             {
@@ -175,6 +177,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 //if (isDuplicate)
                 //    return Conflict(new { message = "Kunjungan ini telah divisit pada tanggal yang sama." });
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
                 // **Buat Data Baru**
                 var data = new VisitDokter
@@ -287,7 +291,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (!vm.TanggalVisit.HasValue)
                 return BadRequest(new { message = "TanggalVisit wajib diisi." });
 
-            await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
+                (IsolationLevel.ReadCommitted, ct);
 
             try
             {
@@ -316,6 +321,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 if (data == null)
                     return NotFound(new { message = "Data Visit Dokter tidak ditemukan." });
 
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
+
                 // Cek duplikasi (kecuali record yang sedang diupdate)
                 var tanggalOnly = vm.TanggalVisit.Value.Date;
 
@@ -330,6 +337,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 if (isDuplicate)
                     return Conflict(new { message = "Kunjungan ini telah divisit pada tanggal yang sama." });
+
+
 
                 // Update VisitDokter
                 data.WaktuVisit = vm.WaktuVisit;

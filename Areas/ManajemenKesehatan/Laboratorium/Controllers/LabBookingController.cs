@@ -710,6 +710,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
+                (IsolationLevel.ReadCommitted, ct);
+
             try
             {
                 // ======================================
@@ -819,7 +822,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
                 (IsolationLevel.ReadCommitted, ct);
 
-            await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
             try
             {
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -843,7 +845,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (entity == null)
                     return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
 
-
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
                 // ======================================
                 // Update nilai field dulu
                 // ======================================
