@@ -73,45 +73,127 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
             if (!items.Any())
                 return 0;
 
-            var pemeriksaanIds = items
-                .Select(x => x.PemeriksaanLabId)
-                .Distinct()
+            /*
+             * Gabungkan pemeriksaan yang sama dalam satu booking.
+             *
+             * Contoh:
+             * - Darah Lengkap qty 1
+             * - Darah Lengkap qty 2
+             *
+             * Akan diproses menjadi:
+             * - Darah Lengkap qty 3
+             */
+            var groupedItems = items
+                .GroupBy(x => x.PemeriksaanLabId)
+                .Select(group =>
+                {
+                    var firstItem = group.First();
+
+                    var totalQty = group.Sum(x =>
+                        x.QtyOrder.HasValue && x.QtyOrder.Value > 0
+                            ? Convert.ToInt32(x.QtyOrder.Value)
+                            : 1);
+
+                    return new
+                    {
+                        PemeriksaanLabId = group.Key,
+                        firstItem.NamaPemeriksaan,
+                        firstItem.HargaPemeriksaan,
+                        firstItem.TipeLayanan,
+                        Qty = totalQty
+                    };
+                })
                 .ToList();
 
-            var existingBillingItemIds = await _context.Billings
-                .AsNoTracking()
+            var pemeriksaanIds = groupedItems
+                .Select(x => x.PemeriksaanLabId)
+                .ToList();
+
+            /*
+             * Jangan gunakan AsNoTracking karena data billing yang ditemukan
+             * akan diperbarui.
+             */
+            var existingBillings = await _context.Billings
                 .Where(x =>
                     x.KunjunganId == kunjunganId &&
                     x.ItemId.HasValue &&
                     pemeriksaanIds.Contains(x.ItemId.Value) &&
                     x.BillingKode == "LAB" &&
                     x.JenisBilling == "Pemeriksaan Lab" &&
+                    x.StatusBilling == false &&
                     (x.IsDelete == false || x.IsDelete == null))
-                .Select(x => x.ItemId!.Value)
-                .Distinct()
                 .ToListAsync(cancellationToken);
 
-            var createdCount = 0;
+            /*
+             * GroupBy digunakan untuk mengantisipasi jika sebelumnya sudah terdapat
+             * billing duplikat di database.
+             *
+             * Billing pertama akan menjadi billing utama yang diperbarui.
+             */
+            var existingBillingMap = existingBillings
+                .Where(x => x.ItemId.HasValue)
+                .GroupBy(x => x.ItemId!.Value)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .OrderBy(x => x.CreateDateTime)
+                        .First());
 
-            foreach (var item in items)
+            var affectedCount = 0;
+
+            foreach (var item in groupedItems)
             {
                 var pemeriksaanLabId = item.PemeriksaanLabId;
-
-                // Cegah billing double kalau endpoint PUT dipanggil ulang.
-                if (existingBillingItemIds.Contains(pemeriksaanLabId))
-                    continue;
-
-                var harga = item.HargaPemeriksaan ?? 0m;
-
-                var qty = item.QtyOrder.HasValue && item.QtyOrder.Value > 0
-                    ? Convert.ToInt32(item.QtyOrder.Value)
-                    : 1;
+                var qtyTambahan = item.Qty;
 
                 var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
                     kunjunganId,
                     "Pemeriksaan Lab",
                     pemeriksaanLabId,
                     cancellationToken);
+
+                /*
+                 * Jika item yang sama sudah ada pada billing,
+                 * tambahkan quantity tanpa membuat baris baru.
+                 */
+                if (existingBillingMap.TryGetValue(
+                        pemeriksaanLabId,
+                        out var existingBilling))
+                {
+                    var qtySebelumnya = Convert.ToInt32(existingBilling.QtyItem);
+                    var qtyBaru = qtySebelumnya + qtyTambahan;
+
+                    /*
+                     * Utamakan harga yang sudah tersimpan pada billing agar perubahan
+                     * harga master tidak mengubah transaksi yang sudah terbentuk.
+                     */
+                    var hargaSatuan = Convert.ToDecimal(existingBilling.HargaItem);
+
+                    if (hargaSatuan <= 0)
+                    {
+                        hargaSatuan = item.HargaPemeriksaan ?? 0m;
+                    }
+
+                    existingBilling.QtyItem = qtyBaru;
+                    existingBilling.HargaItem = hargaSatuan;
+                    existingBilling.SubTotalItem = hargaSatuan * qtyBaru;
+
+                    existingBilling.NamaItem = item.NamaPemeriksaan;
+                    existingBilling.TipeLayanan = item.TipeLayanan;
+
+                    existingBilling.IsCovered = coverage?.IsCovered;
+                    existingBilling.IsCoveredExcess = coverage?.IsCoveredExcess;
+                    existingBilling.AsuransiId = coverage?.AsuransiId;
+                    existingBilling.AsuransiExcessId = coverage?.AsuransiExcessId;
+
+                    affectedCount++;
+                    continue;
+                }
+
+                /*
+                 * Jika belum ada, buat billing pemeriksaan baru.
+                 */
+                var harga = item.HargaPemeriksaan ?? 0m;
 
                 var billing = new Billing
                 {
@@ -122,12 +204,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                     NamaItem = item.NamaPemeriksaan,
 
                     HargaItem = harga,
-                    QtyItem = qty,
-                    SubTotalItem = harga * qty,
+                    QtyItem = qtyTambahan,
+                    SubTotalItem = harga * qtyTambahan,
 
-                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-                        kunjunganId,
-                        DateTime.UtcNow),
+                    InvoiceBilling = await _generateInvoiceBillingService
+                        .GetOrCreateAsync(
+                            kunjunganId,
+                            DateTime.UtcNow),
 
                     IsListWhiteOff = false,
 
@@ -153,14 +236,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
 
                 _context.Billings.Add(billing);
 
-                existingBillingItemIds.Add(pemeriksaanLabId);
-                createdCount++;
+                /*
+                 * Masukkan billing baru ke dictionary agar pada proses yang sama
+                 * tidak dibuat billing duplikat.
+                 */
+                existingBillingMap[pemeriksaanLabId] = billing;
+
+                affectedCount++;
             }
 
-            if (createdCount > 0)
+            if (affectedCount > 0)
+            {
                 await _context.SaveChangesAsync(cancellationToken);
+            }
 
-            return createdCount;
+            return affectedCount;
         }
     }
 }

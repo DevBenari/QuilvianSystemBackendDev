@@ -262,47 +262,101 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ct);
 
                 // Hitung jumlah billing sebelumnya untuk kunjungan ini
-                int billingTindakanCount = await _applicationDbContext.Billings
-                    .Where(b => b.KunjunganId == vm.KunjunganId && b.JenisBilling.ToLower()=="tindakan")
-                    .CountAsync();
-                int billingIndex = billingTindakanCount;
+                // Cari billing tindakan yang sama dan masih aktif/belum dibayar
+                var existingBilling = await _applicationDbContext.Billings
+                    .FirstOrDefaultAsync(b =>
+                        b.KunjunganId == vm.KunjunganId &&
+                        b.ItemId == vm.TindakanId &&
+                        b.JenisBilling == "Tindakan" &&
+                        b.StatusBilling == false,
+                        ct);
 
-                // buat BillingKode untuk setiap tindakan
-                billingIndex++;
-                string billingKode = $"{billingIndex.ToString("D3")}";
-
-                var billing = new Billing
+                if (existingBilling != null)
                 {
-                    BillingId = Guid.NewGuid(),
-                    KunjunganId = vm.KunjunganId,
-                    BillingDate = DateTime.UtcNow,
-                    BillingKode = billingKode,
-                    DiskonId = vm.DiskonId,
-                    ItemId = vm.TindakanId,
-                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                    /*
+                     * Billing tindakan sudah ada.
+                     * Tidak membuat baris billing baru, hanya menambahkan quantity.
+                     */
+
+                    existingBilling.QtyItem += vm.Quantity;
+
+                    // Gunakan harga yang sebelumnya sudah tersimpan agar tarif lama tidak berubah.
+                    var hargaSatuan = existingBilling.HargaItem
+                        ?? tarifKelas.TarifTotal
+                        ?? 0;
+
+                    existingBilling.HargaItem = hargaSatuan;
+
+                    existingBilling.SubTotalItem =
+                        hargaSatuan * Convert.ToDecimal(existingBilling.QtyItem);
+
+                    // Perbarui informasi yang mungkin berubah
+                    existingBilling.IsCovered = coverage?.IsCovered;
+                    existingBilling.IsCoveredExcess = coverage?.IsCoveredExcess;
+                    existingBilling.AsuransiId = coverage?.AsuransiId;
+                    existingBilling.AsuransiExcessId = coverage?.AsuransiExcessId;
+                    existingBilling.TipeLayanan = vm.TipeLayanan;
+
+                    if (!string.IsNullOrWhiteSpace(vm.Keterangan))
+                    {
+                        existingBilling.Keterangan = vm.Keterangan;
+                    }
+
+                    _applicationDbContext.Billings.Update(existingBilling);
+                }
+                else
+                {
+                    /*
+                     * Billing tindakan belum ada.
+                     * Buat billing baru seperti alur sebelumnya.
+                     */
+
+                    int billingTindakanCount = await _applicationDbContext.Billings
+                        .CountAsync(b =>
+                            b.KunjunganId == vm.KunjunganId &&
+                            b.JenisBilling == "Tindakan",
+                            ct);
+
+                    string billingKode = (billingTindakanCount + 1).ToString("D3");
+
+                    var billing = new Billing
+                    {
+                        BillingId = Guid.NewGuid(),
+                        KunjunganId = vm.KunjunganId,
+                        BillingDate = DateTime.UtcNow,
+                        BillingKode = billingKode,
+                        DiskonId = vm.DiskonId,
+                        ItemId = vm.TindakanId,
+
+                        InvoiceBilling = await _generateInvoiceBillingService
+                            .GetOrCreateAsync(
                                 (Guid)vm.KunjunganId,
                                 DateTime.UtcNow),
-                    IsListWhiteOff = false,
-                    NamaItem = tindakan.NamaTindakan,
-                    QtyItem = vm.Quantity,
-                    HargaItem = tarifKelas.TarifTotal,
-                    SubTotalItem = totalqty,
-                    JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
-                    StatusBilling= false,
 
-                    IsCovered = coverage?.IsCovered,
-                    IsCoveredExcess = coverage?.IsCoveredExcess,
-                    AsuransiId = coverage?.AsuransiId,
-                    AsuransiExcessId = coverage?.AsuransiExcessId,
-                    TipeLayanan = vm.TipeLayanan,
-                    TanggalInvoice = DateTime.UtcNow,
-                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                    CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow,
-                    Keterangan = vm.Keterangan,
-                };
+                        IsListWhiteOff = false,
+                        NamaItem = tindakan.NamaTindakan,
+                        QtyItem = vm.Quantity,
+                        HargaItem = tarifKelas.TarifTotal,
+                        SubTotalItem = totalqty,
+                        JenisBilling = "Tindakan",
+                        StatusBilling = false,
 
-                _applicationDbContext.Billings.Add(billing);
+                        IsCovered = coverage?.IsCovered,
+                        IsCoveredExcess = coverage?.IsCoveredExcess,
+                        AsuransiId = coverage?.AsuransiId,
+                        AsuransiExcessId = coverage?.AsuransiExcessId,
+
+                        TipeLayanan = vm.TipeLayanan,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+
+                        CreateBy = userActiveId,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        Keterangan = vm.Keterangan
+                    };
+
+                    _applicationDbContext.Billings.Add(billing);
+                }
 
                 int result = await _applicationDbContext.SaveChangesAsync();
 
