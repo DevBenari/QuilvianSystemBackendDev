@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Interfaces;
@@ -34,6 +35,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ILogger<BookingBedRanapController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
 
 
         public BookingBedRanapController(
@@ -43,7 +45,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             ILogger<BookingBedRanapController> logger,
             IWebHostEnvironment webHostEnvironment,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
-            IAsuransiCoverageService asuransiCoverageService)
+            IAsuransiCoverageService asuransiCoverageService,
+            IKunjunganTransactionGuard kunjunganTransactionGuard)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -52,6 +55,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _webHostEnvironment = webHostEnvironment;
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _asuransiCoverageService = asuransiCoverageService;
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
+
         }
         private DateTime? TryParseTanggalToUtc(string tanggal)
         {
@@ -162,6 +167,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
             if (vm.KunjunganId == null || vm.KamarId == null || vm.BedId == null)
                 return BadRequest(new { message = "KunjunganId, KamarId, dan BedId wajib diisi." });
+            
+            await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
             await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
 

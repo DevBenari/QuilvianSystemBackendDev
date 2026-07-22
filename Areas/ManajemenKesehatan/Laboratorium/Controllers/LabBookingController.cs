@@ -20,6 +20,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
@@ -38,7 +39,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        //private readonly string _uploadUrl;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
         private readonly ITTDService _ttdService;
         private readonly ILogger<LabBookingController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
@@ -52,7 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             SignInManager<ApplicationUser> signInManager,
             ILogger<LabBookingController> logger,
             IWebHostEnvironment webHostEnvironment,
-            //IConfiguration configuration,
+            IKunjunganTransactionGuard kunjunganTransactionGuard,
             ITTDService ttDService,
             IHubContext<LabBookingHub> hubContext,
             INoPhotoGeneratorService noPhotoGeneratorService,
@@ -64,7 +65,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            //_uploadUrl = configuration["FileStorage:UploadUrl"];
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
             _hubContext = hubContext;
             _ttdService = ttDService;
             _noPhotoGeneratorService = noPhotoGeneratorService;
@@ -724,6 +725,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 var userActiveId = getUserActive.UserActiveId;
 
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
+
                 // ======================================
                 // ✅ Simpan ke Database
                 // ======================================
@@ -814,6 +817,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(ct);
 
+            await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
             try
             {
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -836,6 +840,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 if (entity == null)
                     return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
+
 
                 // ======================================
                 // Update nilai field dulu

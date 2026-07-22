@@ -14,6 +14,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Tindakan.Models;
 using QuilvianSystemBackendDev.Interfaces;
@@ -37,6 +38,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
         private readonly IHubContext<TindakanKunjunganHub> _hubContext;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
+
 
         public TindakanKunjunganController(
             ApplicationDbContext applicationDbContext,
@@ -46,7 +49,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             IWebHostEnvironment webHostEnvironment,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
             IAsuransiCoverageService asuransiCoverageService,
-            IHubContext<TindakanKunjunganHub> hubContext)
+            IHubContext<TindakanKunjunganHub> hubContext,
+            IKunjunganTransactionGuard kunjunganTransactionGuard)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -56,6 +60,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _asuransiCoverageService = asuransiCoverageService;
             _hubContext = hubContext;
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
         }
 
 
@@ -181,6 +186,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return NotFound(new { message = "Kunjungan tidak ditemukan." });
                 }
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
                 // **Tentukan Kelas berdasarkan JenisKunjungan**
                 string kelasKode = "";
@@ -370,6 +377,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return NotFound(new { message = "Kunjungan tidak ditemukan." });
                 }
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
                 // Cari kelas berdasarkan kode kelas
                 var kelas = await _applicationDbContext.Kelass

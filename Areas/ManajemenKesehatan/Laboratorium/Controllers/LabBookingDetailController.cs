@@ -14,6 +14,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -30,7 +31,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        //private readonly string _uploadUrl;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
         private readonly IHubContext<LabBookingDetailHub> _hubContext;
         private readonly ITTDService _ttdService;
         private readonly ILogger<LabBookingDetailController> _logger;
@@ -43,7 +44,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             SignInManager<ApplicationUser> signInManager,
             ILogger<LabBookingDetailController> logger,
             IWebHostEnvironment webHostEnvironment,
-            //IConfiguration configuration,
+            IKunjunganTransactionGuard kunjunganTransactionGuard,
             ITTDService ttdService,
             IHubContext<LabBookingDetailHub> hubContext,
             INoPhotoGeneratorService noPhotoGeneratorService)
@@ -53,7 +54,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            //_uploadUrl = configuration["FileStorage:UploadUrl"];
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
             _hubContext = hubContext;
             _ttdService = ttdService;
             _noPhotoGeneratorService = noPhotoGeneratorService;
@@ -675,6 +676,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 var userActiveId = getUserActive.UserActiveId;
 
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
+
                 if (!vm.BookingLabId.HasValue || vm.BookingLabId == Guid.Empty)
                     return BadRequest(new { message = "BookingLabId wajib diisi." });
 
@@ -825,6 +828,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             var userActiveId = getUserActive.UserActiveId;
 
+
             // ==================================================
             // ✅ UPDATE DATA BOOKING MENJADI DIBATALKAN
             // ==================================================
@@ -950,6 +954,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 var userActiveId = getUserActive.UserActiveId;
 
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
                 // ==========================================================
                 // 🔍 Cari data detail booking berdasarkan ID
                 // ==========================================================

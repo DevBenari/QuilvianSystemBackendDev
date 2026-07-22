@@ -17,6 +17,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -40,6 +41,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         private readonly ITTDService _ttdService;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
         private readonly IObatUnitStockService _obatUnitStockService;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
+
+
+
 
         public ResepController(
             ApplicationDbContext applicationDbContext,
@@ -51,7 +56,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             IGenerateInvoiceBillingService generateInvoiceBillingService,
             ITTDService ttdService,
             IAsuransiCoverageService asuransiCoverageServices,
-            IObatUnitStockService obatUnitStockService
+            IObatUnitStockService obatUnitStockService,
+            IKunjunganTransactionGuard kunjunganTransactionGuard
+
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -64,6 +71,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _ttdService = ttdService;
             _asuransiCoverageService = asuransiCoverageServices;
             _obatUnitStockService = obatUnitStockService;
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
+
         }
 
         private void ClearChangeTracker()
@@ -615,6 +624,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 if (kunjungan == null)
                     return NotFound(new { message = "Data kunjungan tidak ditemukan." });
 
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
+                                
                 string antrian = kunjungan.Antrian;
                 var today = DateTime.UtcNow.Date;
                 var todayString = today.ToString("yyyyMMdd");
@@ -949,6 +961,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 var userId = user.UserActiveId;
                 var today = DateTime.UtcNow.Date;
                 var todayString = today.ToString("yyyyMMdd");
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
                 // rollback stok lama
                 var oldDetails = await _applicationDbContext.DetailReseps.Where(d => d.ResepId == id).ToListAsync();

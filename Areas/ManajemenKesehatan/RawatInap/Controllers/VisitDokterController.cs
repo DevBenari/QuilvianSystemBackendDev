@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Interfaces;
@@ -33,6 +34,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly ILogger<VisitDokterController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
+
 
         public VisitDokterController(
             ApplicationDbContext applicationDbContext,
@@ -40,7 +43,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             SignInManager<ApplicationUser> signInManager,
             ILogger<VisitDokterController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IGenerateInvoiceBillingService generateInvoiceBillingService)
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
+            IKunjunganTransactionGuard kunjunganTransactionGuard
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -48,31 +53,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _generateInvoiceBillingService = generateInvoiceBillingService;
-        }
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
 
-        private DateTime? TryParseTanggalToUtc(string tanggal)
-        {
-            if (DateTime.TryParseExact(
-                    tanggal,
-                    "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out var parsedDate))
-            {
-                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
-                var finalDateTime = new DateTime(
-                    parsedDate.Year,
-                    parsedDate.Month,
-                    parsedDate.Day,
-                    now.Hour,
-                    now.Minute,
-                    now.Second,
-                    DateTimeKind.Local
-                ); // atau Utc jika perlu
-
-                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
-            }
-            return null;
         }
 
         [HttpGet]
@@ -149,12 +131,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] VisitDokterViewModel vm)
+        public async Task<IActionResult> Create([FromBody] VisitDokterViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
+
+            await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
             try
             {
@@ -292,7 +276,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] VisitDokterViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] VisitDokterViewModel vm, CancellationToken ct)
         {
             if (id == Guid.Empty)
                 return BadRequest(new { message = "Id tidak valid." });
@@ -302,6 +286,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
             if (!vm.TanggalVisit.HasValue)
                 return BadRequest(new { message = "TanggalVisit wajib diisi." });
+
+            await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
             try
             {

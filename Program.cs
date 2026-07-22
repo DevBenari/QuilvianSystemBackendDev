@@ -322,6 +322,7 @@ builder.Services.AddScoped<IObatUnitStockService, ObatUnitReserveService>();
 builder.Services.AddScoped<IResepStockService, ResepStockService>();
 builder.Services.AddScoped<INoPhotoGeneratorService, NoPhotoGeneratorService>();
 builder.Services.AddScoped<ILabBillingService, LabBillingService>();
+builder.Services.AddScoped<IKunjunganTransactionGuard, KunjunganTransactionGuard>();
 
 #endregion
 
