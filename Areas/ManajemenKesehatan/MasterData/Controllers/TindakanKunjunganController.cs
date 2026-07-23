@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Data;
+using System.Security.Claims;
 using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -14,6 +15,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Tindakan.Models;
 using QuilvianSystemBackendDev.Interfaces;
@@ -37,6 +39,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
         private readonly IHubContext<TindakanKunjunganHub> _hubContext;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
+
 
         public TindakanKunjunganController(
             ApplicationDbContext applicationDbContext,
@@ -46,7 +50,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             IWebHostEnvironment webHostEnvironment,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
             IAsuransiCoverageService asuransiCoverageService,
-            IHubContext<TindakanKunjunganHub> hubContext)
+            IHubContext<TindakanKunjunganHub> hubContext,
+            IKunjunganTransactionGuard kunjunganTransactionGuard)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -56,6 +61,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _asuransiCoverageService = asuransiCoverageService;
             _hubContext = hubContext;
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
         }
 
 
@@ -151,6 +157,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return BadRequest(new { message = "Data tidak valid." });
             }
 
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(
+                IsolationLevel.ReadCommitted, ct);
             try
             {
                 // **Cek koneksi ke database**
@@ -181,6 +189,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return NotFound(new { message = "Kunjungan tidak ditemukan." });
                 }
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
                 // **Tentukan Kelas berdasarkan JenisKunjungan**
                 string kelasKode = "";
@@ -255,64 +265,130 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ct);
 
                 // Hitung jumlah billing sebelumnya untuk kunjungan ini
-                int billingTindakanCount = await _applicationDbContext.Billings
-                    .Where(b => b.KunjunganId == vm.KunjunganId && b.JenisBilling.ToLower()=="tindakan")
-                    .CountAsync();
-                int billingIndex = billingTindakanCount;
+                // Cari billing tindakan yang sama dan masih aktif/belum dibayar
+                var existingBilling = await _applicationDbContext.Billings
+                    .FirstOrDefaultAsync(b =>
+                        b.KunjunganId == vm.KunjunganId &&
+                        b.ItemId == vm.TindakanId &&
+                        b.JenisBilling == "Tindakan" &&
+                        b.StatusBilling == false,
+                        ct);
 
-                // buat BillingKode untuk setiap tindakan
-                billingIndex++;
-                string billingKode = $"{billingIndex.ToString("D3")}";
-
-                var billing = new Billing
+                if (existingBilling != null)
                 {
-                    BillingId = Guid.NewGuid(),
-                    KunjunganId = vm.KunjunganId,
-                    BillingDate = DateTime.UtcNow,
-                    BillingKode = billingKode,
-                    DiskonId = vm.DiskonId,
-                    ItemId = vm.TindakanId,
-                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-                                (Guid)vm.KunjunganId,
-                                DateTime.UtcNow),
-                    IsListWhiteOff = false,
-                    NamaItem = tindakan.NamaTindakan,
-                    QtyItem = vm.Quantity,
-                    HargaItem = tarifKelas.TarifTotal,
-                    SubTotalItem = totalqty,
-                    JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
-                    StatusBilling= false,
+                    /*
+                     * Billing tindakan sudah ada.
+                     * Tidak membuat baris billing baru, hanya menambahkan quantity.
+                     */
 
-                    IsCovered = coverage?.IsCovered,
-                    IsCoveredExcess = coverage?.IsCoveredExcess,
-                    AsuransiId = coverage?.AsuransiId,
-                    AsuransiExcessId = coverage?.AsuransiExcessId,
-                    TipeLayanan = vm.TipeLayanan,
-                    TanggalInvoice = DateTime.UtcNow,
-                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                    CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow,
-                    Keterangan = vm.Keterangan,
-                };
+                    existingBilling.QtyItem += vm.Quantity;
 
-                _applicationDbContext.Billings.Add(billing);
+                    // Gunakan harga yang sebelumnya sudah tersimpan agar tarif lama tidak berubah.
+                    var hargaSatuan = existingBilling.HargaItem
+                        ?? tarifKelas.TarifTotal
+                        ?? 0;
 
-                int result = await _applicationDbContext.SaveChangesAsync();
+                    existingBilling.HargaItem = hargaSatuan;
 
-                if (result > 0)
-                {
-                    // Notifikasi SignalR
-                    await _hubContext.Clients.All.SendAsync("TindakanKunjungan Added", new
+                    existingBilling.SubTotalItem =
+                        hargaSatuan * Convert.ToDecimal(existingBilling.QtyItem);
+
+                    // Perbarui informasi yang mungkin berubah
+                    existingBilling.IsCovered = coverage?.IsCovered;
+                    existingBilling.IsCoveredExcess = coverage?.IsCoveredExcess;
+                    existingBilling.AsuransiId = coverage?.AsuransiId;
+                    existingBilling.AsuransiExcessId = coverage?.AsuransiExcessId;
+                    existingBilling.TipeLayanan = vm.TipeLayanan;
+
+                    if (!string.IsNullOrWhiteSpace(vm.Keterangan))
                     {
-                        action = "AddTindakanKunjungan",
-                    });
+                        existingBilling.Keterangan = vm.Keterangan;
+                    }
 
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    _applicationDbContext.Billings.Update(existingBilling);
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                    /*
+                     * Billing tindakan belum ada.
+                     * Buat billing baru seperti alur sebelumnya.
+                     */
+
+                    int billingTindakanCount = await _applicationDbContext.Billings
+                        .CountAsync(b =>
+                            b.KunjunganId == vm.KunjunganId &&
+                            b.JenisBilling == "Tindakan",
+                            ct);
+
+                    string billingKode = (billingTindakanCount + 1).ToString("D3");
+
+                    var billing = new Billing
+                    {
+                        BillingId = Guid.NewGuid(),
+                        KunjunganId = vm.KunjunganId,
+                        BillingDate = DateTime.UtcNow,
+                        BillingKode = billingKode,
+                        DiskonId = vm.DiskonId,
+                        ItemId = vm.TindakanId,
+
+                        InvoiceBilling = await _generateInvoiceBillingService
+                            .GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+
+                        IsListWhiteOff = false,
+                        NamaItem = tindakan.NamaTindakan,
+                        QtyItem = vm.Quantity,
+                        HargaItem = tarifKelas.TarifTotal,
+                        SubTotalItem = totalqty,
+                        JenisBilling = "Tindakan",
+                        StatusBilling = false,
+
+                        IsCovered = coverage?.IsCovered,
+                        IsCoveredExcess = coverage?.IsCoveredExcess,
+                        AsuransiId = coverage?.AsuransiId,
+                        AsuransiExcessId = coverage?.AsuransiExcessId,
+
+                        TipeLayanan = vm.TipeLayanan,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+
+                        CreateBy = userActiveId,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        Keterangan = vm.Keterangan
+                    };
+
+                    _applicationDbContext.Billings.Add(billing);
                 }
+
+                int result = await _applicationDbContext.SaveChangesAsync(ct);
+
+                if (result <= 0)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return StatusCode(500, new
+                    {
+                        message = "Data tidak berhasil disimpan ke database."
+                    });
+                }
+
+                // Pastikan data benar-benar tersimpan
+                await transaction.CommitAsync(ct);
+
+                // Notifikasi SignalR setelah commit berhasil
+                await _hubContext.Clients.All.SendAsync(
+                    "TindakanKunjungan Added",
+                    new
+                    {
+                        action = "AddTindakanKunjungan"
+                    },
+                    ct);
+
+                return Created("", new
+                {
+                    message = "Tambah Data Berhasil || 201 Created"
+                });
             }
             catch (DbUpdateException dbEx)
             {
@@ -331,6 +407,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
+
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
 
             try
             {
@@ -370,6 +448,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return NotFound(new { message = "Kunjungan tidak ditemukan." });
                 }
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
                 // Cari kelas berdasarkan kode kelas
                 var kelas = await _applicationDbContext.Kelass
@@ -487,22 +567,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     _applicationDbContext.Billings.Update(existingBilling);
                 }
-                int result = await _applicationDbContext.SaveChangesAsync();
+                int result = await _applicationDbContext.SaveChangesAsync(ct);
 
-                if (result > 0)
+                if (result <= 0)
                 {
-                    // Notifikasi SignalR
-                    await _hubContext.Clients.All.SendAsync("TindakanKunjungan Changed", new
+                    await transaction.RollbackAsync(ct);
+
+                    return StatusCode(500, new
                     {
-                        action = "EditTindakanKunjungan",
+                        message = "Data tidak berhasil disimpan ke database."
                     });
+                }
 
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
-                }
-                else
+                // Pastikan data benar-benar tersimpan
+                await transaction.CommitAsync(ct);
+
+                // Notifikasi SignalR setelah commit berhasil
+                await _hubContext.Clients.All.SendAsync(
+                    "TindakanKunjungan Change",
+                    new
+                    {
+                        action = "EditTindakanKunjungan"
+                    },
+                    ct);
+
+                return Created("", new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
+                    message = "Tambah Data Berhasil || 201 Created"
+                });
             }
             catch (DbUpdateException dbEx)
             {

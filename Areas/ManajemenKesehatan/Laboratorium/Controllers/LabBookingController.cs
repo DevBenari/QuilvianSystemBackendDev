@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -20,6 +21,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
@@ -38,7 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        //private readonly string _uploadUrl;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
         private readonly ITTDService _ttdService;
         private readonly ILogger<LabBookingController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
@@ -52,7 +54,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             SignInManager<ApplicationUser> signInManager,
             ILogger<LabBookingController> logger,
             IWebHostEnvironment webHostEnvironment,
-            //IConfiguration configuration,
+            IKunjunganTransactionGuard kunjunganTransactionGuard,
             ITTDService ttDService,
             IHubContext<LabBookingHub> hubContext,
             INoPhotoGeneratorService noPhotoGeneratorService,
@@ -64,7 +66,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            //_uploadUrl = configuration["FileStorage:UploadUrl"];
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
             _hubContext = hubContext;
             _ttdService = ttDService;
             _noPhotoGeneratorService = noPhotoGeneratorService;
@@ -708,6 +710,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
+                (IsolationLevel.ReadCommitted, ct);
+
             try
             {
                 // ======================================
@@ -723,6 +728,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userActiveId = getUserActive.UserActiveId;
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
 
                 // ======================================
                 // ✅ Simpan ke Database
@@ -765,32 +772,45 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 };
 
                 _applicationDbContext.LabBookings.Add(entity);
-                int result = await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
+                int result = await _applicationDbContext
+                    .SaveChangesAsync(ct);
+
+                if (result <= 0)
                 {
-                    await _hubContext.Clients.All.SendAsync("Lab booking Created", new
-                    {
-                        Action = "create",
-                        id = entity.BookingLabId
-                    });
+                    await transaction.RollbackAsync(ct);
 
-                    return Created("", new
+                    return StatusCode(500, new
                     {
-                        message = "Tambah Data Berhasil || 201 Created",
-                        data = new
-                        {
-                            entity.BookingLabId,
-                            entity.NoOrder,
-                            entity.NomorSuratJaminan,
-                            entity.CatatanJaminan,
-                            entity.TglBooking,
-                            entity.CreateDateTime
-                        }
+                        message = "Gagal menyimpan data ke database."
                     });
                 }
 
-                return StatusCode(500, new { message = "Gagal menyimpan data ke database." });
+                await transaction.CommitAsync(ct);
+
+                // SignalR sebaiknya dijalankan setelah commit berhasil
+                await _hubContext.Clients.All.SendAsync(
+                    "Lab booking Created",
+                    new
+                    {
+                        Action = "create",
+                        id = entity.BookingLabId
+                    },
+                    ct);
+
+                return Created("", new
+                {
+                    message = "Tambah Data Berhasil || 201 Created",
+                    data = new
+                    {
+                        entity.BookingLabId,
+                        entity.NoOrder,
+                        entity.NomorSuratJaminan,
+                        entity.CatatanJaminan,
+                        entity.TglBooking,
+                        entity.CreateDateTime
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {
@@ -812,7 +832,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
-            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(ct);
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
+                (IsolationLevel.ReadCommitted, ct);
 
             try
             {
@@ -837,6 +858,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (entity == null)
                     return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
 
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
                 // ======================================
                 // Update nilai field dulu
                 // ======================================
@@ -995,6 +1017,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 foreach (var detail in entity.LabBookingDetails.Where(x => x.IsDelete != true))
                 {
                     detail.StatusPemeriksaan = vm.Status;
+                    detail.TanggalSelesai = vm.TglSelesai;
                     detail.UpdateBy = userActiveId;
                     detail.UpdateDateTime = now;
                 }

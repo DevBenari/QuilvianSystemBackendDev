@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -32,6 +33,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         private readonly ILogger<RuangBedahBookingDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
+
 
         public RuangBedahBookingDetailController(
             ApplicationDbContext applicationDbContext,
@@ -40,7 +43,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             ILogger<RuangBedahBookingDetailController> logger,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
             IWebHostEnvironment webHostEnvironment,
-            IAsuransiCoverageService asuransiCoverageService)
+            IAsuransiCoverageService asuransiCoverageService,
+            IKunjunganTransactionGuard kunjunganTransactionGuard)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -49,6 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             _webHostEnvironment = webHostEnvironment;
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _asuransiCoverageService = asuransiCoverageService;
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
         }
 
         [HttpGet]
@@ -171,6 +176,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     return BadRequest(new { message = "KelasId pada parent booking tidak ditemukan." });
 
                 var kunjunganId = parent.KunjunganId.Value;
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)kunjunganId, ct);
                 var kelasId = parent.KelasId.Value;
 
                 // siapkan data master tindakan
@@ -385,6 +391,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     return BadRequest(new { message = "KelasId pada parent booking tidak ditemukan." });
 
                 var kunjunganId = parent.KunjunganId.Value;
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync(kunjunganId, ct);
                 var kelasId = parent.KelasId.Value;
 
                 // kumpulkan tindakan lama dan baru

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +17,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -35,6 +37,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<ResepDetailHub> _hubContext;
         private readonly IResepStockService _resepStockService;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
+
 
         public ResepDetailController(
             ApplicationDbContext applicationDbContext,
@@ -43,7 +47,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             ILogger<ResepDetailController> logger,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<ResepDetailHub> hubContext,
-            IResepStockService resepStockService
+            IResepStockService resepStockService,
+            IKunjunganTransactionGuard kunjunganTransactionGuard
+
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -53,6 +59,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
             _resepStockService = resepStockService;
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
+
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -665,14 +673,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             return Ok(new { message = "Status stop obat telah diupdate." });
         }
+        
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ResepDetailViewModel vm)
+        public async Task<IActionResult> Create([FromBody] ResepDetailViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
-
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
+                (IsolationLevel.ReadCommitted, ct);
             try
             {
                 // **Cek koneksi ke database**
@@ -695,6 +705,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
+
                 //// **Cek Obat**
                 var obat = await _applicationDbContext.Obats
                                     .FirstOrDefaultAsync(c => c.ObatId == vm.ObatId);
@@ -715,6 +726,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 // cek data resep
                 var resep = await _applicationDbContext.Reseps.FirstOrDefaultAsync(c=>c.ResepId == vm.ResepId);
 
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)resep.Kunjungan.KunjunganID, ct);
                 int billingIndex = await _applicationDbContext.Billings
                 .CountAsync(b => b.KunjunganId == resep.KunjunganId && b.JenisBilling.ToLower() == "obat");
                 //if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
@@ -797,20 +809,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 _applicationDbContext.Billings.Add(billing);
 
-                int result = await _applicationDbContext.SaveChangesAsync();
-                await _hubContext.Clients.All.SendAsync("ResepDetailCreated", new
+                int result = await _applicationDbContext
+                    .SaveChangesAsync(ct);
+
+                if (result <= 0)
                 {
-                    Action = "create",
-                    DetailResepId = data.DetailResepId
+                    await transaction.RollbackAsync(ct);
+
+                    return StatusCode(500, new
+                    {
+                        message = "Data tidak berhasil disimpan ke database."
+                    });
+                }
+
+                // Wajib commit terlebih dahulu
+                await transaction.CommitAsync(ct);
+
+                // SignalR dikirim setelah data benar-benar tersimpan
+                await _hubContext.Clients.All.SendAsync(
+                    "ResepDetailCreated",
+                    new
+                    {
+                        Action = "create",
+                        DetailResepId = data.DetailResepId
+                    },
+                    ct);
+
+                return Created("", new
+                {
+                    message = "Tambah Data Berhasil || 201 Created"
                 });
-                if (result > 0)
-                {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
             }
             catch (DbUpdateException dbEx)
             {
@@ -823,7 +851,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ResepDetailViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] ResepDetailViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {

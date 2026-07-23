@@ -16,6 +16,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
@@ -44,6 +45,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly IHubContext<SuratPengantarRanapHub> _hubContext;
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly IDepositRanapNumberService _depositRanapNumberService;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
+
 
         public SuratPengantarRanapController(
             ApplicationDbContext applicationDbContext,
@@ -54,7 +57,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             IHubContext<SuratPengantarRanapHub> hubContext,
             ITTDService ttdService,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
-            IDepositRanapNumberService depositRanapNumberService
+            IDepositRanapNumberService depositRanapNumberService,
+            IKunjunganTransactionGuard kunjunganTransactionGuard
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -66,6 +70,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _ttdService = ttdService;
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _depositRanapNumberService = depositRanapNumberService;
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
         }
 
         private static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -150,6 +155,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
             return $"{nextNumber:D3}/SP-RI/MMC/{tahun}";
         }
+        
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {

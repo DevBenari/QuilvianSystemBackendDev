@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Security.Claims;
+using System.Threading;
 using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -15,6 +16,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
@@ -40,6 +42,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
         private readonly IHubContext<AlatPemakaianHub> _hubContext;
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
+        private readonly IKunjunganTransactionGuard _kunjunganTransactionGuard;
         public AlatPemakaianController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
@@ -48,6 +51,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             IWebHostEnvironment webHostEnvironment,
             IHubContext<AlatPemakaianHub> hubContext,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
+            IKunjunganTransactionGuard kunjunganTransactionGuard,
             IAsuransiCoverageService asuransiCoverageService
             )
         {
@@ -59,6 +63,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             _hubContext = hubContext;
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _asuransiCoverageService = asuransiCoverageService;
+            _kunjunganTransactionGuard = kunjunganTransactionGuard;
         }
 
         [HttpGet("{id}")]
@@ -180,9 +185,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
 
             var userId = user.UserActiveId;
 
+
             await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
             try
             {
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
                 // =========================
                 // 1) billingIndex awal (khusus kunjungan & jenis billing)
                 // =========================
@@ -358,10 +365,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
             var userId = user.UserActiveId;
-
-            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
+            
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync(ct);
             try
             {
+
+                await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
                 // =========================
                 // 1) Ambil header yang akan diupdate
                 // =========================
