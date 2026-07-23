@@ -401,11 +401,14 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
             return $"GL-{nowJakarta:yyMMdd}-{sequenceBaru:00000}";
         }
         // ================= PAGED =================
+        // ================= PAGED + FILTER =================
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
             int page = 1,
             int perPage = 10,
-            string? search = null)
+            string? search = null,
+            string? sourceTypeGL = null,
+            string? glStatus = null)
         {
             if (page < 1)
                 page = 1;
@@ -450,6 +453,31 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
                         : null
                 };
 
+            // ================= FILTER SOURCE TYPE GL =================
+            if (!string.IsNullOrWhiteSpace(sourceTypeGL))
+            {
+                var sourceTypeKeyword = sourceTypeGL.Trim();
+
+                query = query.Where(x =>
+                    x.SourceTypeGL != null &&
+                    EF.Functions.ILike(
+                        x.SourceTypeGL,
+                        sourceTypeKeyword));
+            }
+
+            // ================= FILTER GL STATUS =================
+            if (!string.IsNullOrWhiteSpace(glStatus))
+            {
+                var statusKeyword = glStatus.Trim();
+
+                query = query.Where(x =>
+                    x.GLStatus != null &&
+                    EF.Functions.ILike(
+                        x.GLStatus,
+                        statusKeyword));
+            }
+
+            // ================= SEARCH =================
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var keyword = $"%{search.Trim()}%";
@@ -476,6 +504,12 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
             return Ok(new
             {
                 message = "success",
+                filter = new
+                {
+                    sourceTypeGL,
+                    glStatus,
+                    search
+                },
                 data,
                 pagination = new
                 {
