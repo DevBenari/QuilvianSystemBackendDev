@@ -36,6 +36,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public Guid? AsuransiExcessId { get; set; }
         public bool? IsCovered { get; set; }
         public bool? IsCoveredExcess { get; set; }
+        public bool? IsAPDokter { get; set; }
         public string? Keterangan { get; set; }
 
         public int? QtyItem { get; set; }
@@ -284,6 +285,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NamaItem = b.NamaItem,
                 AsuransiId = b.AsuransiId,
                 IsCovered = b.IsCovered,
+                IsAPDokter = b.IsAPDokter,
                 AsuransiExcessId = b.AsuransiExcessId,
                 IsCoveredExcess = b.IsCoveredExcess,
                 Keterangan = b.Keterangan,
@@ -364,6 +366,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     x.NamaPemeriksaan,
                     AsuransiId = bill?.AsuransiId,
                     IsCovered = bill?.IsCovered,
+                    IsAPDokter = bill?.IsAPDokter,
                     AsuransiExcessId = bill?.AsuransiExcessId,
                     IsCoveredExcess = bill?.IsCoveredExcess,
                     HargaPemeriksaan = x.HargaPemeriksaan,
@@ -433,6 +436,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     IsCovered = bill?.IsCovered,
                     AsuransiExcessId = bill?.AsuransiExcessId,
                     IsCoveredExcess = bill?.IsCoveredExcess,
+                    IsAPDokter = bill?.IsAPDokter,
 
                     Qty = qty,
                     Harga = harga,
@@ -596,6 +600,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     IsCovered = bill?.IsCovered ?? false,
                     AsuransiExcessId = bill?.AsuransiExcessId,
                     IsCoveredExcess = bill?.IsCoveredExcess ?? false,
+                    IsAPDokter = bill?.IsAPDokter,
 
                     Qty = qtyFinal,
                     Harga = hargaEfektif,
@@ -690,6 +695,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 {
                     b.BillingId,
                     b.BillingKode,
+                    IsAPDokter = b?.IsAPDokter,
                     b.ItemId,
                     b.NamaItem,
                     b.Keterangan,
@@ -791,6 +797,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             IsCovered = bill?.IsCovered,
                             AsuransiExcessId = bill?.AsuransiExcessId,
                             IsCoveredExcess = bill?.IsCoveredExcess,
+                            IsAPDokter = bill?.IsAPDokter,
 
                             Qty = qty,
                             Harga = harga,
@@ -938,6 +945,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     IsCovered = billKamar?.IsCovered,
                     AsuransiExcessId = billKamar?.AsuransiExcessId,
                     IsCoveredExcess = billKamar?.IsCoveredExcess,
+                    IsAPDokter = billKamar?.IsAPDokter,
                     NamaItem = billKamar?.NamaItem,
 
                     HargaPerHari = tarifPerHari,
@@ -1238,6 +1246,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NamaItem = b.NamaItem,
                 AsuransiId = b.AsuransiId,
                 IsCovered = b.IsCovered,
+                IsAPDokter = b.IsAPDokter,
                 AsuransiExcessId = b.AsuransiExcessId,
                 IsCoveredExcess = b.IsCoveredExcess,
                 Keterangan = b.Keterangan,
@@ -1319,6 +1328,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     IsCovered = bill?.IsCovered,
                     AsuransiExcessId = bill?.AsuransiExcessId,
                     IsCoveredExcess = bill?.IsCoveredExcess,
+                    IsAPDokter = bill?.IsAPDokter,
                     HargaPemeriksaan = x.HargaPemeriksaan,
                     Qty = qty,
                     Subtotal = subtotal,
@@ -1386,6 +1396,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     IsCovered = bill?.IsCovered,
                     AsuransiExcessId = bill?.AsuransiExcessId,
                     IsCoveredExcess = bill?.IsCoveredExcess,
+                    IsAPDokter = bill?.IsAPDokter,
 
                     Qty = qty,
                     Harga = harga,
@@ -1549,6 +1560,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     IsCovered = bill?.IsCovered ?? false,
                     AsuransiExcessId = bill?.AsuransiExcessId,
                     IsCoveredExcess = bill?.IsCoveredExcess ?? false,
+                    IsAPDokter = bill?.IsAPDokter,
 
                     Qty = qtyFinal,
                     Harga = hargaEfektif,
@@ -1618,6 +1630,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 b.BillingKode,
                 b.StatusBilling,
                 b.JenisBilling,
+                b.IsAPDokter,
                 TanggalInvoice = b?.TanggalInvoice,
                 TanggalJatuhTempo = b?.TanggalJatuhTempo,
 
@@ -1650,6 +1663,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     Harga = harga,
                     Subtotal = subtotal,
                     b.StatusBilling,
+                    IsAPDokter = b?.IsAPDokter,
                     TanggalInvoice = b?.TanggalInvoice,
                     TanggalJatuhTempo = b?.TanggalJatuhTempo,
 
@@ -1744,6 +1758,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             IsCovered = bill?.IsCovered,
                             AsuransiExcessId = bill?.AsuransiExcessId,
                             IsCoveredExcess = bill?.IsCoveredExcess,
+                            IsAPDokter = bill?.IsAPDokter,
 
                             Qty = qty,
                             Harga = harga,
@@ -1891,6 +1906,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     IsCovered = billKamar?.IsCovered,
                     AsuransiExcessId = billKamar?.AsuransiExcessId,
                     IsCoveredExcess = billKamar?.IsCoveredExcess,
+                    IsAPDokter = billKamar?.IsAPDokter,
                     NamaItem = billKamar?.NamaItem,
 
                     HargaPerHari = tarifPerHari,
@@ -2336,6 +2352,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 IsCovered = b.IsCovered,
                 AsuransiExcessId = b.AsuransiExcessId,
                 IsCoveredExcess = b.IsCoveredExcess,
+                IsAPDokter = b.IsAPDokter,
                 Keterangan = b.Keterangan,
                 QtyItem = b.QtyItem,
                 HargaItem = b.HargaItem,
@@ -2618,6 +2635,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             IsCovered = bill?.IsCovered,
                             AsuransiExcessId = bill?.AsuransiExcessId,
                             IsCoveredExcess = bill?.IsCoveredExcess,
+                            IsAPDokter = bill?.IsAPDokter,
                             HargaPemeriksaan = x.HargaPemeriksaan,
                             Qty = qty,
                             Subtotal = subtotal,
@@ -2663,6 +2681,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             IsCovered = bill?.IsCovered,
                             AsuransiExcessId = bill?.AsuransiExcessId,
                             IsCoveredExcess = bill?.IsCoveredExcess,
+                            IsAPDokter = bill?.IsAPDokter,
                             Qty = qty,
                             Harga = harga,
                             Subtotal = subtotal,
@@ -2765,6 +2784,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             IsCovered = isCovered,
                             AsuransiExcessId = bill?.AsuransiExcessId,
                             IsCoveredExcess = isCoveredExcess,
+                            IsAPDokter = bill?.IsAPDokter,
 
                             Qty = qty,
                             Harga = harga,
@@ -2817,6 +2837,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         x.IsCovered,
                         x.AsuransiExcessId,
                         x.IsCoveredExcess,
+                        x.IsAPDokter,
 
                         x.Qty,
                         x.Harga,
@@ -2958,7 +2979,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         Harga = harga,
                         Subtotal = subtotal,
                         b.StatusBilling,
-                        b.JenisBilling
+                        b.JenisBilling,
+                        b.IsAPDokter,
                     };
                 })
                 .ToList();
@@ -2998,6 +3020,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                                 IsCovered = bill?.IsCovered,
                                 AsuransiExcessId = bill?.AsuransiExcessId,
                                 IsCoveredExcess = bill?.IsCoveredExcess,
+                                IsAPDokter = bill?.IsAPDokter,
 
                                 Qty = qty,
                                 Harga = harga,
@@ -3129,6 +3152,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         IsCovered = billKamar?.IsCovered,
                         AsuransiExcessId = billKamar?.AsuransiExcessId,
                         IsCoveredExcess = billKamar?.IsCoveredExcess,
+                        IsAPDokter = billKamar?.IsAPDokter,
                         NamaItem = billKamar?.NamaItem,
                         HargaPerHari = tarifPerHari,
                         JumlahHari = totalHari,

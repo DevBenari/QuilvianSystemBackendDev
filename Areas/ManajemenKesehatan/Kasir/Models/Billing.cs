@@ -33,6 +33,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public bool? StatusBiayaLainnya {  get; set; }
         public bool? IsCovered {  get; set; }
         public bool? IsCoveredExcess {  get; set; }
+        public bool? IsAPDokter {  get; set; }
         public DateTime? TanggalInvoice {  get; set; }
         public DateTime? TanggalJatuhTempo { get; set; }
         public int? DPD {  get; set; }
