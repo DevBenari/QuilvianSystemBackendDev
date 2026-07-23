@@ -35,6 +35,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? TinggalBersama { get; set; }
         public Guid? KaryawanId { get; set; }
         public string? NoKaryawan { get; set; }
+        public bool? IsPasienTerverifikasi { get; set; }
 
         // Informasi Alamat
         public string? AlamatIdentitas { get; set; }
