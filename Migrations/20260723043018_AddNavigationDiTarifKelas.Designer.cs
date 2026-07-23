@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260723043018_AddNavigationDiTarifKelas")]
+    partial class AddNavigationDiTarifKelas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -18392,12 +18394,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TindakanKunjunganId");
 
-                    b.HasIndex("KelasId");
-
-                    b.HasIndex("KunjunganId");
-
-                    b.HasIndex("TindakanId");
-
                     b.ToTable("TindakanKunjungans");
                 });
 
@@ -19938,8 +19934,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasIndex("AsuransiPasienId");
 
                     b.HasIndex("DokterId");
-
-                    b.HasIndex("KelasId");
 
                     b.HasIndex("PasienId");
 
@@ -25570,35 +25564,10 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasForeignKey("KelasId");
 
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Tindakan", "Tindakan")
-                        .WithMany("TarifKelass")
+                        .WithMany()
                         .HasForeignKey("TindakanId");
 
                     b.Navigation("Kelas");
-
-                    b.Navigation("Tindakan");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TindakanKunjungan", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kelas", "Kelas")
-                        .WithMany()
-                        .HasForeignKey("KelasId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.Kunjungan", "Kunjungan")
-                        .WithMany()
-                        .HasForeignKey("KunjunganId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Tindakan", "Tindakan")
-                        .WithMany()
-                        .HasForeignKey("TindakanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Kelas");
-
-                    b.Navigation("Kunjungan");
 
                     b.Navigation("Tindakan");
                 });
@@ -25635,10 +25604,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_MstKunjungan_MstDokter_DokterId");
 
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kelas", "Kelas")
-                        .WithMany()
-                        .HasForeignKey("KelasId");
-
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.PendaftaranPasienBaru", "Pasien")
                         .WithMany()
                         .HasForeignKey("PasienId")
@@ -25660,8 +25625,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("AsuransiPasienExcess");
 
                     b.Navigation("Dokter");
-
-                    b.Navigation("Kelas");
 
                     b.Navigation("Pasien");
 
@@ -25919,11 +25882,6 @@ namespace QuilvianSystemBackendDev.Migrations
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Satuan", b =>
                 {
                     b.Navigation("Obats");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Tindakan", b =>
-                {
-                    b.Navigation("TarifKelass");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.Kunjungan", b =>

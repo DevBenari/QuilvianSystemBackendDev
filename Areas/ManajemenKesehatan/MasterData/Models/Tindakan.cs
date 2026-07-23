@@ -16,7 +16,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public bool? IsRawatInap {  get; set; }
 
         // nav
-        //public virtual ICollection<TarifKelas>? TarifKelass { get; set; } = new List<TarifKelas>();
+        public virtual ICollection<TarifKelas> TarifKelas { get; set; } = new List<TarifKelas>();
+        public virtual ICollection<TindakanKunjungan> TindakanKunjungan { get; set; } = new List<TindakanKunjungan>();
         //public virtual ICollection<TindakanPoli>? TindakanPolis { get; set; } = new List<TindakanPoli>();
         //public virtual ICollection<TindakanAsuransi>? TindakanAsuransis { get; set; } = new List<TindakanAsuransi>();
     }

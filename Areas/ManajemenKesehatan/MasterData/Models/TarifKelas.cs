@@ -24,7 +24,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? TarifLain { get; set; }
         public decimal? TarifTotal { get; set; }
         public decimal? KSO { get; set; }
-        
+
+        // navigation
+        public Tindakan? Tindakan { get; set; }
+        public Kelas? Kelas { get; set; }
 
     }
 }

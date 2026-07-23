@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260723065828_AddNavigationKelasDiKunjungan")]
+    partial class AddNavigationKelasDiKunjungan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -18392,12 +18394,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TindakanKunjunganId");
 
-                    b.HasIndex("KelasId");
-
-                    b.HasIndex("KunjunganId");
-
-                    b.HasIndex("TindakanId");
-
                     b.ToTable("TindakanKunjungans");
                 });
 
@@ -25574,31 +25570,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasForeignKey("TindakanId");
 
                     b.Navigation("Kelas");
-
-                    b.Navigation("Tindakan");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TindakanKunjungan", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kelas", "Kelas")
-                        .WithMany()
-                        .HasForeignKey("KelasId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.Kunjungan", "Kunjungan")
-                        .WithMany()
-                        .HasForeignKey("KunjunganId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Tindakan", "Tindakan")
-                        .WithMany()
-                        .HasForeignKey("TindakanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Kelas");
-
-                    b.Navigation("Kunjungan");
 
                     b.Navigation("Tindakan");
                 });

@@ -541,26 +541,55 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         // 5) TINDAKAN
         // =========================
-        var tindakanLogs = await (
-            from tk in _db.TindakanKunjungans.AsNoTracking()
-            where tk.KunjunganId == kunjunganId
-            join t in _db.Tindakans.AsNoTracking()
-                on tk.TindakanId equals t.TindakanId into tg
-            from t in tg.DefaultIfEmpty()
-            select new
+        var tindakanLogsRaw = await _db.TindakanKunjungans
+            .AsNoTracking()
+            .Where(tk => tk.KunjunganId == kunjunganId)
+            .Select(tk => new
             {
                 tk.TindakanKunjunganId,
                 tk.TindakanId,
-                NamaTindakan = t != null ? t.NamaTindakan : null,
+                tk.KelasId,
+
+                NamaTindakan = tk.Tindakan != null
+                    ? tk.Tindakan.NamaTindakan
+                    : null,
+
                 Qty = tk.Quantity ?? 1,
-                HargaLog = (decimal?)tk.Total ?? 0m,
+                HargaLog = tk.Total ?? 0m,
 
-                // Kolom FoC dari TindakanKunjungan
+                TarifDokter = tk.Tindakan != null
+                    ? tk.Tindakan.TarifKelas
+                        .Where(tarif =>
+                            tarif.KelasId == tk.KelasId &&
+                            (tarif.IsDelete == false ||
+                             tarif.IsDelete == null))
+                        .Select(tarif => tarif.TarifDokter)
+                        .FirstOrDefault() ?? 0m
+                    : 0m,
+
                 IsFoC = tk.IsFoC ?? false,
-
                 tk.CreateDateTime
-            }
-        ).ToListAsync(ct);
+            })
+            .ToListAsync(ct);
+
+        var tindakanLogs = tindakanLogsRaw
+            .Select(x => new
+            {
+                x.TindakanKunjunganId,
+                x.TindakanId,
+                x.KelasId,
+                x.NamaTindakan,
+                x.Qty,
+                x.HargaLog,
+                x.TarifDokter,
+
+                TotalTarifDokter =
+                    x.TarifDokter * x.Qty,
+
+                x.IsFoC,
+                x.CreateDateTime
+            })
+            .ToList();
 
         dto.DaftarTindakan = tindakanLogs
             .Where(x => x.TindakanId != null)
@@ -588,6 +617,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 var hargaEfektif = bill?.HargaItem ?? latestLog.HargaLog;
                 var subtotal = bill?.SubTotalItem ?? (qtyFinal * hargaEfektif);
 
+                var tarifDokter = latestLog.TarifDokter;
+                var totalTarifDokter = tarifDokter * qtyFinal;
+
                 return (object)new
                 {
                     TindakanKunjunganId = latestLog.TindakanKunjunganId,
@@ -604,6 +636,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                     Qty = qtyFinal,
                     Harga = hargaEfektif,
+                    TarifDokter = tarifDokter,
+                    TotalTarifDokter = totalTarifDokter,
 
                     // Tetap tampil harga penuh, baik FoC maupun bukan
                     Subtotal = subtotal,
@@ -1501,26 +1535,55 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         // 5) TINDAKAN
         // =========================
-        var tindakanLogs = await (
-            from tk in _db.TindakanKunjungans.AsNoTracking()
-            where tk.KunjunganId == kunjunganId
-            join t in _db.Tindakans.AsNoTracking()
-                on tk.TindakanId equals t.TindakanId into tg
-            from t in tg.DefaultIfEmpty()
-            select new
+        var tindakanLogsRaw = await _db.TindakanKunjungans
+            .AsNoTracking()
+            .Where(tk => tk.KunjunganId == kunjunganId)
+            .Select(tk => new
             {
                 tk.TindakanKunjunganId,
                 tk.TindakanId,
-                NamaTindakan = t != null ? t.NamaTindakan : null,
+                tk.KelasId,
+
+                NamaTindakan = tk.Tindakan != null
+                    ? tk.Tindakan.NamaTindakan
+                    : null,
+
                 Qty = tk.Quantity ?? 1,
-                HargaLog = (decimal?)tk.Total ?? 0m,
+                HargaLog = tk.Total ?? 0m,
 
-                // Kolom FoC dari TindakanKunjungan
+                TarifDokter = tk.Tindakan != null
+                    ? tk.Tindakan.TarifKelas
+                        .Where(tarif =>
+                            tarif.KelasId == tk.KelasId &&
+                            (tarif.IsDelete == false ||
+                             tarif.IsDelete == null))
+                        .Select(tarif => tarif.TarifDokter)
+                        .FirstOrDefault() ?? 0m
+                    : 0m,
+
                 IsFoC = tk.IsFoC ?? false,
-
                 tk.CreateDateTime
-            }
-        ).ToListAsync(ct);
+            })
+            .ToListAsync(ct);
+
+        var tindakanLogs = tindakanLogsRaw
+            .Select(x => new
+            {
+                x.TindakanKunjunganId,
+                x.TindakanId,
+                x.KelasId,
+                x.NamaTindakan,
+                x.Qty,
+                x.HargaLog,
+                x.TarifDokter,
+
+                TotalTarifDokter =
+                    x.TarifDokter * x.Qty,
+
+                x.IsFoC,
+                x.CreateDateTime
+            })
+            .ToList();
 
         dto.DaftarTindakan = tindakanLogs
             .Where(x => x.TindakanId != null)
@@ -1548,6 +1611,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 var hargaEfektif = bill?.HargaItem ?? latestLog.HargaLog;
                 var subtotal = bill?.SubTotalItem ?? (qtyFinal * hargaEfektif);
 
+                var tarifDokter = latestLog.TarifDokter;
+                var totalTarifDokter = tarifDokter * qtyFinal;
+
                 return (object)new
                 {
                     TindakanKunjunganId = latestLog.TindakanKunjunganId,
@@ -1564,6 +1630,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                     Qty = qtyFinal,
                     Harga = hargaEfektif,
+                    TarifDokter = tarifDokter,
+                    TotalTarifDokter = totalTarifDokter,
 
                     // Tetap tampil harga penuh, baik FoC maupun bukan
                     Subtotal = subtotal,
@@ -2478,14 +2546,39 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // ============================================================
         var tindakanRows = await (
             from tk in _db.TindakanKunjungans.AsNoTracking()
+
             where pageIds.Contains(tk.KunjunganId)
+
             join t in _db.Tindakans.AsNoTracking()
                 on tk.TindakanId equals t.TindakanId into tg
+
             from t in tg.DefaultIfEmpty()
-            select new { tk, t }
+
+            let tarifDokter = _db.TarifKelass
+                .AsNoTracking()
+                .Where(tarif =>
+                    tarif.TindakanId == tk.TindakanId &&
+                    tarif.KelasId == tk.KelasId &&
+                    (tarif.IsDelete == false ||
+                     tarif.IsDelete == null))
+                .OrderByDescending(tarif => tarif.CreateDateTime)
+                .Select(tarif => tarif.TarifDokter)
+                .FirstOrDefault()
+
+            select new
+            {
+                tk,
+                t,
+
+                TarifDokter = tarifDokter ?? 0m
+            }
         ).ToListAsync(ct);
 
-        var tindakanByKunjungan = tindakanRows.GroupBy(x => x.tk.KunjunganId).ToDictionary(g => g.Key, g => g.ToList());
+        var tindakanByKunjungan = tindakanRows
+            .GroupBy(x => x.tk.KunjunganId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.ToList());
 
         // ============================
         // VISIT DOKTER BULK (untuk semua pageIds)
@@ -2742,93 +2835,141 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             // =========================
             // TINDAKAN
             // =========================
-            if (tindakanByKunjungan.TryGetValue(kid, out var tindakanForKunjungan))
+            if (tindakanByKunjungan.TryGetValue(
+        kid,
+        out var tindakanForKunjungan))
             {
                 var daftarTindakanMapped = tindakanForKunjungan
-                    .Where(x => x.tk != null && x.t != null)
+                    .Where(x => x.t != null)
                     .GroupBy(x => x.tk.TindakanKunjunganId)
                     .Select(g =>
                     {
-                        var x = g.First();
+                        var x = g
+                            .OrderByDescending(item =>
+                                item.tk.CreateDateTime)
+                            .First();
 
                         var isFoC = x.tk.IsFoC ?? false;
 
                         /*
-                         * Jika IsFoC = true, billing dicari sebagai "Diskon Dokter".
-                         * Kalau tidak ditemukan, fallback cari sebagai "Tindakan".
+                         * Jika IsFoC = true, billing dicari sebagai
+                         * "Diskon Dokter".
+                         *
+                         * Jika tidak ditemukan, fallback ke "Tindakan".
                          */
-                        var jenisBillingLookup = isFoC ? "Diskon Dokter" : "Tindakan";
+                        var jenisBillingLookup = isFoC
+                            ? "Diskon Dokter"
+                            : "Tindakan";
 
                         var bill =
-                            FindBilling(kid, jenisBillingLookup, x.tk.TindakanId)
-                            ?? (isFoC ? FindBilling(kid, "Tindakan", x.tk.TindakanId) : null);
+                            FindBilling(
+                                kid,
+                                jenisBillingLookup,
+                                x.tk.TindakanId)
+                            ??
+                            (
+                                isFoC
+                                    ? FindBilling(
+                                        kid,
+                                        "Tindakan",
+                                        x.tk.TindakanId)
+                                    : null
+                            );
 
-                        var qty = bill?.QtyItem ?? x.tk.Quantity ?? 1;
+                        var qty =
+                            bill?.QtyItem ??
+                            x.tk.Quantity ??
+                            1;
 
-                        var totalTindakan = (decimal?)x.tk.Total ?? 0m;
-                        var harga = bill?.HargaItem ?? totalTindakan;
-                        var subtotal = bill?.SubTotalItem ?? (qty * harga);
+                        var totalTindakan =
+                            x.tk.Total ?? 0m;
 
-                        var isCovered = bill?.IsCovered ?? false;
-                        var isCoveredExcess = bill?.IsCoveredExcess ?? false;
+                        var harga =
+                            bill?.HargaItem ??
+                            totalTindakan;
+
+                        var subtotal =
+                            bill?.SubTotalItem ??
+                            (qty * harga);
+
+                        var isCovered =
+                            bill?.IsCovered ?? false;
+
+                        var isCoveredExcess =
+                            bill?.IsCoveredExcess ?? false;
+
+                        /*
+                         * TarifDokter dari MstTarifKelas berdasarkan
+                         * TindakanId dan KelasId.
+                         */
+                        var tarifDokter =
+                            x.TarifDokter;
+
+                        var totalTarifDokter =
+                            tarifDokter * qty;
 
                         return new
                         {
-                            TindakanKunjunganId=x.tk!.TindakanKunjunganId,
-                            x.t!.TindakanId,
-                            x.t.NamaTindakan,
+                            TindakanKunjunganId =
+                                x.tk.TindakanKunjunganId,
+
+                            TindakanId =
+                                x.tk.TindakanId,
+
+                            KelasId =
+                                x.tk.KelasId,
+
+                            NamaTindakan =
+                                x.t!.NamaTindakan,
 
                             IsFoC = isFoC,
 
-                            AsuransiId = bill?.AsuransiId,
-                            IsCovered = isCovered,
-                            AsuransiExcessId = bill?.AsuransiExcessId,
-                            IsCoveredExcess = isCoveredExcess,
-                            IsAPDokter = bill?.IsAPDokter,
+                            AsuransiId =
+                                bill?.AsuransiId,
+
+                            IsCovered =
+                                isCovered,
+
+                            AsuransiExcessId =
+                                bill?.AsuransiExcessId,
+
+                            IsCoveredExcess =
+                                isCoveredExcess,
+
+                            IsAPDokter =
+                                bill?.IsAPDokter,
 
                             Qty = qty,
                             Harga = harga,
-
-                            /*
-                             * Subtotal tetap harga penuh,
-                             * baik FoC maupun bukan.
-                             */
+                            TarifDokter =tarifDokter,
+                            TotalTarifDokter = totalTarifDokter,
                             Subtotal = subtotal,
 
-                            /*
-                             * Breakdown khusus FoC / Diskon Dokter.
-                             */
-                            SubtotalDiskonDokter = isFoC ? subtotal : 0m,
+                            SubtotalDiskonDokter =isFoC ? subtotal: 0m,
 
-                            SubtotalDiskonDokterAsuransi =
-                                isFoC && isCovered ? subtotal : 0m,
+                            SubtotalDiskonDokterAsuransi =isFoC && isCovered ? subtotal: 0m,
 
-                            SubtotalDiskonDokterAsuransiExcess =
-                                isFoC && isCoveredExcess ? subtotal : 0m,
+                            SubtotalDiskonDokterAsuransiExcess =isFoC && isCoveredExcess? subtotal: 0m,
 
-                            SubtotalDiskonDokterMandiri =
-                                isFoC && !isCovered && !isCoveredExcess ? subtotal : 0m,
+                            SubtotalDiskonDokterMandiri =isFoC && !isCovered && !isCoveredExcess ? subtotal : 0m,
 
                             BillingId = bill?.BillingId,
+
                             BillingKode = bill?.BillingKode,
+
                             StatusBilling = bill?.StatusBilling,
 
-                            jenisBilling = isFoC
-                                ? "Diskon Dokter"
-                                : bill?.JenisBilling ?? "Tindakan"
+                            jenisBilling = isFoC ? "Diskon Dokter" : bill?.JenisBilling ?? "Tindakan"
                         };
                     })
                     .ToList();
 
-                /*
-                 * Semua tindakan tetap masuk ke DaftarTindakan,
-                 * termasuk tindakan IsFoC = true.
-                 */
                 dto.DaftarTindakan = daftarTindakanMapped
                     .Select(x => (object)new
                     {
                         x.TindakanKunjunganId,
                         x.TindakanId,
+                        x.KelasId,
                         x.NamaTindakan,
 
                         x.IsFoC,
@@ -2841,6 +2982,13 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                         x.Qty,
                         x.Harga,
+
+                        // Tarif dokter per item
+                        x.TarifDokter,
+
+                        // Tarif dokter dikalikan quantity
+                        x.TotalTarifDokter,
+
                         x.Subtotal,
 
                         x.SubtotalDiskonDokter,
@@ -2855,10 +3003,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     })
                     .ToList();
 
-                /*
-                 * Khusus tindakan IsFoC = true,
-                 * disimpan juga sebagai DaftarDiskonDokter.
-                 */
                 dto.DaftarDiskonDokter = daftarTindakanMapped
                     .Where(x => x.IsFoC)
                     .Select(x => (object)new

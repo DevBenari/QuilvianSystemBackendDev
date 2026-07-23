@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
@@ -19,5 +20,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Disposition { get; set; }
         public string? Keterangan { get; set; }
         public bool? IsFoC {  get; set; }
+
+        //Navigation 
+        public Tindakan? Tindakan { get; set; }
+        public Kunjungan? Kunjungan { get; set; }
+        public Kelas? Kelas { get; set; }
+
     }
 }

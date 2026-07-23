@@ -11,6 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public Guid? AsuransiPasienId { get; set; }
         public Guid? DokterId { get; set; }
         public Guid? PasienId { get; set; }
+        public Guid? KelasId { get; set; }
         //public bool? IsFinished { get; set; } 
         public string? DokterPerujuk { get; set; }
         public string? RSPerujuk { get; set; }

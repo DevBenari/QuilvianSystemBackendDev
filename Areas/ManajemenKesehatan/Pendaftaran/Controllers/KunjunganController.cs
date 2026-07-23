@@ -1357,6 +1357,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         KunjunganID = newKunjunganId,
                         PasienId = request.PasienId,
                         DokterId = request.DokterId,
+                        KelasId = request.KelasId,
                         PoliklinikId = request.PoliklinikId,
                         AsuransiId = request.AsuransiId,
                         AsuransiPasienId = request.AsuransiPasienId,
@@ -1611,6 +1612,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 existing.AsuransiExcessId = request.AsuransiExcessId;
                 existing.AsuransiId = request.AsuransiId;
                 existing.AsuransiPasienId = request.AsuransiPasienId;
+                existing.KelasId = request.KelasId;
                 existing.NoHandphone = request.NoHandphone;
                 existing.Email = request.Email;
                 existing.JenisKunjungan = kodeJenis;

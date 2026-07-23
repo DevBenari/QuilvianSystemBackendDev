@@ -50,6 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public Poliklinik? Poliklinik { get; set; }
         public Dokter? Dokter { get; set; }
         public PendaftaranPasienBaru? Pasien { get; set; }
+        public Kelas? Kelas { get; set; }
         public Asuransi? Asuransi { get; set; }
         public Asuransi? AsuransiExcess { get; set; }
         public AsuransiPasien? AsuransiPasien { get; set; }
