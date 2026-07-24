@@ -907,11 +907,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // Generate NoPhoto dan billing hanya kalau sudah konfirmasi
                 // ======================================
                 var generatedCount = 0;
-                
+                var labBillingCreated = 0;
+
                 if (entity.KonfirmatorId.HasValue)
                 {
                     generatedCount = await _noPhotoGeneratorService
                         .GenerateNoPhotosByLabBookingIdAsync(entity.BookingLabId, ct);
+
+                    labBillingCreated = await _labBillingService
+                        .EnsureLabBillingOnConfirmationAsync(
+                            entity.BookingLabId,
+                            userActiveId,
+                            ct);
                 }
 
                 await transaction.CommitAsync(ct);
