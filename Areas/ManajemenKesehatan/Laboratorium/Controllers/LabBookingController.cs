@@ -776,6 +776,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 int result = await _applicationDbContext
                     .SaveChangesAsync(ct);
 
+                var labBillingCreated = 0;
+                labBillingCreated = await _labBillingService
+                .EnsureLabBillingOnConfirmationAsync(
+                    entity.BookingLabId,
+                    userActiveId,
+                    ct);
+
                 if (result <= 0)
                 {
                     await transaction.RollbackAsync(ct);
@@ -808,6 +815,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         entity.NomorSuratJaminan,
                         entity.CatatanJaminan,
                         entity.TglBooking,
+                        totalLabBillingCreated = labBillingCreated,
                         entity.CreateDateTime
                     }
                 });
@@ -899,17 +907,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // Generate NoPhoto dan billing hanya kalau sudah konfirmasi
                 // ======================================
                 var generatedCount = 0;
-                var labBillingCreated = 0;
+                
                 if (entity.KonfirmatorId.HasValue)
                 {
                     generatedCount = await _noPhotoGeneratorService
                         .GenerateNoPhotosByLabBookingIdAsync(entity.BookingLabId, ct);
-
-                    labBillingCreated = await _labBillingService
-                    .EnsureLabBillingOnConfirmationAsync(
-                        entity.BookingLabId,
-                        userActiveId,
-                        ct);
                 }
 
                 await transaction.CommitAsync(ct);
@@ -927,7 +929,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     {
                         entity.BookingLabId,
                         totalNoPhotoGenerated = generatedCount,
-                        totalLabBillingCreated = labBillingCreated,
                         entity.NoOrder,
                         entity.NomorSuratJaminan,
                         entity.CatatanJaminan,
