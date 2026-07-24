@@ -861,11 +861,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 // =============================
                 // ✅ Cek Duplikasi 
                 // =============================
-                var isDuplicate = await _applicationDbContext.PendaftaranPasienBarus
-                    .AnyAsync(c => c.NoIdentitas == vm.NoIdentitas, ct);
+                var noIdentitas = string.IsNullOrWhiteSpace(vm.NoIdentitas)
+                    ? null
+                    : vm.NoIdentitas.Trim();
 
-                if (isDuplicate)
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                if (string.IsNullOrWhiteSpace(noIdentitas))
+                {
+                    return BadRequest(new
+                    {
+                        message = "No identitas wajib diisi."
+                    });
+                }
+
+                if (!string.IsNullOrWhiteSpace(noIdentitas))
+                {
+                    var isDuplicate = await _applicationDbContext
+                        .PendaftaranPasienBarus
+                        .AsNoTracking()
+                        .AnyAsync(c =>
+                            c.NoIdentitas != null &&
+                            c.NoIdentitas == noIdentitas &&
+                            (c.IsDelete == false || c.IsDelete == null),
+                            ct);
+
+                    if (isDuplicate)
+                    {
+                        return Conflict(new
+                        {
+                            message = "NIK sudah terdaftar. Terdapat duplikasi data."
+                        });
+                    }
+                }
 
                 // =============================
                 // ✅ Upload Foto ke Flask (mirip Lab)
@@ -960,14 +986,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 if (!flaskRespQR.IsSuccessStatusCode)
                     return StatusCode(500, new { message = "Gagal upload QR Code pasien ke server Flask." });
 
-                // =============================
-                // ✅ Simpan Data
-                // =============================
+                // cek informasi indentitas penting
+                var email = string.IsNullOrWhiteSpace(vm.Email)
+                    ? null
+                    : vm.Email.Trim();
+
+                var noHp = string.IsNullOrWhiteSpace(vm.NoPasien)
+                    ? null
+                    : vm.NoPasien.Trim();
+
+                var kewarganegaraan = string.IsNullOrWhiteSpace(vm.Kewarganegaraan)
+                    ? null
+                    : vm.Kewarganegaraan.Trim();
+
+                var isPasienTerverifikasi =
+                    !string.IsNullOrWhiteSpace(noIdentitas) &&
+                    !string.IsNullOrWhiteSpace(email) &&
+                    !string.IsNullOrWhiteSpace(noHp) &&
+                    !string.IsNullOrWhiteSpace(kewarganegaraan);
+
                 var daftar = new PendaftaranPasienBaru
                 {
                     PendaftaranPasienBaruId = Guid.NewGuid(),
                     CreateDateTime = DateTimeOffset.UtcNow,
                     CreateBy = userActiveId,
+
                     KodePasien = kodePasien,
                     NoRekamMedis = noRekamMedis,
                     NoRekamMedisAsal = vm.NoRekamMedisAsal,
@@ -976,7 +1019,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     TitleId = vm.TitleId,
                     NamaLengkap = vm.NamaLengkap,
                     IdentitasId = vm.IdentitasId,
-                    NoIdentitas = vm.NoIdentitas,
+                    NoIdentitas = noIdentitas,
                     TempatLahir = vm.TempatLahir,
                     CatatanKhusus = vm.CatatanKhusus,
                     TanggalLahir = parsedDate,
@@ -993,13 +1036,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     KecKabId = vm.KecKabId,
                     KelurahanId = vm.KelurahanId,
                     KodePos = vm.KodePos,
-                    Email = vm.Email,
-                    NoPasien = vm.NoPasien,
+                    Email = email,
+                    NoPasien = noHp,
+                    Kewarganegaraan = kewarganegaraan,
+                    IsPasienTerverifikasi = isPasienTerverifikasi,
                     NoWali1 = vm.NoWali1,
                     NoWali2 = vm.NoWali2,
                     NamaWali1 = vm.NamaWali1,
                     NamaWali2 = vm.NamaWali2,
-                    Kewarganegaraan = vm.Kewarganegaraan,
                     Suku = vm.Suku,
                     StatusKewarganegaraan = vm.StatusKewarganegaraan,
                     PekerjaanId = vm.PekerjaanId,
@@ -1024,14 +1068,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     MembershipId = vm.MembershipId,
                     TinggalBersama = vm.TinggalBersama,
 
-                    // jika pasien adalah karyawan
                     NoKaryawan = noKaryawan,
                     KaryawanId = vm.KaryawanId,
 
-                    // ✅ sesuai pola Lab (path hasil dari Flask)
                     FotoName = fotoFileName,
                     FotoPath = fotoPath,
                     QrCode = qrPath,
+
+                    IsDelete = false
                 };
 
                 _applicationDbContext.PendaftaranPasienBarus.Add(daftar);
