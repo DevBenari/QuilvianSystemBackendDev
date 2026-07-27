@@ -37,6 +37,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ILogger<LabBookingDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly INoPhotoGeneratorService _noPhotoGeneratorService;
+        private readonly ILabBillingService _labBillingService;
 
         public LabBookingDetailController(
             ApplicationDbContext applicationDbContext,
@@ -47,7 +48,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             IKunjunganTransactionGuard kunjunganTransactionGuard,
             ITTDService ttdService,
             IHubContext<LabBookingDetailHub> hubContext,
-            INoPhotoGeneratorService noPhotoGeneratorService)
+            INoPhotoGeneratorService noPhotoGeneratorService,
+            ILabBillingService labBillingService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -58,6 +60,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _hubContext = hubContext;
             _ttdService = ttdService;
             _noPhotoGeneratorService = noPhotoGeneratorService;
+            _labBillingService = labBillingService;
         }
 
         private static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -761,14 +764,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 _applicationDbContext.LabBookingDetails.Add(data);
 
-                await _applicationDbContext.SaveChangesAsync(ct);
+                var detailSaved = await _applicationDbContext
+                    .SaveChangesAsync(ct);
+
+                if (detailSaved <= 0)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return StatusCode(500, new
+                    {
+                        message = "Detail booking lab gagal disimpan."
+                    });
+                }
+
+                /*
+                 * Detail sudah tersimpan di transaction yang sama.
+                 * Sekarang service sudah bisa membaca LabBookingDetail
+                 * dan membuat/update billing.
+                 */
+                var labBillingAffected = await _labBillingService
+                    .EnsureLabBillingOnConfirmationAsync(
+                        vm.BookingLabId.Value,
+                        userActiveId,
+                        ct);
+
+                if (labBillingAffected <= 0)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return Conflict(new
+                    {
+                        message =
+                            "Detail booking berhasil diproses, tetapi billing pemeriksaan " +
+                            "tidak dapat dibentuk. Pastikan PemeriksaanLabId memiliki data master dan harga.",
+                        bookingLabId = vm.BookingLabId.Value,
+                        pemeriksaanLabId = vm.PemeriksaanLabId.Value
+                    });
+                }
+
                 await transaction.CommitAsync(ct);
 
-                await _hubContext.Clients.All.SendAsync("Lab booking detail created", new
-                {
-                    Action = "create",
-                    Id = data.DetailBookingLabId
-                }, ct);
+                await _hubContext.Clients.All.SendAsync(
+                    "Lab booking detail created",
+                    new
+                    {
+                        Action = "create",
+                        Id = data.DetailBookingLabId
+                    },
+                    ct);
 
                 return Created("", new
                 {
@@ -776,7 +819,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     data = new
                     {
                         data.DetailBookingLabId,
-                        NoOrder = noOrder
+                        NoOrder = noOrder,
+                        BillingAffected = labBillingAffected
                     }
                 });
             }
@@ -929,101 +973,351 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         //}
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingDetailEditViewModel vm, CancellationToken ct)
+        public async Task<IActionResult> Update(
+            Guid detailBookingLabId,
+            [FromBody] LabBookingDetailViewModel vm,
+            CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
-                return BadRequest(new { message = "Data tidak valid." });
+            {
+                return BadRequest(new
+                {
+                    message = "Data tidak valid."
+                });
+            }
 
-            //await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync
-            //    (IsolationLevel.ReadCommitted, ct);
+            if (detailBookingLabId == Guid.Empty)
+            {
+                return BadRequest(new
+                {
+                    message = "DetailBookingLabId tidak valid."
+                });
+            }
+
+            if (!vm.PemeriksaanLabId.HasValue ||
+                vm.PemeriksaanLabId.Value == Guid.Empty)
+            {
+                return BadRequest(new
+                {
+                    message = "PemeriksaanLabId wajib diisi."
+                });
+            }
+
+            if (!vm.LabId.HasValue ||
+                vm.LabId.Value == Guid.Empty)
+            {
+                return BadRequest(new
+                {
+                    message = "LabId wajib diisi."
+                });
+            }
+
+            await using var transaction =
+                await _applicationDbContext.Database
+                    .BeginTransactionAsync(
+                        IsolationLevel.ReadCommitted,
+                        ct);
 
             try
             {
-                // ==========================================================
-                // 🔐 Validasi koneksi database dan user login
-                // ==========================================================
-                if (!_applicationDbContext.Database.CanConnect())
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                // =====================================
+                // Ambil user aktif
+                // =====================================
+                var emailLogin = User
+                    .FindFirst(ClaimTypes.NameIdentifier)?
+                    .Value;
 
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-
-                var userActiveId = getUserActive.UserActiveId;
-
-                //await _kunjunganTransactionGuard.EnsureCanAddTransactionAsync((Guid)vm.KunjunganId, ct);
-                // ==========================================================
-                // 🔍 Cari data detail booking berdasarkan ID
-                // ==========================================================
-                var existingData = await _applicationDbContext.LabBookingDetails
-                    .FirstOrDefaultAsync(d => d.DetailBookingLabId == id);
-
-                if (existingData == null)
-                    return NotFound(new { message = "Data detail booking lab tidak ditemukan." });
-
-
-                // ==========================================================
-                // ✅ Update field dari ViewModel
-                // ==========================================================
-                existingData.BookingLabId = vm.BookingLabId;
-                existingData.PasienId = vm.PasienId;
-                existingData.PemeriksaanLabId = vm.PemeriksaanLabId;
-                existingData.LabId = vm.LabId;
-                existingData.DokterPemeriksaId = vm.DokterPemeriksaId;
-                existingData.KategoriPatologiAnatomi = vm.KategoriPatologiAnatomi;
-                existingData.JenisSpecimen = vm.JenisSpecimen;
-                existingData.LokasiSpecimen = vm.LokasiSpecimen;
-                existingData.KeteranganKlinik = vm.KeteranganKlinik;
-                existingData.PenyakitSebelumnya = vm.PenyakitSebelumnya;
-                existingData.PenggunaanFiksasi = vm.PenggunaanFiksasi;
-                existingData.JenisPemeriksaanGC = vm.JenisPemeriksaanGC;
-                existingData.JenisGC = vm.JenisGC;
-                existingData.BahanNonGC = vm.BahanNonGC;
-                existingData.BahanMicrobiologi = vm.BahanMicrobiologi;
-                existingData.MasaHaidTerakhir = vm.MasaHaidTerakhir;
-                existingData.SpecimenJenisId = vm.SpecimenJenisId;
-                existingData.SpecimenMethodId = vm.SpecimenMethodId;
-                existingData.AsalSpecimenId = vm.AsalSpecimenId;
-                existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
-                existingData.TanggalSelesai = vm.TanggalSelesai;
-                existingData.QtyOrder = vm.QtyOrder;
-                existingData.IsCito = vm.IsCito;
-
-                existingData.UpdateBy = userActiveId;
-                existingData.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                _applicationDbContext.LabBookingDetails.Update(existingData);
-                await _applicationDbContext.SaveChangesAsync();
-
-                // ==========================================================
-                // ✅ RESPONSE
-                // ==========================================================
-                await _hubContext.Clients.All.SendAsync("Lab booking detail changed", new
+                if (string.IsNullOrWhiteSpace(emailLogin))
                 {
-                    Action = "create",
-                    id = existingData.DetailBookingLabId
-                });
+                    await transaction.RollbackAsync(ct);
+
+                    return Unauthorized(new
+                    {
+                        message = "User tidak terautentikasi!"
+                    });
+                }
+
+                var userActiveId = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .Where(x => x.Email == emailLogin)
+                    .Select(x => (Guid?)x.UserActiveId)
+                    .FirstOrDefaultAsync(ct);
+
+                if (!userActiveId.HasValue)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return Unauthorized(new
+                    {
+                        message = "User aktif tidak ditemukan!"
+                    });
+                }
+
+                // =====================================
+                // Ambil detail lama
+                // =====================================
+                var data = await _applicationDbContext.LabBookingDetails
+                    .FirstOrDefaultAsync(
+                        x =>
+                            x.DetailBookingLabId == detailBookingLabId &&
+                            (x.IsDelete == false || x.IsDelete == null),
+                        ct);
+
+                if (data == null)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return NotFound(new
+                    {
+                        message = "Detail booking laboratorium tidak ditemukan."
+                    });
+                }
+
+                if (!data.BookingLabId.HasValue ||
+                    data.BookingLabId.Value == Guid.Empty)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return Conflict(new
+                    {
+                        message = "Detail booking tidak memiliki BookingLabId."
+                    });
+                }
+
+                var bookingLabId = data.BookingLabId.Value;
+
+                /*
+                 * Sebaiknya BookingLabId tidak boleh berubah pada endpoint update
+                 * detail. Jika ingin pindah booking, gunakan proses khusus.
+                 */
+                if (vm.BookingLabId.HasValue &&
+                    vm.BookingLabId.Value != bookingLabId)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return BadRequest(new
+                    {
+                        message = "BookingLabId tidak boleh diubah."
+                    });
+                }
+
+                // =====================================
+                // Ambil header booking
+                // =====================================
+                var booking = await _applicationDbContext.LabBookings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        x =>
+                            x.BookingLabId == bookingLabId &&
+                            (x.IsDelete == false || x.IsDelete == null),
+                        ct);
+
+                if (booking == null)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return NotFound(new
+                    {
+                        message = "Header booking laboratorium tidak ditemukan."
+                    });
+                }
+
+                if (!booking.KunjunganId.HasValue ||
+                    booking.KunjunganId.Value == Guid.Empty)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return Conflict(new
+                    {
+                        message = "Booking laboratorium tidak memiliki KunjunganId."
+                    });
+                }
+
+                /*
+                 * KunjunganId dipastikan dari header booking, bukan hanya
+                 * mempercayai nilai yang dikirim frontend.
+                 */
+                var kunjunganId = booking.KunjunganId.Value;
+
+                if (vm.KunjunganId.HasValue &&
+                    vm.KunjunganId.Value != kunjunganId)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return BadRequest(new
+                    {
+                        message =
+                            "KunjunganId pada request tidak sesuai dengan " +
+                            "KunjunganId milik booking."
+                    });
+                }
+
+                // =====================================
+                // Pastikan billing kunjungan belum ditutup
+                // =====================================
+                await _kunjunganTransactionGuard
+                    .EnsureCanAddTransactionAsync(
+                        kunjunganId,
+                        ct);
+
+                // =====================================
+                // Pastikan NoOrder tersedia
+                // =====================================
+                var noOrder = await _noPhotoGeneratorService
+                    .EnsureNoOrderForBookingAsync(
+                        bookingLabId,
+                        userActiveId.Value,
+                        ct);
+
+                // =====================================
+                // Update detail
+                // =====================================
+                data.PasienId = vm.PasienId;
+                data.PemeriksaanLabId = vm.PemeriksaanLabId;
+                data.LabId = vm.LabId;
+                data.IsCito = vm.IsCito;
+                data.DokterPemeriksaId = vm.DokterPemeriksaId;
+                data.TipeLayanan = vm.TipeLayanan;
+                data.KategoriPatologiAnatomi =
+                    vm.KategoriPatologiAnatomi;
+                data.JenisSpecimen = vm.JenisSpecimen;
+                data.LokasiSpecimen = vm.LokasiSpecimen;
+                data.KeteranganKlinik = vm.KeteranganKlinik;
+                data.PenyakitSebelumnya = vm.PenyakitSebelumnya;
+                data.PenggunaanFiksasi = vm.PenggunaanFiksasi;
+                data.JenisPemeriksaanGC = vm.JenisPemeriksaanGC;
+                data.JenisGC = vm.JenisGC;
+                data.BahanNonGC = vm.BahanNonGC;
+                data.BahanMicrobiologi = vm.BahanMicrobiologi;
+                data.MasaHaidTerakhir = vm.MasaHaidTerakhir;
+                data.AsalSpecimenId = vm.AsalSpecimenId;
+                data.SpecimenMethodId = vm.SpecimenMethodId;
+                data.SpecimenJenisId = vm.SpecimenJenisId;
+                data.StatusPemeriksaan = vm.StatusPemeriksaan;
+                data.TanggalSelesai = vm.TanggalSelesai;
+                data.QtyOrder = vm.QtyOrder;
+
+                data.UpdateBy = userActiveId.Value;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                // =====================================
+                // Simpan perubahan detail terlebih dahulu
+                // =====================================
+                var detailUpdated =
+                    await _applicationDbContext.SaveChangesAsync(ct);
+
+                if (detailUpdated <= 0)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return StatusCode(500, new
+                    {
+                        message =
+                            "Detail booking laboratorium tidak berhasil diperbarui."
+                    });
+                }
+
+                var labBillingAffected =
+                    await _labBillingService
+                        .EnsureLabBillingOnConfirmationAsync(
+                            bookingLabId,
+                            userActiveId.Value,
+                            ct);
+
+                if (labBillingAffected <= 0)
+                {
+                    await transaction.RollbackAsync(ct);
+
+                    return Conflict(new
+                    {
+                        message =
+                            "Detail berhasil diperbarui, tetapi billing " +
+                            "pemeriksaan laboratorium tidak dapat disinkronkan.",
+                        bookingLabId,
+                        pemeriksaanLabId = vm.PemeriksaanLabId
+                    });
+                }
+
+                await transaction.CommitAsync(ct);
+
+                // SignalR dikirim setelah commit
+                await _hubContext.Clients.All.SendAsync(
+                    "Lab booking detail updated",
+                    new
+                    {
+                        Action = "update",
+                        Id = data.DetailBookingLabId,
+                        BookingLabId = bookingLabId,
+                        BillingAffected = labBillingAffected
+                    },
+                    ct);
+
                 return Ok(new
                 {
-                    message = "Update Data Detail Booking Lab & Billing Berhasil || 200 OK",
+                    message =
+                        "Detail Booking Lab dan Billing berhasil diperbarui.",
                     data = new
                     {
-                        existingData.DetailBookingLabId
+                        data.DetailBookingLabId,
+                        BookingLabId = bookingLabId,
+                        NoOrder = noOrder,
+                        PemeriksaanLabId = data.PemeriksaanLabId,
+                        QtyOrder = data.QtyOrder,
+                        BillingAffected = labBillingAffected
                     }
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync(
+                    CancellationToken.None);
+
+                return Conflict(new
+                {
+                    message = ex.Message
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                await transaction.RollbackAsync(
+                    CancellationToken.None);
+
+                return NotFound(new
+                {
+                    message = ex.Message
                 });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message}" });
+                await transaction.RollbackAsync(
+                    CancellationToken.None);
+
+                return StatusCode(500, new
+                {
+                    message = "Gagal memperbarui data.",
+                    error = dbEx.Message,
+                    innerError =
+                        dbEx.InnerException?.Message
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                await transaction.RollbackAsync(
+                    CancellationToken.None);
+
+                throw;
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                await transaction.RollbackAsync(
+                    CancellationToken.None);
+
+                return StatusCode(500, new
+                {
+                    message = "Terjadi kesalahan internal.",
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message
+                });
             }
         }
 
