@@ -7,13 +7,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
 {
     public interface INoPhotoGeneratorService
     {
-        Task<string> GenerateNoOrderByLabIdAsync(
-            Guid labId,
-            CancellationToken cancellationToken = default);
+        Task<string> GenerateNoOrderAsync(
+        CancellationToken cancellationToken = default);
 
         Task<string> EnsureNoOrderForBookingAsync(
             Guid bookingLabId,
-            Guid labId,
             Guid? updateBy = null,
             CancellationToken cancellationToken = default);
 
@@ -56,34 +54,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
             _context = context;
         }
 
-        // =========================================================
-        // NO ORDER
-        // Format: 000001
-        // Naik berdasarkan LabId / layanan penunjang.
-        //
-        // Contoh:
-        // Radiologi   -> 000001, 000002, 000003
-        // Laboratorium -> 000001, 000002, 000003
-        // =========================================================
-        public async Task<string> GenerateNoOrderByLabIdAsync(
-            Guid labId,
+        public async Task<string> GenerateNoOrderAsync(
             CancellationToken cancellationToken = default)
         {
-            if (labId == Guid.Empty)
-                throw new Exception("LabId tidak valid.");
+            /*
+             * Method ini harus dipanggil di dalam database transaction
+             * agar advisory lock tetap aktif sampai transaction di-commit.
+             */
+            if (_context.Database.CurrentTransaction == null)
+            {
+                throw new InvalidOperationException(
+                    "Generate NoOrder harus dijalankan di dalam database transaction.");
+            }
+
+            /*
+             * Lock global generator nomor order.
+             * Mencegah dua request bersamaan mendapatkan nomor yang sama.
+             */
+            await _context.Database.ExecuteSqlRawAsync(
+                "SELECT pg_advisory_xact_lock(hashtext('global_lab_no_order'));",
+                cancellationToken);
 
             var existingNoOrders = await _context.LabBookings
                 .AsNoTracking()
                 .Where(b =>
                     b.NoOrder != null &&
                     b.NoOrder != "" &&
-                    _context.LabBookingDetails.Any(d =>
-                        d.BookingLabId.HasValue &&
-                        d.BookingLabId.Value == b.BookingLabId &&
-                        d.LabId.HasValue &&
-                        d.LabId.Value == labId
-                    )
-                )
+                    (b.IsDelete == false || b.IsDelete == null))
                 .Select(b => b.NoOrder!)
                 .Distinct()
                 .ToListAsync(cancellationToken);
@@ -92,7 +89,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
 
             foreach (var noOrder in existingNoOrders)
             {
-                if (int.TryParse(noOrder, out var number) && number > maxNumber)
+                var normalizedNoOrder = noOrder.Trim();
+
+                if (int.TryParse(normalizedNoOrder, out var number) &&
+                    number > maxNumber)
                 {
                     maxNumber = number;
                 }
@@ -100,7 +100,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
 
             var nextNumber = maxNumber + 1;
 
-            return nextNumber.ToString("D6"); // 000001
+            if (nextNumber > 999999)
+            {
+                throw new InvalidOperationException(
+                    "NoOrder sudah melebihi batas maksimal enam digit.");
+            }
+
+            return nextNumber.ToString("D6");
         }
 
         // =========================================================
@@ -116,53 +122,46 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
         // =========================================================
         public async Task<string> EnsureNoOrderForBookingAsync(
             Guid bookingLabId,
-            Guid labId,
             Guid? updateBy = null,
             CancellationToken cancellationToken = default)
         {
             if (bookingLabId == Guid.Empty)
-                throw new Exception("BookingLabId tidak valid.");
-
-            if (labId == Guid.Empty)
-                throw new Exception("LabId tidak valid.");
+            {
+                throw new ArgumentException(
+                    "BookingLabId tidak valid.",
+                    nameof(bookingLabId));
+            }
 
             var booking = await _context.LabBookings
-                .FirstOrDefaultAsync(x =>
-                    x.BookingLabId == bookingLabId &&
-                    (x.IsDelete == false || x.IsDelete == null),
+                .FirstOrDefaultAsync(
+                    x =>
+                        x.BookingLabId == bookingLabId &&
+                        (x.IsDelete == false || x.IsDelete == null),
                     cancellationToken);
 
             if (booking == null)
-                throw new Exception("Booking lab tidak ditemukan.");
-
-            // Satu BookingLabId hanya boleh punya satu jenis LabId / layanan penunjang.
-            var existingLabIds = await _context.LabBookingDetails
-                .AsNoTracking()
-                .Where(x =>
-                    x.BookingLabId.HasValue &&
-                    x.BookingLabId.Value == bookingLabId &&
-                    x.LabId.HasValue &&
-                    (x.IsDelete == false || x.IsDelete == null))
-                .Select(x => x.LabId!.Value)
-                .Distinct()
-                .ToListAsync(cancellationToken);
-
-            if (existingLabIds.Any() && !existingLabIds.Contains(labId))
             {
-                throw new Exception("Satu BookingLabId tidak boleh memiliki LabId / layanan penunjang berbeda.");
+                throw new KeyNotFoundException(
+                    "Booking lab tidak ditemukan.");
             }
 
-            // Kalau sudah punya NoOrder, jangan generate ulang.
+            // Booking yang sama tetap memakai NoOrder yang sudah terbentuk.
             if (!string.IsNullOrWhiteSpace(booking.NoOrder))
+            {
                 return booking.NoOrder;
+            }
 
-            var noOrder = await GenerateNoOrderByLabIdAsync(labId, cancellationToken);
+            // Generate nomor secara global, tidak lagi berdasarkan LabId.
+            var noOrder = await GenerateNoOrderAsync(
+                cancellationToken);
 
             booking.NoOrder = noOrder;
-            booking.UpdateDateTime = DateTime.UtcNow;
+            booking.UpdateDateTime = DateTimeOffset.UtcNow;
 
             if (updateBy.HasValue)
+            {
                 booking.UpdateBy = updateBy.Value;
+            }
 
             return noOrder;
         }

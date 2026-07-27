@@ -722,7 +722,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 var noOrder = await _noPhotoGeneratorService.EnsureNoOrderForBookingAsync(
                     vm.BookingLabId.Value,
-                    vm.LabId.Value,
                     userActiveId,
                     ct
                 );
