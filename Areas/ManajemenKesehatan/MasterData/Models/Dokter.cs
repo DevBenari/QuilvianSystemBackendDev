@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -28,6 +29,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? HargaVisit { get; set; }
 
         // Navigation properties
+        public UserActive? UserActive { get; set; }
         //public virtual ICollection<DokterPoli>? DokterPolis { get; set; }
         //public virtual ICollection<DokterAsuransi>? DokterAsuransis { get; set; } // Add this property  
         //public virtual ICollection<JadwalPraktek>? JadwalPrakteks { get; set; }
