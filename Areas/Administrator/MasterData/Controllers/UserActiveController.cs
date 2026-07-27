@@ -933,9 +933,9 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     NoRekening = vm.NoRekening?.Trim(),
                     BankId = vm.BankId?.Trim(),
 
-                    TanggalKontrak = vm.TanggalKontrak,
-                    TanggalAwalKerja = vm.TanggalAwalKerja,
-                    TanggalAkhirKerja = vm.TanggalAkhirKerja,
+                    TanggalKontrak = ConvertNullableDateToUtc(vm.TanggalKontrak),
+                    TanggalAwalKerja = ConvertNullableDateToUtc(vm.TanggalAwalKerja),
+                    TanggalAkhirKerja = ConvertNullableDateToUtc(vm.TanggalAkhirKerja),
 
                     NoHandphone = string.IsNullOrWhiteSpace(vm.NoHandphone)
                         ? handphone
@@ -1057,15 +1057,49 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     }
                 });
             }
+            catch (DbUpdateException ex)
+            {
+                await transaction.RollbackAsync();
+
+                var detailError = ex.GetBaseException().Message;
+
+                _logger.LogError(
+                    ex,
+                    "Gagal menyimpan UserActive. Detail: {DetailError}",
+                    detailError
+                );
+
+                return StatusCode(500, new
+                {
+                    message = "Gagal menyimpan data UserActive.",
+                    detail = detailError
+                });
+            }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
 
+                _logger.LogError(
+                    ex,
+                    "Terjadi kesalahan saat membuat UserActive."
+                );
+
                 return StatusCode(500, new
                 {
-                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                    message = "Terjadi kesalahan internal.",
+                    detail = ex.GetBaseException().Message
                 });
             }
+        }
+        private static DateTime? ConvertNullableDateToUtc(DateTime? value)
+        {
+            if (!value.HasValue)
+                return null;
+
+            return DateTime.SpecifyKind(
+                value.Value.Date,
+                DateTimeKind.Utc
+            );
         }
 
         [HttpGet("ByDepartemen/{departemenId}")]
