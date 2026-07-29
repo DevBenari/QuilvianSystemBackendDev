@@ -91,6 +91,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         x.LabBooking.BookingLabId,
                         x.LabBooking.KunjunganId,
                         x.LabBooking.PasienId,
+                        IsCito = x.LabBooking != null ? x.LabBooking.IsCito : null,
                         x.LabBooking.AsuransiId,
                         x.LabBooking.TglSampling,
                         x.LabBooking.TglBooking,
@@ -201,7 +202,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         x.LabBookingDetail.StatusPemeriksaan,
                         x.LabBookingDetail.TanggalSelesai,
                         x.LabBookingDetail.StatusVerifikasi,
-                        x.LabBookingDetail.IsCito,
                         x.LabBookingDetail.AlasanPembatalan,
                         x.LabBookingDetail.TTDPembatalanPath,
 
@@ -283,7 +283,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.StatusPemeriksaan,
                         d.TanggalSelesai,
                         d.StatusVerifikasi,
-                        d.IsCito,
+                        
 
                         d.KategoriPatologiAnatomi,
                         d.JenisSpecimen,
@@ -595,6 +595,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     x.BatalBookingLabId,
                     x.LabBookingId,
+                    IsCito = x.LabBooking != null ? x.LabBooking.IsCito : null,
                     x.DetailLabBookingId,
                     x.JenisPembatalan,
                     x.TglPembatalan,
@@ -780,10 +781,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                     TanggalSelesai = x.LabBookingDetail != null
                         ? x.LabBookingDetail.TanggalSelesai
-                        : null,
-
-                    IsCito = x.LabBookingDetail != null
-                        ? x.LabBookingDetail.IsCito
                         : null,
 
                     AlasanPembatalanDetail = x.LabBookingDetail != null

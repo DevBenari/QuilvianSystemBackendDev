@@ -38,6 +38,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? NoPA { get; set; }
         public bool? StatusBookingLab { get; set; }
         public string? IsLunas { get; set; }
+        public bool? IsCito { get; set; } // Penanda apakah pemeriksaan bersifat "Cito" (darurat)
         public bool? IsPasienPersiapan { get; set; }
         public bool? SuratRujukan { get; set; }
         public string? AlasanPembatalan { get; set; }

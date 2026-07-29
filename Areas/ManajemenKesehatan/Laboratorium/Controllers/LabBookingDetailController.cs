@@ -128,6 +128,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                     d.DetailBookingLabId,
                     d.BookingLabId,
+                    IsCito = d.LabBooking != null ? d.LabBooking.IsCito : null,
                     NoOrder = d.LabBooking != null ? d.LabBooking.NoOrder : null,
                     NamaLab = d.Lab != null
                         ? d.Lab.NamaLab
@@ -167,7 +168,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         ? d.LabBooking.Pasien.Email
                         : null,
 
-                    d.IsCito,
+                    
 
                     // Informasi Kunjungan
                     KunjunganId = d.LabBooking != null
@@ -345,6 +346,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         d.DetailBookingLabId,
                         d.BookingLabId,
+                        IsCito = d.LabBooking != null ? d.LabBooking.IsCito : null,
 
                         NoOrder = d.LabBooking != null
                             ? d.LabBooking.NoOrder
@@ -421,8 +423,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 d.LabBooking.Pasien != null
                             ? d.LabBooking.Pasien.Email
                             : null,
-
-                        d.IsCito,
 
                         KunjunganId = d.LabBooking != null
                             ? d.LabBooking.KunjunganId
@@ -736,7 +736,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     PasienId = vm.PasienId,
                     PemeriksaanLabId = vm.PemeriksaanLabId,
                     LabId = vm.LabId,
-                    IsCito = vm.IsCito,
                     DokterPemeriksaId = vm.DokterPemeriksaId,
                     TipeLayanan = vm.TipeLayanan,
                     KategoriPatologiAnatomi = vm.KategoriPatologiAnatomi,
@@ -1175,7 +1174,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.PasienId = vm.PasienId;
                 data.PemeriksaanLabId = vm.PemeriksaanLabId;
                 data.LabId = vm.LabId;
-                data.IsCito = vm.IsCito;
                 data.DokterPemeriksaId = vm.DokterPemeriksaId;
                 data.TipeLayanan = vm.TipeLayanan;
                 data.KategoriPatologiAnatomi =
@@ -1496,6 +1494,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                     d.DetailBookingLabId,
                     d.BookingLabId,
+                    IsCito = d.LabBooking != null ? d.LabBooking.IsCito : null,
 
                     NoOrder = d.LabBooking != null
                         ? d.LabBooking.NoOrder
@@ -1580,7 +1579,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         ? d.LabBooking.Pasien.Email
                         : null,
 
-                    d.IsCito,
 
                     KunjunganId = d.LabBooking != null
                         ? d.LabBooking.KunjunganId
