@@ -26,7 +26,6 @@
         public string? MasaHaidTerakhir { get; set; } // Informasi masa haid terakhir (jika relevan)
         public decimal? QtyOrder { get; set; }
         public string? StatusPemeriksaan { get; set; }
-        public bool? IsCito { get; set; }
         public DateTime? TanggalSelesai { get; set; }
 
     }

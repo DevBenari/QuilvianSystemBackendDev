@@ -401,6 +401,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.WaktuKonfirmasi,
                         b.StatusKonfirmasi,
 
+                        b.IsCito, 
                         b.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
                         b.CreateDateTime
@@ -621,10 +622,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.JenisKunjungan,
                     header.NoRegistrasi,
                     header.IsPasienPersiapan,
+                    header.IsCito,
 
                     header.PoliId,
                     header.NamaPoli,
-
                     header.PasienId,
                     header.PasienNama,
                     header.NoRekamMedis,
@@ -753,6 +754,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     CatatanJaminan = vm.CatatanJaminan,
                     NoLab = vm.NoLab,
                     NoPA = vm.NoPA,
+                    IsCito = vm.IsCito,
                     WaktuPemeriksaan = vm.WaktuPemeriksaan,
                     WaktuPemeriksaanPersiapan = vm.WaktuPemeriksaanPersiapan,
                     StatusBookingLab = false,
@@ -879,6 +881,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.StatusPemeriksaan = vm.StatusPemeriksaan;
                 entity.DokterKonsulenId = vm.DokterKonsulenId;
                 entity.TerapisId = vm.TerapisId;
+                entity.IsCito = vm.IsCito;
                 entity.HemodialisaKe = vm.HemodialisaKe;
                 entity.NomorSuratJaminan = vm.NomorSuratJaminan;
                 entity.CatatanJaminan = vm.CatatanJaminan;
@@ -1884,7 +1887,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.NoLab,
                     b.NoPA,
                     b.NomorSuratJaminan,
-
+                    b.IsCito,
                     KunjunganId = b.KunjunganId,
                     AsalKunjungan = b.Kunjungan != null ? b.Kunjungan.AsalKunjungan : null,
                     TipePasien = b.Kunjungan != null ? b.Kunjungan.TipePasien : null,
@@ -2319,7 +2322,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.BookingLabId,
                     b.SuratRujukan,
                     b.NoOrder,
-
+                    b.IsCito,
                     KunjunganId = b.KunjunganId,
                     AsalKunjungan = b.Kunjungan != null ? b.Kunjungan.AsalKunjungan : null,
                     TipePasien = b.Kunjungan != null ? b.Kunjungan.TipePasien : null,
@@ -2825,7 +2828,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.BookingLabId,
                     b.SuratRujukan,
                     b.NoOrder,
-
+                    b.IsCito,
                     KunjunganId = b.KunjunganId,
                     AsalKunjungan = b.Kunjungan != null ? b.Kunjungan.AsalKunjungan : null,
                     TipePasien = b.Kunjungan != null ? b.Kunjungan.TipePasien : null,
@@ -3259,7 +3262,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.BookingLabId,
                     b.SuratRujukan,
                     b.NoOrder,
-
+                    b.IsCito,
                     KunjunganId = b.KunjunganId,
                     AsalKunjungan = b.Kunjungan != null ? b.Kunjungan.AsalKunjungan : null,
                     TipePasien = b.Kunjungan != null ? b.Kunjungan.TipePasien : null,
@@ -3675,7 +3678,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.BookingLabId,
                     b.SuratRujukan,
                     b.NoOrder,
-
+                    b.IsCito,
                     KunjunganId = b.KunjunganId,
                     AsalKunjungan = b.Kunjungan != null ? b.Kunjungan.AsalKunjungan : null,
                     TipePasien = b.Kunjungan != null ? b.Kunjungan.TipePasien : null,
