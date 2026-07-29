@@ -121,6 +121,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.StoolVolume,
                              a.JaringanVolume,
                              a.BodyFluidVolume,
+                             a.SatuanPemeriksaan,
                              a.PetugasSpecimenId,
                              a.TanggalSpecimen,
                              a.JamSpecimen,
@@ -211,6 +212,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     data.PetugasSpecimenId,
                     data.TanggalSpecimen,
                     data.JamSpecimen,
+                    data.SatuanPemeriksaan,
                     data.InfoNReff,
                     data.Kondisi,
                     data.KategoriGC,
@@ -353,6 +355,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     StoolVolume = vm.StoolVolume,
                     JaringanVolume = vm.JaringanVolume,
                     BodyFluidVolume = vm.BodyFluidVolume,
+                    SatuanPemeriksaan = vm.SatuanPemeriksaan,
                     PetugasSpecimenId = vm.PetugasSpecimenId,
                     TanggalSpecimen = vm.TanggalSpecimen,
                     JamSpecimen = vm.JamSpecimen,
@@ -450,6 +453,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.StoolVolume = vm.StoolVolume;
                 data.JaringanVolume = vm.JaringanVolume;
                 data.BodyFluidVolume = vm.BodyFluidVolume;
+                data.SatuanPemeriksaan = vm.SatuanPemeriksaan;
                 data.PetugasSpecimenId = vm.PetugasSpecimenId;
                 data.TanggalSpecimen = vm.TanggalSpecimen;
                 data.JamSpecimen = vm.JamSpecimen;
@@ -673,6 +677,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.StoolVolume,
                              a.JaringanVolume,
                              a.BodyFluidVolume,
+                             a.SatuanPemeriksaan,
                              a.PetugasSpecimenId,
                              a.TanggalSpecimen,
                              a.JamSpecimen,

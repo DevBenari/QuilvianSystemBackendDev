@@ -33,6 +33,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public decimal? StoolVolume { get; set; }
         public decimal? JaringanVolume { get; set; }
         public decimal? BodyFluidVolume { get; set; }
+        public decimal? SatuanPemeriksaan { get; set; }
         public Guid? PetugasSpecimenId { get; set; }
         public DateTime? TanggalSpecimen {  get; set; }
         public TimeOnly? JamSpecimen {  get; set; }
