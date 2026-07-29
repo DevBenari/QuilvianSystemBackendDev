@@ -693,6 +693,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.LabId,
                              NamaLab = c.NamaLab,
                              b.LabBookingId,
+                             IsCito = b.LabBooking != null ? b.LabBooking.IsCito:null,
                              b.UserActiveId,
                              b.PenanggungJawabAnalisId,
                              b.PenanggungJawabId,
