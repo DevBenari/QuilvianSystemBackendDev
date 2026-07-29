@@ -160,69 +160,116 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+        public async Task<IActionResult> GetById(Guid id)
         {
-            if (!await _applicationDbContext.Database.CanConnectAsync(ct))
-                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+            if (id == Guid.Empty)
+            {
+                return BadRequest(new
+                {
+                    status = "error",
+                    message = "Id tidak valid."
+                });
+            }
 
-            var data = await _applicationDbContext.LabHasilDetails
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x =>
-                    x.DetailHasilLabId == id &&
-                    (x.IsDelete == false || x.IsDelete == null), ct);
+            var data = await (
+                from a in _applicationDbContext.LabHasilDetails.AsNoTracking()
+
+                join u in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u.UserActiveId
+
+                join b in _applicationDbContext.LabHasils.AsNoTracking()
+                    on a.HasilLabId equals b.HasilLabId into bGroup
+                from b in bGroup.DefaultIfEmpty()
+
+                join c in _applicationDbContext.Labs.AsNoTracking()
+                    on b.LabId equals c.LabId into cGroup
+                from c in cGroup.DefaultIfEmpty()
+
+                where (a.IsDelete == false || a.IsDelete == null)
+                      && a.DetailHasilLabId == id
+
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+
+                    a.DetailHasilLabId,
+                    a.HasilLabId,
+
+                    b.KunjunganId,
+
+                    a.PemeriksaanLabId,
+                    a.KelasId,
+                    a.TanggalSelesai,
+
+                    a.NoPhotoLab,
+                    PhotoLabPath = ToPhotoLabPaths(a.PhotoLabPath),
+                    JumlahFotoLab = ToPhotoLabPaths(a.PhotoLabPath).Count,
+
+                    a.HasilLabManual,
+                    a.HasilLabAI,
+                    a.JumlahFilm,
+
+                    a.KeadaanSpecimen,
+                    a.AnalisId,
+                    a.IsDefinitif,
+                    a.IsDuplu,
+
+                    a.HasilMakroskopik,
+                    a.HasilMikroskopik,
+                    a.KesimpulanHasil,
+                    a.NilaiNormal,
+
+                    a.BloodVolume,
+                    a.SputumVolume,
+                    a.UrineVolume,
+                    a.PusVolume,
+                    a.StoolVolume,
+                    a.JaringanVolume,
+                    a.BodyFluidVolume,
+
+                    a.SatuanPemeriksaan,
+
+                    a.PetugasSpecimenId,
+                    a.TanggalSpecimen,
+                    a.JamSpecimen,
+
+                    a.InfoNReff,
+                    a.Kondisi,
+                    a.KategoriGC,
+                    a.Rincian,
+                    a.Anjuran,
+                    a.DiagnosisPA,
+                    a.Keterangan,
+
+                    // Lab Hasil
+                    b.LabId,
+                    NamaLab = c.NamaLab,
+                    b.LabBookingId,
+                    IsCito = b.LabBooking != null ? b.LabBooking.IsCito : null,
+                    b.UserActiveId,
+                    b.PenanggungJawabAnalisId,
+                    b.PenanggungJawabId,
+                    b.TanggalPemeriksaan,
+                    KeteranganLabHasil = b.Keterangan
+                })
+                .FirstOrDefaultAsync();
 
             if (data == null)
-                return NotFound(new { message = "Data tidak ditemukan." });
-
+            {
+                return NotFound(new
+                {
+                    status = "error",
+                    message = "Data tidak ditemukan."
+                });
+            }
 
             return Ok(new
             {
                 status = "success",
                 message = "Data retrieved successfully",
-
-                // opsional: jangan kirim PhotoLabPath string biar FE tidak melihat \"
-                data = new
-                {
-                    data.DetailHasilLabId,
-                    data.HasilLabId,
-                    data.PemeriksaanLabId,
-                    data.KelasId,
-                    data.TanggalSelesai,
-                    data.NoPhotoLab,
-                    PhotoLabPath = ToPhotoLabPaths(data.PhotoLabPath),
-                    JumlahFoto = ToPhotoLabPaths(data.PhotoLabPath).Count,
-                    data.HasilLabManual,
-                    data.HasilLabAI,
-                    data.JumlahFilm,
-                    data.KeadaanSpecimen,
-                    data.AnalisId,
-                    data.IsDefinitif,
-                    data.IsDuplu,
-                    data.HasilMakroskopik,
-                    data.HasilMikroskopik,
-                    data.KesimpulanHasil,
-                    data.NilaiNormal,
-                    data.BloodVolume,
-                    data.SputumVolume,
-                    data.UrineVolume,
-                    data.PusVolume,
-                    data.StoolVolume,
-                    data.JaringanVolume,
-                    data.BodyFluidVolume,
-                    data.PetugasSpecimenId,
-                    data.TanggalSpecimen,
-                    data.JamSpecimen,
-                    data.SatuanPemeriksaan,
-                    data.InfoNReff,
-                    data.Kondisi,
-                    data.KategoriGC,
-                    data.Rincian,
-                    data.Anjuran,
-                    data.DiagnosisPA,
-                    data.Keterangan,
-                    data.CreateBy,
-                    data.CreateDateTime
-                }
+                data
             });
         }
 
