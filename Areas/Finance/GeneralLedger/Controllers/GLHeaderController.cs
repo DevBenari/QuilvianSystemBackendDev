@@ -41,13 +41,22 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
             var query =
                 from gl in _context.GLHeaders
 
-                join user in _context.UserActives
-                    on gl.CreateBy equals user.UserActiveId
+                join userData in _context.UserActives
+                    on gl.CreateBy equals userData.UserActiveId
                     into userJoin
-
                 from user in userJoin.DefaultIfEmpty()
 
-                where gl.IsDelete == false
+                join kunjungan in _context.Kunjungans
+                    on gl.KunjunganId equals kunjungan.KunjunganID
+                    into kunjunganJoin
+                from kunjungan in kunjunganJoin.DefaultIfEmpty()
+
+                join dokter in _context.Dokters
+                    on kunjungan.DokterId equals dokter.DokterId
+                    into dokterJoin
+                from dokter in dokterJoin.DefaultIfEmpty()
+
+                where !gl.IsDelete
 
                 select new
                 {
@@ -69,6 +78,12 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
 
                     CreateByName = user != null
                         ? user.FullName
+                        : null,
+
+                    DokterId = kunjungan.DokterId,
+
+                    NamaDokter = dokter != null
+                        ? dokter.NmDokter
                         : null
                 };
 
@@ -116,11 +131,20 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
                 join user in _context.UserActives
                     on gl.CreateBy equals user.UserActiveId
                     into userJoin
-
                 from user in userJoin.DefaultIfEmpty()
 
+                join kunjungan in _context.Kunjungans
+                    on gl.KunjunganId equals kunjungan.KunjunganID
+                    into kunjunganJoin
+                from kunjungan in kunjunganJoin.DefaultIfEmpty()
+
+                join dokter in _context.Dokters
+                    on kunjungan.DokterId equals dokter.DokterId
+                    into dokterJoin
+                from dokter in dokterJoin.DefaultIfEmpty()
+
                 where gl.GLHeaderId == id &&
-                      gl.IsDelete == false
+                      !gl.IsDelete
 
                 select new
                 {
@@ -141,9 +165,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
                     gl.CreateDateTime,
                     gl.UpdateDateTime,
 
-                    CreateByName = user != null
-                        ? user.FullName
-                        : null
+                    CreateByName = user != null ? user.FullName : null,
+
+                    kunjungan.DokterId,
+                    NamaDokter = dokter.NmDokter
                 })
                 .FirstOrDefaultAsync();
 
@@ -425,10 +450,19 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
                 join userData in _context.UserActives
                     on gl.CreateBy equals userData.UserActiveId
                     into userJoin
-
                 from user in userJoin.DefaultIfEmpty()
 
-                where gl.IsDelete == false
+                join kunjungan in _context.Kunjungans
+                    on gl.KunjunganId equals kunjungan.KunjunganID
+                    into kunjunganJoin
+                from kunjungan in kunjunganJoin.DefaultIfEmpty()
+
+                join dokter in _context.Dokters
+                    on kunjungan.DokterId equals dokter.DokterId
+                    into dokterJoin
+                from dokter in dokterJoin.DefaultIfEmpty()
+
+                where !gl.IsDelete
 
                 select new
                 {
@@ -450,6 +484,12 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
 
                     CreateByName = user != null
                         ? user.FullName
+                        : null,
+
+                    DokterId = kunjungan.DokterId,
+
+                    NamaDokter = dokter != null
+                        ? dokter.NmDokter
                         : null
                 };
 
