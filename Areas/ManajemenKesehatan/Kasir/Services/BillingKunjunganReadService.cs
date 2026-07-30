@@ -593,7 +593,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         dto.DaftarTindakan = tindakanLogs
             .Where(x => x.TindakanId != null)
-            .GroupBy(x => x.TindakanKunjunganId)
+            .GroupBy(x => new
+            {
+                x.TindakanId,
+                x.KelasId,
+                x.IsFoC
+            })
             .Select(g =>
             {
                 var latestLog = g
@@ -601,65 +606,55 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     .First();
 
                 var tindakanId = latestLog.TindakanId;
-                var nama = latestLog.NamaTindakan;
-
                 var isFoC = latestLog.IsFoC;
 
-                /*
-                 * Kalau IsFoC = true, maka billing-nya dianggap Diskon Dokter.
-                 * Kalau false, tetap Tindakan.
-                 */
-                var jenisBillingLookup = isFoC ? "Diskon Dokter" : "Tindakan";
+                var jenisBillingLookup = isFoC
+                    ? "Diskon Dokter"
+                    : "Tindakan";
 
                 var bill = FindBilling(jenisBillingLookup, tindakanId);
 
-                var qtyFinal = bill?.QtyItem ?? latestLog.Qty;
+                var qtyFinal = bill?.QtyItem ?? g.Sum(x => x.Qty);
+
                 var hargaEfektif = bill?.HargaItem ?? latestLog.HargaLog;
-                var subtotal = bill?.SubTotalItem ?? (qtyFinal * hargaEfektif);
+
+                var subtotal = bill?.SubTotalItem
+                              ?? (qtyFinal * hargaEfektif);
 
                 var tarifDokter = latestLog.TarifDokter;
-                var totalTarifDokter = tarifDokter * qtyFinal;
 
                 return (object)new
                 {
-                    TindakanKunjunganId = latestLog.TindakanKunjunganId,
                     TindakanId = tindakanId,
+
                     NamaTindakan = latestLog.NamaTindakan,
+
+                    Qty = qtyFinal,
+
+                    Harga = hargaEfektif,
+
+                    TarifDokter = tarifDokter,
+
+                    TotalTarifDokter = tarifDokter * qtyFinal,
+
+                    Subtotal = subtotal,
 
                     IsFoC = isFoC,
 
                     AsuransiId = bill?.AsuransiId,
                     IsCovered = bill?.IsCovered ?? false,
+
                     AsuransiExcessId = bill?.AsuransiExcessId,
                     IsCoveredExcess = bill?.IsCoveredExcess ?? false,
-                    IsAPDokter = bill?.IsAPDokter,
 
-                    Qty = qtyFinal,
-                    Harga = hargaEfektif,
-                    TarifDokter = tarifDokter,
-                    TotalTarifDokter = totalTarifDokter,
-
-                    // Tetap tampil harga penuh, baik FoC maupun bukan
-                    Subtotal = subtotal,
-
-                    // Khusus informasi FoC
                     SubtotalDiskonDokter = isFoC ? subtotal : 0m,
-
-                    SubtotalDiskonDokterAsuransi =
-                        isFoC && (bill?.IsCovered ?? false) ? subtotal : 0m,
-
-                    SubtotalDiskonDokterAsuransiExcess =
-                        isFoC && (bill?.IsCoveredExcess ?? false) ? subtotal : 0m,
-
-                    SubtotalDiskonDokterMandiri =
-                        isFoC &&
-                        !(bill?.IsCovered ?? false) &&
-                        !(bill?.IsCoveredExcess ?? false)
-                            ? subtotal
-                            : 0m,
+                    SubtotalDiskonDokterAsuransi = isFoC && (bill?.IsCovered ?? false) ? subtotal: 0m,
+                    SubtotalDiskonDokterAsuransiExcess = isFoC && (bill?.IsCoveredExcess ?? false) ? subtotal : 0m,
+                    SubtotalDiskonDokterMandiri = isFoC && !(bill?.IsCovered ?? false) && !(bill?.IsCoveredExcess ?? false) ? subtotal : 0m,
 
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
+
                     StatusBilling = bill?.StatusBilling,
 
                     jenisBilling = isFoC
@@ -668,6 +663,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                     TanggalInvoice = bill?.TanggalInvoice,
                     TanggalJatuhTempo = bill?.TanggalJatuhTempo,
+
                     DPD = HitungDpd(bill?.TanggalJatuhTempo, snap)
                 };
             })
@@ -1587,7 +1583,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         dto.DaftarTindakan = tindakanLogs
             .Where(x => x.TindakanId != null)
-            .GroupBy(x => x.TindakanKunjunganId)
+            .GroupBy(x => new
+            {
+                x.TindakanId,
+                x.KelasId,
+                x.IsFoC
+            })
             .Select(g =>
             {
                 var latestLog = g
@@ -1595,65 +1596,55 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     .First();
 
                 var tindakanId = latestLog.TindakanId;
-                var nama = latestLog.NamaTindakan;
-
                 var isFoC = latestLog.IsFoC;
 
-                /*
-                 * Kalau IsFoC = true, maka billing-nya dianggap Diskon Dokter.
-                 * Kalau false, tetap Tindakan.
-                 */
-                var jenisBillingLookup = isFoC ? "Diskon Dokter" : "Tindakan";
+                var jenisBillingLookup = isFoC
+                    ? "Diskon Dokter"
+                    : "Tindakan";
 
                 var bill = FindBilling(jenisBillingLookup, tindakanId);
 
-                var qtyFinal = bill?.QtyItem ?? latestLog.Qty;
+                var qtyFinal = bill?.QtyItem ?? g.Sum(x => x.Qty);
+
                 var hargaEfektif = bill?.HargaItem ?? latestLog.HargaLog;
-                var subtotal = bill?.SubTotalItem ?? (qtyFinal * hargaEfektif);
+
+                var subtotal = bill?.SubTotalItem
+                              ?? (qtyFinal * hargaEfektif);
 
                 var tarifDokter = latestLog.TarifDokter;
-                var totalTarifDokter = tarifDokter * qtyFinal;
 
                 return (object)new
                 {
-                    TindakanKunjunganId = latestLog.TindakanKunjunganId,
                     TindakanId = tindakanId,
+
                     NamaTindakan = latestLog.NamaTindakan,
+
+                    Qty = qtyFinal,
+
+                    Harga = hargaEfektif,
+
+                    TarifDokter = tarifDokter,
+
+                    TotalTarifDokter = tarifDokter * qtyFinal,
+
+                    Subtotal = subtotal,
 
                     IsFoC = isFoC,
 
                     AsuransiId = bill?.AsuransiId,
                     IsCovered = bill?.IsCovered ?? false,
+
                     AsuransiExcessId = bill?.AsuransiExcessId,
                     IsCoveredExcess = bill?.IsCoveredExcess ?? false,
-                    IsAPDokter = bill?.IsAPDokter,
 
-                    Qty = qtyFinal,
-                    Harga = hargaEfektif,
-                    TarifDokter = tarifDokter,
-                    TotalTarifDokter = totalTarifDokter,
-
-                    // Tetap tampil harga penuh, baik FoC maupun bukan
-                    Subtotal = subtotal,
-
-                    // Khusus informasi FoC
                     SubtotalDiskonDokter = isFoC ? subtotal : 0m,
-
-                    SubtotalDiskonDokterAsuransi =
-                        isFoC && (bill?.IsCovered ?? false) ? subtotal : 0m,
-
-                    SubtotalDiskonDokterAsuransiExcess =
-                        isFoC && (bill?.IsCoveredExcess ?? false) ? subtotal : 0m,
-
-                    SubtotalDiskonDokterMandiri =
-                        isFoC &&
-                        !(bill?.IsCovered ?? false) &&
-                        !(bill?.IsCoveredExcess ?? false)
-                            ? subtotal
-                            : 0m,
+                    SubtotalDiskonDokterAsuransi = isFoC && (bill?.IsCovered ?? false) ? subtotal : 0m,
+                    SubtotalDiskonDokterAsuransiExcess = isFoC && (bill?.IsCoveredExcess ?? false) ? subtotal : 0m,
+                    SubtotalDiskonDokterMandiri = isFoC && !(bill?.IsCovered ?? false) && !(bill?.IsCoveredExcess ?? false) ? subtotal : 0m,
 
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
+
                     StatusBilling = bill?.StatusBilling,
 
                     jenisBilling = isFoC
@@ -1662,6 +1653,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                     TanggalInvoice = bill?.TanggalInvoice,
                     TanggalJatuhTempo = bill?.TanggalJatuhTempo,
+
                     DPD = HitungDpd(bill?.TanggalJatuhTempo, snap)
                 };
             })
@@ -2835,28 +2827,24 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             // =========================
             // TINDAKAN
             // =========================
-            if (tindakanByKunjungan.TryGetValue(
-        kid,
-        out var tindakanForKunjungan))
+            if (tindakanByKunjungan.TryGetValue(kid,out var tindakanForKunjungan))
             {
                 var daftarTindakanMapped = tindakanForKunjungan
                     .Where(x => x.t != null)
-                    .GroupBy(x => x.tk.TindakanKunjunganId)
+                    .GroupBy(x => new
+                    {
+                        x.tk.TindakanId,
+                        x.tk.KelasId,
+                        IsFoC = x.tk.IsFoC ?? false
+                    })
                     .Select(g =>
                     {
                         var x = g
-                            .OrderByDescending(item =>
-                                item.tk.CreateDateTime)
+                            .OrderByDescending(i => i.tk.CreateDateTime)
                             .First();
 
                         var isFoC = x.tk.IsFoC ?? false;
 
-                        /*
-                         * Jika IsFoC = true, billing dicari sebagai
-                         * "Diskon Dokter".
-                         *
-                         * Jika tidak ditemukan, fallback ke "Tindakan".
-                         */
                         var jenisBillingLookup = isFoC
                             ? "Diskon Dokter"
                             : "Tindakan";
@@ -2876,130 +2864,73 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                                     : null
                             );
 
-                        var qty =
-                            bill?.QtyItem ??
-                            x.tk.Quantity ??
-                            1;
+                        var qty = bill?.QtyItem ?? g.Sum(i => i.tk.Quantity ?? 1);
 
-                        var totalTindakan =
-                            x.tk.Total ?? 0m;
+                        var harga = bill?.HargaItem
+                                    ?? (x.tk.Total ?? 0m);
 
-                        var harga =
-                            bill?.HargaItem ??
-                            totalTindakan;
+                        var subtotal = bill?.SubTotalItem
+                                       ?? (qty * harga);
 
-                        var subtotal =
-                            bill?.SubTotalItem ??
-                            (qty * harga);
+                        var isCovered = bill?.IsCovered ?? false;
+                        var isCoveredExcess = bill?.IsCoveredExcess ?? false;
 
-                        var isCovered =
-                            bill?.IsCovered ?? false;
-
-                        var isCoveredExcess =
-                            bill?.IsCoveredExcess ?? false;
-
-                        /*
-                         * TarifDokter dari MstTarifKelas berdasarkan
-                         * TindakanId dan KelasId.
-                         */
-                        var tarifDokter =
-                            x.TarifDokter;
-
-                        var totalTarifDokter =
-                            tarifDokter * qty;
+                        var tarifDokter = x.TarifDokter;
+                        var totalTarifDokter = tarifDokter * qty;
 
                         return new
                         {
-                            TindakanKunjunganId =
-                                x.tk.TindakanKunjunganId,
-
-                            TindakanId =
-                                x.tk.TindakanId,
-
-                            KelasId =
-                                x.tk.KelasId,
-
-                            NamaTindakan =
-                                x.t!.NamaTindakan,
+                            TindakanKunjunganId = x.tk.TindakanKunjunganId,
+                            TindakanId = x.tk.TindakanId,
+                            KelasId = x.tk.KelasId,
+                            NamaTindakan = x.t!.NamaTindakan,
 
                             IsFoC = isFoC,
 
-                            AsuransiId =
-                                bill?.AsuransiId,
+                            AsuransiId = bill?.AsuransiId,
+                            IsCovered = isCovered,
 
-                            IsCovered =
-                                isCovered,
+                            AsuransiExcessId = bill?.AsuransiExcessId,
+                            IsCoveredExcess = isCoveredExcess,
 
-                            AsuransiExcessId =
-                                bill?.AsuransiExcessId,
-
-                            IsCoveredExcess =
-                                isCoveredExcess,
-
-                            IsAPDokter =
-                                bill?.IsAPDokter,
+                            IsAPDokter = bill?.IsAPDokter,
 
                             Qty = qty,
                             Harga = harga,
-                            TarifDokter =tarifDokter,
+
+                            TarifDokter = tarifDokter,
                             TotalTarifDokter = totalTarifDokter,
+
                             Subtotal = subtotal,
 
-                            SubtotalDiskonDokter =isFoC ? subtotal: 0m,
+                            SubtotalDiskonDokter =
+                                isFoC ? subtotal : 0m,
 
-                            SubtotalDiskonDokterAsuransi =isFoC && isCovered ? subtotal: 0m,
+                            SubtotalDiskonDokterAsuransi =
+                                isFoC && isCovered
+                                    ? subtotal
+                                    : 0m,
 
-                            SubtotalDiskonDokterAsuransiExcess =isFoC && isCoveredExcess? subtotal: 0m,
+                            SubtotalDiskonDokterAsuransiExcess =
+                                isFoC && isCoveredExcess
+                                    ? subtotal
+                                    : 0m,
 
-                            SubtotalDiskonDokterMandiri =isFoC && !isCovered && !isCoveredExcess ? subtotal : 0m,
+                            SubtotalDiskonDokterMandiri =
+                                isFoC &&
+                                !isCovered &&
+                                !isCoveredExcess
+                                    ? subtotal
+                                    : 0m,
 
                             BillingId = bill?.BillingId,
-
                             BillingKode = bill?.BillingKode,
-
                             StatusBilling = bill?.StatusBilling,
 
-                            jenisBilling = isFoC ? "Diskon Dokter" : bill?.JenisBilling ?? "Tindakan"
+                            jenisBilling = isFoC
+                                ? "Diskon Dokter"
+                                : bill?.JenisBilling ?? "Tindakan"
                         };
-                    })
-                    .ToList();
-
-                dto.DaftarTindakan = daftarTindakanMapped
-                    .Select(x => (object)new
-                    {
-                        x.TindakanKunjunganId,
-                        x.TindakanId,
-                        x.KelasId,
-                        x.NamaTindakan,
-
-                        x.IsFoC,
-
-                        x.AsuransiId,
-                        x.IsCovered,
-                        x.AsuransiExcessId,
-                        x.IsCoveredExcess,
-                        x.IsAPDokter,
-
-                        x.Qty,
-                        x.Harga,
-
-                        // Tarif dokter per item
-                        x.TarifDokter,
-
-                        // Tarif dokter dikalikan quantity
-                        x.TotalTarifDokter,
-
-                        x.Subtotal,
-
-                        x.SubtotalDiskonDokter,
-                        x.SubtotalDiskonDokterAsuransi,
-                        x.SubtotalDiskonDokterAsuransiExcess,
-                        x.SubtotalDiskonDokterMandiri,
-
-                        x.BillingId,
-                        x.BillingKode,
-                        x.StatusBilling,
-                        x.jenisBilling
                     })
                     .ToList();
 
