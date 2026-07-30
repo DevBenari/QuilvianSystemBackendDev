@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.Finance.COA.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Repositories;
 using System.Security.Claims;
 
@@ -62,6 +63,14 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
 
                 from tindakan in tindakanJoin.DefaultIfEmpty()
 
+
+                join dokterData in _context.Dokters
+                        .Where(x => x.IsDelete == false)
+                    on m.TransaksiId equals dokterData.DokterId
+                    into dokterJoin
+
+                from dokter in dokterJoin.DefaultIfEmpty()
+
                 join pemeriksaanData in _context.LabPemeriksaans
                         .Where(x => x.IsDelete == false)
                     on m.TransaksiId equals pemeriksaanData.PemeriksaanLabId
@@ -102,6 +111,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                                 ? pemeriksaan.NamaPemeriksaan
                                 : null
 
+                        : m.NamaTransaksi == "DOKTER"
+                            ? dokter != null
+                                ? dokter.NmDokter
+                                : null
                         : null,
 
                     m.COAId,
@@ -113,6 +126,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                     coa.NomalBalance,
                     m.Keterangan,
                     m.CreateDateTime,
+
 
                     CreateByName = user != null
                         ? user.FullName
