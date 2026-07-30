@@ -266,19 +266,51 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] COAMapping model)
         {
+            if (model == null)
+            {
+                return BadRequest(new
+                {
+                    message = "Data mapping COA tidak valid."
+                });
+            }
+
             var email = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return Unauthorized(new
+                {
+                    message = "User tidak terautentikasi."
+                });
+            }
+
             var user = await _context.UserActives
-                .FirstOrDefaultAsync(x => x.Email == email);
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Email == email &&
+                    x.IsDelete == false);
 
             if (user == null)
-                return Unauthorized();
+            {
+                return Unauthorized(new
+                {
+                    message = "User aktif tidak ditemukan."
+                });
+            }
 
             if (model.TransaksiId == Guid.Empty)
             {
                 return BadRequest(new
                 {
-                    message = "TransaksiId wajib diisi"
+                    message = "TransaksiId wajib diisi."
+                });
+            }
+
+            if (model.COAId == Guid.Empty)
+            {
+                return BadRequest(new
+                {
+                    message = "COAId wajib diisi."
                 });
             }
 
@@ -286,11 +318,13 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "NamaTransaksi wajib diisi dengan OBAT, TINDAKAN, atau PEMERIKSAAN"
+                    message =
+                        "NamaTransaksi wajib diisi dengan OBAT, TINDAKAN, PEMERIKSAAN, atau DOKTER."
                 });
             }
 
             var coa = await _context.MasterCoas
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
                     x.COAId == model.COAId &&
                     x.IsDelete == false);
@@ -299,13 +333,13 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "COA tidak ditemukan"
+                    message = "COA tidak ditemukan."
                 });
             }
 
             var jenisTransaksi = model.NamaTransaksi
                 .Trim()
-                .ToUpper();
+                .ToUpperInvariant();
 
             string? namaItem = null;
 
@@ -313,6 +347,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             {
                 case "OBAT":
                     namaItem = await _context.Obats
+                        .AsNoTracking()
                         .Where(x =>
                             x.ObatId == model.TransaksiId &&
                             x.IsDelete == false)
@@ -322,6 +357,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
 
                 case "TINDAKAN":
                     namaItem = await _context.Tindakans
+                        .AsNoTracking()
                         .Where(x =>
                             x.TindakanId == model.TransaksiId &&
                             x.IsDelete == false)
@@ -331,6 +367,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
 
                 case "PEMERIKSAAN":
                     namaItem = await _context.LabPemeriksaans
+                        .AsNoTracking()
                         .Where(x =>
                             x.PemeriksaanLabId == model.TransaksiId &&
                             x.IsDelete == false)
@@ -338,10 +375,21 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
                         .FirstOrDefaultAsync();
                     break;
 
+                case "DOKTER":
+                    namaItem = await _context.Dokters
+                        .AsNoTracking()
+                        .Where(x =>
+                            x.DokterId == model.TransaksiId &&
+                            x.IsDelete == false)
+                        .Select(x => x.NmDokter)
+                        .FirstOrDefaultAsync();
+                    break;
+
                 default:
                     return BadRequest(new
                     {
-                        message = "NamaTransaksi hanya boleh OBAT, TINDAKAN, atau PEMERIKSAAN"
+                        message =
+                            "NamaTransaksi hanya boleh OBAT, TINDAKAN, PEMERIKSAAN, atau DOKTER."
                     });
             }
 
@@ -349,32 +397,31 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
             {
                 return BadRequest(new
                 {
-                    message = $"Data {jenisTransaksi.ToLower()} tidak ditemukan berdasarkan TransaksiId"
+                    message =
+                        $"Data {jenisTransaksi.ToLowerInvariant()} tidak ditemukan berdasarkan TransaksiId."
                 });
             }
 
             var mappingExists = await _context.COAMappings
+                .AsNoTracking()
                 .AnyAsync(x =>
                     x.TransaksiId == model.TransaksiId &&
-                    x.NamaTransaksi == jenisTransaksi &&
+                    x.NamaTransaksi.ToUpper() == jenisTransaksi &&
                     x.COAId == model.COAId &&
                     x.IsDelete == false);
 
             if (mappingExists)
             {
-                return BadRequest(new
+                return Conflict(new
                 {
-                    message = "Mapping transaksi dengan COA tersebut sudah tersedia"
+                    message =
+                        $"Mapping {jenisTransaksi} dengan COA tersebut sudah tersedia."
                 });
             }
 
             model.COAMappingId = Guid.NewGuid();
-
-            // NamaTransaksi tetap menyimpan jenis transaksi.
             model.NamaTransaksi = jenisTransaksi;
-
             model.NamaCOA = coa.NamaCOA;
-
             model.CreateBy = user.UserActiveId;
             model.CreateDateTime = DateTime.UtcNow;
             model.IsDelete = false;
@@ -383,27 +430,28 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(new
+            return Created("", new
             {
-                message = "created",
+                message = "Mapping COA berhasil dibuat.",
                 data = new
                 {
                     model.COAMappingId,
                     model.TransaksiId,
 
-                    // Jenis transaksi: OBAT, TINDAKAN, atau PEMERIKSAAN.
-                    model.NamaTransaksi,
+                    // OBAT, TINDAKAN, PEMERIKSAAN, atau DOKTER
+                    JenisTransaksi = model.NamaTransaksi,
 
-                    // Nama asli yang ditemukan berdasarkan TransaksiId.
+                    // Nama obat, tindakan, pemeriksaan, atau dokter
                     NamaItem = namaItem,
 
                     model.COAId,
                     model.NamaCOA,
-                    model.Keterangan
+                    model.Keterangan,
+                    model.CreateDateTime
                 }
             });
         }
-        //[HttpPost]
+
         //public async Task<IActionResult> Create([FromBody] COAMapping model)
         //{
         //    var email = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -414,20 +462,106 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
         //    if (user == null)
         //        return Unauthorized();
 
+        //    if (model.TransaksiId == Guid.Empty)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            message = "TransaksiId wajib diisi"
+        //        });
+        //    }
+
+        //    if (string.IsNullOrWhiteSpace(model.NamaTransaksi))
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            message = "NamaTransaksi wajib diisi dengan OBAT, TINDAKAN, atau PEMERIKSAAN"
+        //        });
+        //    }
+
         //    var coa = await _context.MasterCoas
-        //        .FirstOrDefaultAsync(x => x.COAId == model.COAId && x.IsDelete == false);
+        //        .FirstOrDefaultAsync(x =>
+        //            x.COAId == model.COAId &&
+        //            x.IsDelete == false);
 
         //    if (coa == null)
+        //    {
         //        return BadRequest(new
         //        {
         //            message = "COA tidak ditemukan"
         //        });
+        //    }
+
+        //    var jenisTransaksi = model.NamaTransaksi
+        //        .Trim()
+        //        .ToUpper();
+
+        //    string? namaItem = null;
+
+        //    switch (jenisTransaksi)
+        //    {
+        //        case "OBAT":
+        //            namaItem = await _context.Obats
+        //                .Where(x =>
+        //                    x.ObatId == model.TransaksiId &&
+        //                    x.IsDelete == false)
+        //                .Select(x => x.ObatName)
+        //                .FirstOrDefaultAsync();
+        //            break;
+
+        //        case "TINDAKAN":
+        //            namaItem = await _context.Tindakans
+        //                .Where(x =>
+        //                    x.TindakanId == model.TransaksiId &&
+        //                    x.IsDelete == false)
+        //                .Select(x => x.NamaTindakan)
+        //                .FirstOrDefaultAsync();
+        //            break;
+
+        //        case "PEMERIKSAAN":
+        //            namaItem = await _context.LabPemeriksaans
+        //                .Where(x =>
+        //                    x.PemeriksaanLabId == model.TransaksiId &&
+        //                    x.IsDelete == false)
+        //                .Select(x => x.NamaPemeriksaan)
+        //                .FirstOrDefaultAsync();
+        //            break;
+
+        //        default:
+        //            return BadRequest(new
+        //            {
+        //                message = "NamaTransaksi hanya boleh OBAT, TINDAKAN, atau PEMERIKSAAN"
+        //            });
+        //    }
+
+        //    if (string.IsNullOrWhiteSpace(namaItem))
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            message = $"Data {jenisTransaksi.ToLower()} tidak ditemukan berdasarkan TransaksiId"
+        //        });
+        //    }
+
+        //    var mappingExists = await _context.COAMappings
+        //        .AnyAsync(x =>
+        //            x.TransaksiId == model.TransaksiId &&
+        //            x.NamaTransaksi == jenisTransaksi &&
+        //            x.COAId == model.COAId &&
+        //            x.IsDelete == false);
+
+        //    if (mappingExists)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            message = "Mapping transaksi dengan COA tersebut sudah tersedia"
+        //        });
+        //    }
 
         //    model.COAMappingId = Guid.NewGuid();
-        //    model.NamaCOA = coa.NamaCOA;
 
-        //    // Ambil NamaTransaksi dari tabel transaksi sesuai kebutuhan Anda
-        //    // model.NamaTransaksi = ...
+        //    // NamaTransaksi tetap menyimpan jenis transaksi.
+        //    model.NamaTransaksi = jenisTransaksi;
+
+        //    model.NamaCOA = coa.NamaCOA;
 
         //    model.CreateBy = user.UserActiveId;
         //    model.CreateDateTime = DateTime.UtcNow;
@@ -439,11 +573,25 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
 
         //    return Ok(new
         //    {
-        //        message = "created"
+        //        message = "created",
+        //        data = new
+        //        {
+        //            model.COAMappingId,
+        //            model.TransaksiId,
+
+        //            // Jenis transaksi: OBAT, TINDAKAN, atau PEMERIKSAAN.
+        //            model.NamaTransaksi,
+
+        //            // Nama asli yang ditemukan berdasarkan TransaksiId.
+        //            NamaItem = namaItem,
+
+        //            model.COAId,
+        //            model.NamaCOA,
+        //            model.Keterangan
+        //        }
         //    });
         //}
 
-        // ================= UPDATE =================
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] COAMapping model)
         {
