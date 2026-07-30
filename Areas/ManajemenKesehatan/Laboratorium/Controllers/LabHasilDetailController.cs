@@ -252,6 +252,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.PenanggungJawabAnalisId,
                     b.PenanggungJawabId,
                     b.TanggalPemeriksaan,
+                    b.DokterPerujukId,
+                    DokterPerujukNama = b.DokterPerujuk.NmDokter,
+                    b.DokterKonfirmatorId,
+                    DokterKonfirmatorNama = b.DokterKonfirmator.NmDokter,
+                    b.NoPhoneKonfirmator,
+                    b.IsKonfirmatorDPJP,
                     KeteranganLabHasil = b.Keterangan
                 })
                 .FirstOrDefaultAsync();
@@ -668,7 +674,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         int perPage = 10,
         Guid? kunjunganId = null,
         Guid? labbookingid = null,
+        bool? isCito = null,
         string? namaLab =null,
+        string? namaDokter =null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -741,6 +749,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              NamaLab = c.NamaLab,
                              b.LabBookingId,
                              IsCito = b.LabBooking != null ? b.LabBooking.IsCito:null,
+                             b.DokterPerujukId,
+                             DokterPerujukNama = b.DokterPerujuk.NmDokter,
+                             b.DokterKonfirmatorId,
+                             DokterKonfirmatorNama = b.DokterKonfirmator.NmDokter,
+                             b.NoPhoneKonfirmator,
+                             b.IsKonfirmatorDPJP,
                              b.UserActiveId,
                              b.PenanggungJawabAnalisId,
                              b.PenanggungJawabId,
@@ -757,6 +771,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 );
             }
 
+            if (!string.IsNullOrWhiteSpace(namaDokter))
+            {
+                namaDokter = $"%{namaDokter.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.DokterKonfirmatorNama, namaDokter) ||
+                    EF.Functions.ILike(u.DokterPerujukNama, namaDokter)
+                );
+            }
+
             // filter based on kunjungan id
             if (kunjunganId.HasValue)
             {
@@ -767,6 +790,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (labbookingid.HasValue)
             {
                 query = query.Where(u => u.LabBookingId == labbookingid.Value);
+            } 
+            
+            // filter is cito
+            if (isCito.HasValue)
+            {
+                query = query.Where(u => u.IsCito == isCito);
             }
 
             //// **Filter berdasarkan tanggal**
