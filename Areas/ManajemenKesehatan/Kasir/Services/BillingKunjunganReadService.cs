@@ -90,6 +90,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public bool? isPks { get; set; }
         public bool? isCovered { get; set; }
         public bool? isCoveredExcess { get; set; }
+        public Guid? DokterPemeriksaId { get; set; }
+        public bool? IsAPDokter { get; set; }
         public string? asal { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
@@ -176,6 +178,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.KunjunganID,
                 k.JenisKunjungan,
                 k.AsalKunjungan,
+                k.NoRegistrasi,
                 k.IsClosed,
                 k.IsPresent,
                 TanggalKunjungan = k.CreateDateTime,
@@ -223,6 +226,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             AsOf = snap,
             PasienId = header.PasienId,
             KunjunganID = header.KunjunganID,
+            NoRegistrasi = header.NoRegistrasi,
             JenisKunjungan = header.JenisKunjungan,
             TanggalKunjungan = header.TanggalKunjungan,
             AsalKunjungan = header.AsalKunjungan,
@@ -548,6 +552,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 tk.TindakanKunjunganId,
                 tk.TindakanId,
+                tk.DokterPemeriksaId,
                 tk.KelasId,
 
                 NamaTindakan = tk.Tindakan != null
@@ -578,6 +583,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 x.TindakanKunjunganId,
                 x.TindakanId,
                 x.KelasId,
+                x.DokterPemeriksaId,
                 x.NamaTindakan,
                 x.Qty,
                 x.HargaLog,
@@ -622,11 +628,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                               ?? (qtyFinal * hargaEfektif);
 
                 var tarifDokter = latestLog.TarifDokter;
+                var dokterId = latestLog.DokterPemeriksaId;
 
                 return (object)new
                 {
                     TindakanId = tindakanId,
-
+                    DokterPemeriksaId = dokterId,
                     NamaTindakan = latestLog.NamaTindakan,
 
                     Qty = qtyFinal,
@@ -1166,6 +1173,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 k.KunjunganID,
                 k.JenisKunjungan,
+                k.NoRegistrasi,
                 k.AsalKunjungan,
                 k.IsClosed,
                 k.IsPresent,
@@ -1215,6 +1223,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             AsOf = snap,
             PasienId = header.PasienId,
             KunjunganID = header.KunjunganID,
+            NoRegistrasi = header.NoRegistrasi,
             JenisKunjungan = header.JenisKunjungan,
             TanggalKunjungan = header.TanggalKunjungan,
             AsalKunjungan = header.AsalKunjungan,
@@ -1538,6 +1547,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 tk.TindakanKunjunganId,
                 tk.TindakanId,
+                tk.DokterPemeriksaId,
                 tk.KelasId,
 
                 NamaTindakan = tk.Tindakan != null
@@ -1567,6 +1577,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 x.TindakanKunjunganId,
                 x.TindakanId,
+                x.DokterPemeriksaId,
                 x.KelasId,
                 x.NamaTindakan,
                 x.Qty,
@@ -1612,11 +1623,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                               ?? (qtyFinal * hargaEfektif);
 
                 var tarifDokter = latestLog.TarifDokter;
+                var dokterId = latestLog.DokterPemeriksaId;
 
                 return (object)new
                 {
                     TindakanId = tindakanId,
-
+                    DokterPemeriksaId = dokterId,
                     NamaTindakan = latestLog.NamaTindakan,
 
                     Qty = qtyFinal,
@@ -2110,6 +2122,22 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         var snap = query.AsOf ?? DateTime.Now;
 
         // ============================================================
+        // FILTER OPTIONAL SECTION TINDAKAN
+        // ============================================================
+        var hasDokterPemeriksaFilter =
+            query.DokterPemeriksaId.HasValue &&
+            query.DokterPemeriksaId.Value != Guid.Empty;
+
+        var dokterPemeriksaIdFilter =
+            query.DokterPemeriksaId.GetValueOrDefault();
+
+        var hasIsAPDokterFilter =
+            query.IsAPDokter.HasValue;
+
+        var isAPDokterFilter =
+            query.IsAPDokter.GetValueOrDefault();
+
+        // ============================================================
         // BASE QUERY KUNJUNGAN (FILTER)
         // ============================================================
         var baseQuery = _db.Kunjungans.AsNoTracking().Where(k => !k.IsDelete);
@@ -2133,7 +2161,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 StatusBayarEnum.Lunas => "Lunas",
                 StatusBayarEnum.Cicil => "Cicil",
-                StatusBayarEnum.BelumBayar => "Belum Lunas", 
+                StatusBayarEnum.BelumBayar => "Belum Lunas",
                 _ => null
             };
 
@@ -2266,6 +2294,37 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     EF.Functions.ILike(b.StatusBilling, wantedStatusBilling)));
         }
 
+        // ============================================================
+        // FILTER DOKTER PEMERIKSA & IS AP DOKTER PADA SECTION TINDAKAN
+        //
+        // Filter diletakkan sebelum paging supaya:
+        // - TotalKunjungan sesuai filter.
+        // - TotalPages sesuai filter.
+        // - pageIds hanya berisi kunjungan yang memiliki tindakan cocok.
+        // ============================================================
+        if (hasDokterPemeriksaFilter || hasIsAPDokterFilter)
+        {
+            baseQuery = baseQuery.Where(k =>
+                _db.TindakanKunjungans
+                    .AsNoTracking()
+                    .Any(tk =>
+                        tk.KunjunganId == k.KunjunganID &&
+
+                        (!hasDokterPemeriksaFilter ||
+                         tk.DokterPemeriksaId == dokterPemeriksaIdFilter) &&
+
+                        (!hasIsAPDokterFilter ||
+                         _db.Billings
+                            .AsNoTracking()
+                            .Any(b =>
+                                b.KunjunganId == k.KunjunganID &&
+                                b.ItemId == tk.TindakanId &&
+                                (b.JenisBilling == "Tindakan" ||
+                                 b.JenisBilling == "Diskon Dokter") &&
+                                (b.IsDelete == false || b.IsDelete == null) &&
+                                (b.IsAPDokter ?? false) == isAPDokterFilter))));
+        }
+
         // date range
         if (query.StartDate.HasValue && query.EndDate.HasValue)
         {
@@ -2336,6 +2395,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.KunjunganID,
                 k.CreateDateTime,
                 k.JenisKunjungan,
+                k.NoRegistrasi,
                 k.AsalKunjungan,
                 k.IsClosed,
                 k.IsPresent,
@@ -2651,6 +2711,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 KunjunganID = h.KunjunganID,
                 PasienId = h.PasienId,
                 JenisKunjungan = h.JenisKunjungan,
+                NoRegistrasi = h.NoRegistrasi,
                 AsalKunjungan = h.AsalKunjungan,
                 IsClosed = h.IsClosed,
                 IsPresent = h.IsPresent,
@@ -2827,10 +2888,13 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             // =========================
             // TINDAKAN
             // =========================
-            if (tindakanByKunjungan.TryGetValue(kid,out var tindakanForKunjungan))
+            if (tindakanByKunjungan.TryGetValue(kid, out var tindakanForKunjungan))
             {
                 var daftarTindakanMapped = tindakanForKunjungan
                     .Where(x => x.t != null)
+                    .Where(x =>
+                        !hasDokterPemeriksaFilter ||
+                        x.tk.DokterPemeriksaId == dokterPemeriksaIdFilter)
                     .GroupBy(x => new
                     {
                         x.tk.TindakanId,
@@ -2882,6 +2946,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         {
                             TindakanKunjunganId = x.tk.TindakanKunjunganId,
                             TindakanId = x.tk.TindakanId,
+                            DokterPemeriksaId = x.tk.DokterPemeriksaId,
                             KelasId = x.tk.KelasId,
                             NamaTindakan = x.t!.NamaTindakan,
 
@@ -2932,6 +2997,14 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                                 : bill?.JenisBilling ?? "Tindakan"
                         };
                     })
+                    .Where(x =>
+                        !hasIsAPDokterFilter ||
+                        (x.IsAPDokter ?? false) == isAPDokterFilter)
+                    .ToList();
+
+                // Isi section tindakan tanpa mengubah property yang sudah ditampilkan.
+                dto.DaftarTindakan = daftarTindakanMapped
+                    .Select(x => (object)x)
                     .ToList();
 
                 dto.DaftarDiskonDokter = daftarTindakanMapped
@@ -2940,6 +3013,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     {
                         x.TindakanKunjunganId,
                         x.TindakanId,
+                        x.DokterPemeriksaId,
                         x.NamaTindakan,
 
                         x.IsFoC,
@@ -3285,16 +3359,16 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 + dto.TotalAlkes
                 + dto.TotalBiayaVisitDokter;
 
-            
+
             dto.SubTotalAsuransi = asuransi;
             dto.SubTotalAsuransiExcess = asuransiExcess;
 
             // Nilai awal
             var ppnRate = dto.PPN / 100m;
-            var dasarPajakSebelumDiskon = Math.Round(mandiri,2,MidpointRounding.AwayFromZero);
+            var dasarPajakSebelumDiskon = Math.Round(mandiri, 2, MidpointRounding.AwayFromZero);
 
             // Jika TotalDiskonDokterMandiri bertipe decimal, tidak perlu ??
-            var diskonDokterMandiri = Math.Round(dto.TotalDiskonDokterMandiri,2,MidpointRounding.AwayFromZero);
+            var diskonDokterMandiri = Math.Round(dto.TotalDiskonDokterMandiri, 2, MidpointRounding.AwayFromZero);
 
             // Supaya diskon negatif tidak merusak perhitungan
             if (diskonDokterMandiri < 0)
@@ -3303,9 +3377,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             }
 
             // SEBELUM DISKON
-            var pajakSebelumDiskon = Math.Round(dasarPajakSebelumDiskon * ppnRate,2,MidpointRounding.AwayFromZero);
+            var pajakSebelumDiskon = Math.Round(dasarPajakSebelumDiskon * ppnRate, 2, MidpointRounding.AwayFromZero);
 
-            var subtotalSebelumDiskon = Math.Round(dasarPajakSebelumDiskon + pajakSebelumDiskon,2,MidpointRounding.AwayFromZero);
+            var subtotalSebelumDiskon = Math.Round(dasarPajakSebelumDiskon + pajakSebelumDiskon, 2, MidpointRounding.AwayFromZero);
 
             // SETELAH DISKON
             var dasarPajakSetelahDiskon = dasarPajakSebelumDiskon - diskonDokterMandiri;
@@ -3316,11 +3390,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dasarPajakSetelahDiskon = 0;
             }
 
-            dasarPajakSetelahDiskon = Math.Round(dasarPajakSetelahDiskon,2,MidpointRounding.AwayFromZero);
+            dasarPajakSetelahDiskon = Math.Round(dasarPajakSetelahDiskon, 2, MidpointRounding.AwayFromZero);
 
-            var pajakSetelahDiskon = Math.Round(dasarPajakSetelahDiskon * ppnRate,2,MidpointRounding.AwayFromZero);
+            var pajakSetelahDiskon = Math.Round(dasarPajakSetelahDiskon * ppnRate, 2, MidpointRounding.AwayFromZero);
 
-            var subtotalSetelahDiskon = Math.Round(dasarPajakSetelahDiskon + pajakSetelahDiskon,2,MidpointRounding.AwayFromZero);
+            var subtotalSetelahDiskon = Math.Round(dasarPajakSetelahDiskon + pajakSetelahDiskon, 2, MidpointRounding.AwayFromZero);
 
             // Sebelum diskon
             dto.SebelumTaxTotalMandiri = dasarPajakSebelumDiskon;
@@ -3338,6 +3412,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.PasienId,
                 CreateDateTime = h.CreateDateTime,
                 dto.JenisKunjungan,
+                dto.NoRegistrasi,
                 dto.AsalKunjungan,
                 dto.IsClosed,
                 dto.TanggalKunjungan,
@@ -3442,6 +3517,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 x.KasirId,
                 x.KunjunganId,
+                NoRegistrasi = k != null ? k.NoRegistrasi : null,
                 x.PasienId,
                 x.NoBill,
                 x.StatusBilling,
@@ -3627,6 +3703,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 {
                     h.KasirId,
                     h.KunjunganId,
+                    h.NoRegistrasi,
                     h.PasienId,
                     h.NamaLengkap,
                     h.NoRekamMedis,

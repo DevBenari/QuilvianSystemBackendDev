@@ -8,6 +8,7 @@
         #region Data Pribadi Pasien
         public Guid? PasienId { get; set; }
         public Guid? KunjunganID { get; set; }
+        public string? NoRegistrasi { get; set; }
         public string? JenisKunjungan { get; set; }
         public string? AsalKunjungan { get; set; }
         public bool? IsClosed { get; set; }

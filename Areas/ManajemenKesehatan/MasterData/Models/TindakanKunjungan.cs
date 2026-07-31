@@ -25,6 +25,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Tindakan? Tindakan { get; set; }
         public Kunjungan? Kunjungan { get; set; }
         public Kelas? Kelas { get; set; }
+        public Dokter? DokterPemeriksa { get; set; }
 
     }
 }
