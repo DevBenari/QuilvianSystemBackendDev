@@ -19,7 +19,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewMod
         public string? HasilMakroskopik { get; set; }
         public string? HasilMikroskopik { get; set; }
         public string? KesimpulanHasil { get; set; }
-        public decimal? NilaiNormal { get; set; }
+        public string? NilaiNormal { get; set; }
         public decimal? BloodVolume { get; set; }
         public decimal? SputumVolume { get; set; }
         public decimal? UrineVolume { get; set; }
