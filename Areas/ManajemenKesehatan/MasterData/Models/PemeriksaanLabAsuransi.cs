@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
@@ -42,5 +43,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         // Tahun Bulan (misal: 2025-01)
         public DateTime? DiskonDari { get; set; }
         public DateTime? DiskonSampai { get; set; }
+
+        // navigation 
+        public Asuransi? Asuransi { get; set; }
+        public LabPemeriksaan? LabPemeriksaan { get; set; }
     }
 }

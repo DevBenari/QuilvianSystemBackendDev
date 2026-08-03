@@ -865,13 +865,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     ? null
                     : vm.NoIdentitas.Trim();
 
-                if (string.IsNullOrWhiteSpace(noIdentitas))
-                {
-                    return BadRequest(new
-                    {
-                        message = "No identitas wajib diisi."
-                    });
-                }
+                //if (string.IsNullOrWhiteSpace(noIdentitas))
+                //{
+                //    return BadRequest(new
+                //    {
+                //        message = "No identitas wajib diisi."
+                //    });
+                //}
 
                 if (!string.IsNullOrWhiteSpace(noIdentitas))
                 {
@@ -881,7 +881,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         .AnyAsync(c =>
                             c.NoIdentitas != null &&
                             c.NoIdentitas == noIdentitas &&
-                            (c.IsDelete == false || c.IsDelete == null),
+                            c.IsDelete == false,
                             ct);
 
                     if (isDuplicate)
@@ -889,6 +889,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         return Conflict(new
                         {
                             message = "NIK sudah terdaftar. Terdapat duplikasi data."
+                        });
+                    }
+                }
+
+                var noRekamMedisLama = string.IsNullOrWhiteSpace(vm.NoRekamMedisAsal)
+                    ? null
+                    : vm.NoRekamMedisAsal.Trim();
+
+                if (!string.IsNullOrWhiteSpace(noRekamMedisLama))
+                {
+                    var isDuplicateNoRmLama = await _applicationDbContext
+                        .PendaftaranPasienBarus
+                        .AsNoTracking()
+                        .AnyAsync(c =>
+                            c.NoRekamMedisAsal != null &&
+                            c.NoRekamMedisAsal == noRekamMedisLama &&
+                            !c.IsDelete,
+                            ct);
+
+                    if (isDuplicateNoRmLama)
+                    {
+                        return Conflict(new
+                        {
+                            message = "No RM lama sudah terdaftar. Terdapat duplikasi data.",
+                            field = "NoRekamMedisLama",
+                            value = noRekamMedisLama
                         });
                     }
                 }
