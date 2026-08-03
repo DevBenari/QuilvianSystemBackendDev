@@ -763,6 +763,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     AlasanPembatalan = vm.AlasanPembatalan,
                     ProsesBooking = vm.ProsesBooking,
                     TindakLanjut = vm.TindakLanjut,
+                    TglSampling = vm.TglSampling,
                     HasilPenunjangLab = vm.HasilPenunjangLab,
                     AnjuranDiet = vm.AnjuranDiet,
                     CreateBy = userActiveId,
@@ -867,6 +868,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.DiskonId = vm.DiskonId;
                 entity.DokterPemeriksaId = vm.DokterPemeriksaId;
                 entity.TglBooking = vm.TglBooking;
+                entity.TglSampling = vm.TglSampling;
                 entity.KelasId = vm.KelasId;
                 entity.DokterPerujukId = vm.DokterPerujukId;
                 entity.SuratRujukan = vm.SuratRujukan;
@@ -1930,6 +1932,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.StatusKonfirmasi,
                     b.TglPemeriksaan,
                     b.TglBooking,
+                    b.TglSampling,
                     b.AlasanPembatalan,
                     b.StatusBookingLab,
                     b.IsLunas,
@@ -2362,6 +2365,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.StatusKonfirmasi,
                     b.TglPemeriksaan,
                     b.TglBooking,
+                    b.TglSampling,
                     b.AlasanPembatalan,
                     b.StatusBookingLab,
                     b.IsLunas,
@@ -2867,6 +2871,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.WaktuPemeriksaanPersiapan,
                     b.TglPemeriksaan,
                     b.TglBooking,
+                    b.TglSampling,
                     b.AlasanPembatalan,
                     b.StatusBookingLab,
                     b.IsLunas,
@@ -3300,6 +3305,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.WaktuPemeriksaanPersiapan,
                     b.TglPemeriksaan,
                     b.TglBooking,
+                    b.TglSampling,
                     b.AlasanPembatalan,
                     b.StatusBookingLab,
                     b.IsLunas,
@@ -3716,6 +3722,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.WaktuPemeriksaanPersiapan,
                     b.TglPemeriksaan,
                     b.TglBooking,
+                    b.TglSampling,
                     b.AlasanPembatalan,
                     b.StatusBookingLab,
                     b.IsLunas,

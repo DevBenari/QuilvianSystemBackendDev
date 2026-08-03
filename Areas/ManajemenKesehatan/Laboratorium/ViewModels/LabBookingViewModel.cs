@@ -6,6 +6,7 @@
         public Guid? PasienId { get; set; } // Relasi dengan tabel Pasien
         public Guid? AsuransiId { get; set; }
         public DateTime? TglBooking { get; set; } // Tanggal booking lab
+        public DateTime? TglSampling { get; set; } // Tanggal booking lab
         public Guid? KelasId { get; set; } // Relasi ke tabel Kelas
         public Guid? DiskonId { get; set; }
 

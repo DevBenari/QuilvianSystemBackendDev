@@ -41,6 +41,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public bool? IsCito { get; set; } // Penanda apakah pemeriksaan bersifat "Cito" (darurat)
         public bool? IsPasienPersiapan { get; set; }
         public bool? SuratRujukan { get; set; }
+        public decimal? KalkulasiTercover { get; set; }
+        public decimal? KalkulasiTidakTercover { get; set; }
         public string? AlasanPembatalan { get; set; }
         public string? TTDPathPembatalan { get; set; }
         public string? PetugasPembatalan { get; set; }
@@ -51,6 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? AnjuranDiet { get; set; }
         public TimeOnly? WaktuKonfirmasi { get; set; }
         public DateTime? TglKonfirmasi {  get; set; }
+        
         // Tambahan baru
         public TimeOnly? WaktuPemeriksaan { get; set; }
         public TimeOnly? WaktuPemeriksaanPersiapan { get; set; }

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
@@ -23,6 +24,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public DateTime? TanggalPemeriksaan {  get; set; }
         public string? Keterangan {  get; set; }
 
+        // wa message ke pasien
+        public StatusKirimHasilWhatsapp? StatusKirimHasil { get; set; } = StatusKirimHasilWhatsapp.BelumDikirim;
+        public int? JumlahKirimHasil { get; set; } = 0;
+        public DateTimeOffset? TanggalKirimHasilTerakhir { get; set; }
+
         // navigatiom
         public Kunjungan? Kunjungan { get; set; }
         public Lab? Lab { get; set; }
@@ -31,6 +37,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Dokter? DokterKonfirmator { get; set; }
         public UserActive? PenanggungJawab { get; set; }
         public UserActive? PenanggungJawabAnalis {  get; set; }
-
     }
 }

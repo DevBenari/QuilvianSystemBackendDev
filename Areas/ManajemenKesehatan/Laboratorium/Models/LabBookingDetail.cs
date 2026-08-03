@@ -32,6 +32,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public decimal? QtyOrder {  get; set; }
         public string? StatusPemeriksaan {  get; set; }
         public DateTime? TanggalSelesai { get; set; }
+        public bool? StatusTercover { get; set; }
         public bool? StatusVerifikasi { get; set; }
         public string? AlasanPembatalan {  get; set; }
         public string? TTDPembatalanPath { get; set; }
