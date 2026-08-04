@@ -46,6 +46,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 
         // navigation 
         public Asuransi? Asuransi { get; set; }
-        public LabPemeriksaan? LabPemeriksaan { get; set; }
+        public LabPemeriksaan? PemeriksaanLab { get; set; }
     }
 }

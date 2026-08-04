@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Security.Claims;
+using System.Threading;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -38,6 +39,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly INoPhotoGeneratorService _noPhotoGeneratorService;
         private readonly ILabBillingService _labBillingService;
+        private readonly LabBookingCoverageService _labBookingCoverageService;
 
         public LabBookingDetailController(
             ApplicationDbContext applicationDbContext,
@@ -49,7 +51,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             ITTDService ttdService,
             IHubContext<LabBookingDetailHub> hubContext,
             INoPhotoGeneratorService noPhotoGeneratorService,
-            ILabBillingService labBillingService)
+            ILabBillingService labBillingService,
+            LabBookingCoverageService labBookingCoverageService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -61,6 +64,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _ttdService = ttdService;
             _noPhotoGeneratorService = noPhotoGeneratorService;
             _labBillingService = labBillingService;
+            _labBookingCoverageService = labBookingCoverageService;
         }
 
         private static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -139,6 +143,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TglPemeriksaan = d.LabBooking != null ? d.LabBooking.TglPemeriksaan : null,
                     TglKonfirmasi = d.LabBooking != null ? d.LabBooking.TglKonfirmasi : null,
                     TglSampling = d.LabBooking != null ? d.LabBooking.TglSampling : null,
+                    KalkulasiTercover = d.LabBooking != null ? d.LabBooking.KalkulasiTercover : null,
+                    KalkulasiTidakTercover = d.LabBooking != null ? d.LabBooking.KalkulasiTidakTercover : null,
 
                     // informasi dokter
                     DokterPemeriksa = d.LabBooking != null ? d.LabBooking.DokterPemeriksa.NmDokter : null,
@@ -246,7 +252,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     // =========================
 
                     d.PemeriksaanLabId,
-
+                    d.StatusTercover,
                     NamaPemeriksaan = p != null
                         ? p.NamaPemeriksaan
                         : null,
@@ -352,6 +358,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             ? d.LabBooking.NoOrder
                             : null,
 
+                        KalkulasiTercover = d.LabBooking != null ? d.LabBooking.KalkulasiTercover : null,
+                        KalkulasiTidakTercover = d.LabBooking != null ? d.LabBooking.KalkulasiTidakTercover : null,
                         NamaLab = d.Lab != null
                             ? d.Lab.NamaLab
                             : null,
@@ -510,7 +518,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             : null,
 
                         d.PemeriksaanLabId,
-
+                        d.StatusTercover,
                         NamaPemeriksaan = p != null
                             ? p.NamaPemeriksaan
                             : null,
@@ -800,6 +808,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         pemeriksaanLabId = vm.PemeriksaanLabId.Value
                     });
                 }
+
+                var coverageResult = await _labBookingCoverageService
+                .ApplyCoverageAndRecalculateAsync(
+                    (Guid)vm.BookingLabId,
+                    ct);
 
                 await transaction.CommitAsync(ct);
 
@@ -1495,6 +1508,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.DetailBookingLabId,
                     d.BookingLabId,
                     IsCito = d.LabBooking != null ? d.LabBooking.IsCito : null,
+                    KalkulasiTercover = d.LabBooking != null ? d.LabBooking.KalkulasiTercover : null,
+                    KalkulasiTidakTercover = d.LabBooking != null ? d.LabBooking.KalkulasiTidakTercover : null,
 
                     NoOrder = d.LabBooking != null
                         ? d.LabBooking.NoOrder
@@ -1670,7 +1685,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                     // Informasi Pemeriksaan
                     d.PemeriksaanLabId,
-
+                    d.StatusTercover,
                     NamaPemeriksaan = p != null
                         ? p.NamaPemeriksaan
                         : null,
