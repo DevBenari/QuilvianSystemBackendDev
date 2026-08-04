@@ -920,7 +920,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 }
 
                 // =============================
-                // ✅ Upload Foto ke Flask (mirip Lab)
+                // ✅ Upload Foto ke Flask (mirip Lab)f
                 // =============================
                 string fotoPath = "/FotoPasienBaru/user.jpg"; // default
                 string fotoFileName = "user.jpg";

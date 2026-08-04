@@ -714,7 +714,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         [HttpPost("LabHasiWA-Pasien/{hasilLabId:guid}")]
         public async Task<IActionResult> KirimWaPasien(
         [FromRoute] Guid hasilLabId,
-        [FromBody] LabHasilKonfirmasiViewModel request,
+        [FromBody] LabHasilWAPasienViewModel request,
         CancellationToken cancellationToken)
         {
             if (request == null)
@@ -728,39 +728,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (!ModelState.IsValid)
             {
                 return ValidationProblem(ModelState);
-            }
-
-            if (!request.LabBookingId.HasValue)
-            {
-                return BadRequest(new
-                {
-                    message = "LabBookingId wajib diisi."
-                });
-            }
-
-            if (!request.DokterKonfirmatorId.HasValue)
-            {
-                return BadRequest(new
-                {
-                    message = "DokterKonfirmatorId wajib diisi."
-                });
-            }
-
-            if (!request.IsKonfirmatorDPJP.HasValue)
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "IsKonfirmatorDPJP wajib diisi dengan nilai true atau false."
-                });
-            }
-
-            if (string.IsNullOrWhiteSpace(request.NoPhoneKonfirmator))
-            {
-                return BadRequest(new
-                {
-                    message = "NoPhoneKonfirmator wajib diisi."
-                });
             }
 
             try
@@ -814,84 +781,141 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     });
                 }
 
-                // ==============================
-                // 3. Validasi LabBookingId
-                // ==============================
-                var labBookingId =
-                    request.LabBookingId.Value;
 
-                if (labHasil.LabBookingId.HasValue &&
-                    labHasil.LabBookingId.Value != labBookingId)
+                // ==============================
+                // 3. Validasi nomor WhatsApp pasien
+                // ==============================
+                var noPhonePasien = request.NoPhonePasien?.Trim();
+
+                if (string.IsNullOrWhiteSpace(noPhonePasien))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Nomor WhatsApp pasien wajib diisi."
+                    });
+                }
+
+                // ==============================
+                // 4. Pastikan LabBookingId tersedia
+                // ==============================
+                if (!labHasil.LabBookingId.HasValue ||
+                    labHasil.LabBookingId.Value == Guid.Empty)
                 {
                     return Conflict(new
                     {
-                        message =
-                            "LabBookingId pada request tidak sesuai dengan data LabHasil.",
-                        data = new
-                        {
-                            labHasilId = hasilLabId,
-                            labBookingIdPadaHasil =
-                                labHasil.LabBookingId,
-                            labBookingIdPadaRequest =
-                                request.LabBookingId
-                        }
+                        message = "LabHasil belum memiliki LabBookingId."
                     });
                 }
 
-                // ==============================
-                // 4. Cari LabBooking
-                // ==============================
-                var labBooking =
-                    await _applicationDbContext.LabBookings
-                        .FirstOrDefaultAsync(
-                            x => x.BookingLabId == labBookingId,
-                            cancellationToken);
+                var labBookingId = labHasil.LabBookingId.Value;
 
-                if (labBooking == null)
+                // ==============================
+                // 5. Ambil No RM dan nama pasien
+                // ==============================
+                var dataPasien = await _applicationDbContext.LabBookings
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.BookingLabId == labBookingId &&
+                        (x.IsDelete == false || x.IsDelete == null))
+                    .Select(x => new
+                    {
+                        x.BookingLabId,
+
+                        NoRM = x.Pasien != null
+                            ? x.Pasien.NoRekamMedis
+                            : null,
+
+                        NamaLengkap = x.Pasien != null
+                            ? x.Pasien.NamaLengkap
+                            : null
+                    })
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (dataPasien == null)
                 {
                     return NotFound(new
                     {
-                        message = "Data LabBooking tidak ditemukan."
+                        message = "Data booking laboratorium tidak ditemukan."
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(dataPasien.NamaLengkap))
+                {
+                    return Conflict(new
+                    {
+                        message = "Nama pasien pada booking laboratorium tidak ditemukan."
                     });
                 }
 
                 // ==============================
-                // 5. Tentukan jenis dan status
+                // 6. Ambil daftar pemeriksaan pasien
                 // ==============================
-                var isKonfirmatorDPJP =
-                    request.IsKonfirmatorDPJP.Value;
+                var daftarPemeriksaan = await (
+                    from detail in _applicationDbContext.LabBookingDetails
+                        .AsNoTracking()
 
-                var jenisKonfirmator =
-                    isKonfirmatorDPJP
-                        ? "Dokter DPJP"
-                        : "Dokter Lantai";
+                    join pemeriksaan in _applicationDbContext.LabPemeriksaans
+                        .AsNoTracking()
+                        on detail.PemeriksaanLabId
+                        equals (Guid?)pemeriksaan.PemeriksaanLabId
 
-                var statusPemeriksaan =
-                    isKonfirmatorDPJP
-                        ? "Terkonfirmasi Dokter DPJP"
-                        : "Terkonfirmasi Dokter Lantai";
+                    where detail.BookingLabId == labBookingId
+                          && detail.PemeriksaanLabId.HasValue
+                          && (detail.IsDelete == false ||
+                              detail.IsDelete == null)
+
+                    select pemeriksaan.NamaPemeriksaan
+                )
+                .Where(x => x != null && x != "")
+                .Distinct()
+                .OrderBy(x => x)
+                .ToListAsync(cancellationToken);
+
+                if (!daftarPemeriksaan.Any())
+                {
+                    return Conflict(new
+                    {
+                        message = "Daftar pemeriksaan pasien tidak ditemukan."
+                    });
+                }
 
                 // ==============================
-                // 6. Susun pesan WhatsApp
+                // 7. Susun daftar pemeriksaan
+                // ==============================
+                var daftarPemeriksaanText = string.Join(
+                    "\n",
+                    daftarPemeriksaan.Select(
+                        (namaPemeriksaan, index) =>
+                            $"{index + 1}. {namaPemeriksaan}"));
+
+                // ==============================
+                // 8. Susun pesan WhatsApp pasien
                 // ==============================
                 var message =
-                    "Yth. Dokter Konfirmator,\n\n" +
-                    "Hasil pemeriksaan laboratorium telah selesai " +
-                    "dan membutuhkan konfirmasi.\n\n" +
-                    $"ID Hasil Lab: {hasilLabId}\n" +
-                    $"ID Booking Lab: {labBookingId}\n" +
-                    $"Jenis Konfirmator: {jenisKonfirmator}\n\n" +
-                    "Untuk sementara pesan ini belum memiliki tautan " +
-                    "konfirmasi karena halaman konfirmasi masih dalam proses pembuatan.\n\n" +
-                    "Pesan ini merupakan pemberitahuan otomatis dari " +
-                    "Sistem Informasi Rumah Sakit.";
+                    $"Yth. Bapak/Ibu {dataPasien.NamaLengkap?.Trim()},\n\n" +
+                    "Kami informasikan bahwa hasil pemeriksaan laboratorium Anda telah selesai.\n\n" +
+
+                    "*Informasi Pasien*\n" +
+                    $"No. Rekam Medis : {dataPasien.NoRM ?? "-"}\n" +
+                    $"Nama Pasien     : {dataPasien.NamaLengkap?.Trim()}\n\n" +
+
+                    "*Daftar Pemeriksaan*\n" +
+                    $"{daftarPemeriksaanText}\n\n" +
+
+                    "Silakan melihat dokumen hasil pemeriksaan yang dikirimkan " +
+                    "atau menghubungi petugas rumah sakit apabila membutuhkan informasi lebih lanjut.\n\n" +
+
+                    "Mohon menjaga kerahasiaan pesan ini karena berisi informasi medis pribadi.\n\n" +
+
+                    "Terima kasih.\n" +
+                    "Sistem Informasi Rumah Sakit";
 
                 // ==============================
-                // 7. Kirim WhatsApp melalui service lama
+                // 9. Kirim WhatsApp
                 // ==============================
                 var whatsappResult =
                     await _notificationService.SendWhatsAppAsync(
-                        request.NoPhoneKonfirmator.Trim(),
+                        noPhonePasien,
                         message,
                         cancellationToken);
 
@@ -917,9 +941,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             data = new
                             {
                                 hasilLabId,
-                                labBookingId,
-                                noPhoneKonfirmator =
-                                    request.NoPhoneKonfirmator
+                                    NoPhonePasien =
+                                    request.NoPhonePasien
                             },
                             whatsapp = new
                             {
@@ -934,36 +957,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         });
                 }
 
-                // ==============================
-                // 8. Update LabHasil setelah WA berhasil
-                // ==============================
-                labHasil.LabBookingId =
-                    request.LabBookingId;
-
-                labHasil.DokterPerujukId =
-                    request.DokterPerujukId;
-
-                labHasil.DokterKonfirmatorId =
-                    request.DokterKonfirmatorId;
-
-                labHasil.NoPhoneKonfirmator =
-                    request.NoPhoneKonfirmator.Trim();
-
-                labHasil.IsKonfirmatorDPJP =
-                    request.IsKonfirmatorDPJP;
-
-                labHasil.UpdateBy =
-                    userActive.UserActiveId;
-
-                labHasil.UpdateDateTime =
-                    DateTimeOffset.UtcNow;
-
-                // ==============================
-                // 9. Update status LabBooking
-                // ==============================
-                labBooking.StatusPemeriksaan =
-                    statusPemeriksaan;
-
                 try
                 {
                     await _applicationDbContext.SaveChangesAsync(
@@ -973,7 +966,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     _logger.LogError(
                         dbException,
-                        "WhatsApp sudah terkirim tetapi database gagal diperbarui. " +
+                        "WhatsApp gagal dikirim ke nomor pasien" +
                         "HasilLabId: {HasilLabId}",
                         hasilLabId);
 
@@ -982,11 +975,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         new
                         {
                             message =
-                                "WhatsApp berhasil dikirim, tetapi status database gagal diperbarui.",
+                                "WhatsApp gagal dikirim ke nomor pasien.",
                             data = new
                             {
                                 hasilLabId,
-                                labBookingId
                             },
                             whatsapp = new
                             {
@@ -1006,20 +998,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return Ok(new
                 {
                     message =
-                        "WhatsApp konfirmasi berhasil dikirim dan status pemeriksaan berhasil diperbarui.",
+                        "WhatsApp hasil lab berhasil dikirim ke nomor pasien",
                     data = new
                     {
                         hasilLabId,
-                        labBookingId,
-                        dokterPerujukId =
-                            request.DokterPerujukId,
-                        dokterKonfirmatorId =
-                            request.DokterKonfirmatorId,
-                        noPhoneKonfirmator =
-                            request.NoPhoneKonfirmator,
-                        isKonfirmatorDPJP,
-                        jenisKonfirmator,
-                        statusPemeriksaan
+                      
                     },
                     whatsapp = new
                     {
