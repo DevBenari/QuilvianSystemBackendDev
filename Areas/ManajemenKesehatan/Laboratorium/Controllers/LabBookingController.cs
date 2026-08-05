@@ -158,6 +158,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         x.Booking.HasilPenunjangLab,
                         x.Booking.AnjuranDiet,
                         x.Booking.StatusKonfirmasi,
+                        x.Booking.KalkulasiTercover,
+                        x.Booking.KalkulasiTidakTercover
                     })
                     .ToListAsync();
 
@@ -183,6 +185,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.DetailBookingLabId,
 
                         d.PemeriksaanLabId,
+                        d.StatusTercover,
                         NamaPemeriksaan = d.PemeriksaanLab != null ? d.PemeriksaanLab.NamaPemeriksaan : null,
                         HargaPemeriksaan = d.PemeriksaanLab != null ? d.PemeriksaanLab.HargaPemeriksaan : null,
 
@@ -279,6 +282,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.HasilPenunjangLab,
                         b.AnjuranDiet,
                         b.StatusKonfirmasi,
+                        b.KalkulasiTercover,
+                        b.KalkulasiTidakTercover,
                         Details = details ?? new List<object>()
                     };
                 }).ToList();
@@ -400,6 +405,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         TglKonfrimasi = b.TglKonfirmasi,
                         b.WaktuKonfirmasi,
                         b.StatusKonfirmasi,
+                        b.KalkulasiTercover,
+                        b.KalkulasiTidakTercover,
 
                         b.IsCito, 
                         b.CreateBy,
@@ -432,6 +439,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
 
                         d.PemeriksaanLabId,
+                        d.StatusTercover,
                         PemeriksaanNama = d.PemeriksaanLab != null
                             ? d.PemeriksaanLab.NamaPemeriksaan
                             : null,
@@ -465,7 +473,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.TipeLayanan,
                         d.AlasanPembatalan,
                         d.TTDPembatalanPath,
-
+                        
                         d.CreateDateTime,
                         d.IsDelete
                     })
@@ -569,7 +577,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             d.BookingLabId,
                             d.LabId,
                             d.NamaLab,
-
+                            d.StatusTercover,
                             d.PemeriksaanLabId,
                             d.PemeriksaanNama,
                             d.HargaPemeriksaan,
@@ -677,6 +685,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.TTDPathPembatalan,
                     header.PetugasPembatalan,
                     header.AlasanPembatalanLabBooking,
+                    header.KalkulasiTercover,
+                    header.KalkulasiTidakTercover,
 
                     header.CreateBy,
                     header.CreateByName,
@@ -1940,7 +1950,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaKelas = kl != null ? kl.NamaKelas : null,
                     b.HemodialisaKe,
                     b.StatusPemeriksaan,
-
                     b.DiagnosaAwal,
                     b.Keterangan,
                     b.PetugasPembatalan,
@@ -1949,6 +1958,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
+                    b.KalkulasiTercover,
+                    b.KalkulasiTidakTercover,
                     b.IsDelete,
                     CreateBy = u != null ? u.FullName : null
                 })
@@ -1978,6 +1989,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.DetailBookingLabId,
                     d.PasienId,
                     d.PemeriksaanLabId,
+                    d.StatusTercover,
                     d.DokterPemeriksaId,
                     NamaDokter = d.DokterPemeriksa != null ? d.DokterPemeriksa.NmDokter : null,
                     TipeLayanan = d.TipeLayanan ?? null,
@@ -2094,6 +2106,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.DokterPemeriksaId,
                         d.NamaDokter,
                         d.TanggalSelesai,
+                        d.StatusTercover,
                         d.CreateDateTime,
                         d.IsDelete,
                         IsLunas = detailIsLunas
@@ -2383,6 +2396,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
+                    b.KalkulasiTercover,
+                    b.KalkulasiTidakTercover,
                     b.IsDelete,
                     CreateBy = u != null ? u.FullName : null
                 })
@@ -2421,6 +2436,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.PasienId,
                     TipeLayanan = d.TipeLayanan,
                     d.PemeriksaanLabId,
+                    d.StatusTercover,
                     d.NoPhoto,
                     NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                     HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
@@ -2430,6 +2446,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.StatusPemeriksaan,
                     d.StatusVerifikasi,
                     d.TanggalSelesai,
+
                     d.CreateDateTime,
                     d.IsDelete
                 })
@@ -2505,6 +2522,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.KunjunganId,
                         d.PasienId,
                         d.PemeriksaanLabId,
+                        d.StatusTercover,
                         d.NoPhoto,
                         d.NamaPemeriksaan,
                         d.HargaPemeriksaan,
@@ -2889,6 +2907,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
+                    b.KalkulasiTercover,
+                    b.KalkulasiTidakTercover,
                     b.IsDelete,
                     CreateBy = u != null ? u.FullName : null
                 })
@@ -2927,6 +2947,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      TipeLayanan = d.TipeLayanan,
 
                      d.PemeriksaanLabId,
+                     d.StatusTercover,
                      NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                      HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
 
@@ -3323,6 +3344,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
+                    b.KalkulasiTercover,
+                    b.KalkulasiTidakTercover,
                     b.IsDelete,
                     CreateBy = u != null ? u.FullName : null
                 })
@@ -3360,6 +3383,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      TipeLayanan = d.TipeLayanan,
 
                      d.PemeriksaanLabId,
+                     d.StatusTercover,
                      NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                      HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
                      d.DokterPemeriksaId,
@@ -3740,6 +3764,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
+                    b.KalkulasiTercover,
+                    b.KalkulasiTidakTercover,
                     b.IsDelete,
                     CreateBy = u != null ? u.FullName : null
                 })
@@ -3778,6 +3804,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      TipeLayanan = d.TipeLayanan,
 
                      d.PemeriksaanLabId,
+                     d.StatusTercover,
+                     d.StatusPemeriksaan,
                      NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                      HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
                      d.QtyOrder,
