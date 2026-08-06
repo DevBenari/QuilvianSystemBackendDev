@@ -3802,7 +3802,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      d.DetailBookingLabId,
                      d.NoPhoto,
                      TipeLayanan = d.TipeLayanan,
-
                      d.PemeriksaanLabId,
                      d.StatusTercover,
                      d.StatusPemeriksaan,
