@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Claims;
 using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +16,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
+using static OpenCvSharp.Stitcher;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers
 {
@@ -114,18 +116,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.HasilMikroskopik,
                              a.KesimpulanHasil,
                              a.NilaiNormal,
-                             a.BloodVolume,
-                             a.SputumVolume,
-                             a.UrineVolume,
-                             a.PusVolume,
-                             a.StoolVolume,
-                             a.JaringanVolume,
-                             a.BodyFluidVolume,
                              a.SatuanPemeriksaan,
-                             a.PetugasSpecimenId,
-                             a.TanggalSpecimen,
-                             a.JamSpecimen,
                              a.InfoNReff,
+                             a.DetailDiagnosaKlinis,
+                             a.ReseptorEstrogenER,
+                             a.ReseptorProgesteronPR,
+                             a.HER,
+                             a.Ki67,
+                             a.StatusER,
+                             a.StatusPR,
+                             a.HERImunohistokimia,
+                             a.LainLain,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -220,27 +221,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.HasilMikroskopik,
                     a.KesimpulanHasil,
                     a.NilaiNormal,
-
-                    a.BloodVolume,
-                    a.SputumVolume,
-                    a.UrineVolume,
-                    a.PusVolume,
-                    a.StoolVolume,
-                    a.JaringanVolume,
-                    a.BodyFluidVolume,
-
                     a.SatuanPemeriksaan,
-
-                    a.PetugasSpecimenId,
-                    a.TanggalSpecimen,
-                    a.JamSpecimen,
-
                     a.InfoNReff,
                     a.Kondisi,
                     a.KategoriGC,
                     a.Rincian,
                     a.Anjuran,
                     a.DiagnosisPA,
+                    a.DetailDiagnosaKlinis,
+                    a.ReseptorEstrogenER,
+                    a.ReseptorProgesteronPR,
+                    a.HER,
+                    a.Ki67,
+                    a.StatusER,
+                    a.StatusPR,
+                    a.HERImunohistokimia,
+                    a.LainLain,
                     a.Keterangan,
 
                     // Lab Hasil
@@ -401,17 +397,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     HasilMikroskopik = vm.HasilMikroskopik,
                     KesimpulanHasil = vm.KesimpulanHasil,
                     NilaiNormal = vm.NilaiNormal,
-                    BloodVolume = vm.BloodVolume,
-                    SputumVolume = vm.SputumVolume,
-                    UrineVolume = vm.UrineVolume,
-                    PusVolume = vm.PusVolume,
-                    StoolVolume = vm.StoolVolume,
-                    JaringanVolume = vm.JaringanVolume,
-                    BodyFluidVolume = vm.BodyFluidVolume,
                     SatuanPemeriksaan = vm.SatuanPemeriksaan,
-                    PetugasSpecimenId = vm.PetugasSpecimenId,
-                    TanggalSpecimen = vm.TanggalSpecimen,
-                    JamSpecimen = vm.JamSpecimen,
+                    DetailDiagnosaKlinis = vm.DetailDiagnosaKlinis,
+                    ReseptorProgesteronPR = vm.ReseptorProgesteronPR,
+                    ReseptorEstrogenER = vm.ReseptorEstrogenER,
+                    HER = vm.HER,
+                    Ki67 = vm.Ki67,
+                    StatusER = vm.StatusER,
+                    StatusPR = vm.StatusPR,
+                    HERImunohistokimia = vm.HERImunohistokimia,
+                    LainLain = vm.LainLain,
                     InfoNReff = vm.InfoNReff,
                     Kondisi = vm.Kondisi,
                     KategoriGC = vm.KategoriGC,
@@ -499,17 +494,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.HasilMikroskopik = vm.HasilMikroskopik;
                 data.KesimpulanHasil = vm.KesimpulanHasil;
                 data.NilaiNormal = vm.NilaiNormal;
-                data.BloodVolume = vm.BloodVolume;
-                data.SputumVolume = vm.SputumVolume;
-                data.UrineVolume = vm.UrineVolume;
-                data.PusVolume = vm.PusVolume;
-                data.StoolVolume = vm.StoolVolume;
-                data.JaringanVolume = vm.JaringanVolume;
-                data.BodyFluidVolume = vm.BodyFluidVolume;
                 data.SatuanPemeriksaan = vm.SatuanPemeriksaan;
-                data.PetugasSpecimenId = vm.PetugasSpecimenId;
-                data.TanggalSpecimen = vm.TanggalSpecimen;
-                data.JamSpecimen = vm.JamSpecimen;
+                data.DetailDiagnosaKlinis = vm.DetailDiagnosaKlinis;
+                data.ReseptorProgesteronPR = vm.ReseptorProgesteronPR;
+                data.ReseptorEstrogenER = vm.ReseptorEstrogenER;
+                data.HER = vm.HER;
+                data.Ki67 = vm.Ki67;
+                data.StatusER = vm.StatusER;
+                data.StatusPR = vm.StatusPR;
+                data.HERImunohistokimia = vm.HERImunohistokimia;
+                data.LainLain = vm.LainLain;
                 data.InfoNReff = vm.InfoNReff;
                 data.Kondisi = vm.Kondisi;
                 data.KategoriGC = vm.KategoriGC;
@@ -725,18 +719,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.HasilMikroskopik,
                              a.KesimpulanHasil,
                              a.NilaiNormal,
-                             a.BloodVolume,
-                             a.SputumVolume,
-                             a.UrineVolume,
-                             a.PusVolume,
-                             a.StoolVolume,
-                             a.JaringanVolume,
-                             a.BodyFluidVolume,
                              a.SatuanPemeriksaan,
-                             a.PetugasSpecimenId,
-                             a.TanggalSpecimen,
-                             a.JamSpecimen,
                              a.InfoNReff,
+                             a.DetailDiagnosaKlinis,
+                             a.ReseptorEstrogenER,
+                             a.ReseptorProgesteronPR,
+                             a.HER,
+                             a.Ki67,
+                             a.StatusER,
+                             a.StatusPR,
+                             a.HERImunohistokimia,
+                             a.LainLain,
                              a.Kondisi,
                              a.KategoriGC,
                              a.Rincian,

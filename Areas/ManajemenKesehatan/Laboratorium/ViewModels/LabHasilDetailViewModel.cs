@@ -20,17 +20,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewMod
         public string? HasilMikroskopik { get; set; }
         public string? KesimpulanHasil { get; set; }
         public string? NilaiNormal { get; set; }
-        public decimal? BloodVolume { get; set; }
-        public decimal? SputumVolume { get; set; }
-        public decimal? UrineVolume { get; set; }
-        public decimal? PusVolume { get; set; }
-        public decimal? StoolVolume { get; set; }
-        public decimal? JaringanVolume { get; set; }
-        public decimal? BodyFluidVolume { get; set; }
         public string? SatuanPemeriksaan { get; set; }
-        public Guid? PetugasSpecimenId { get; set; }
-        public DateTime? TanggalSpecimen { get; set; }
-        public TimeOnly? JamSpecimen { get; set; }
         public string? InfoNReff { get; set; }
         public string? Kondisi { get; set; }
         public string? KategoriGC { get; set; }
@@ -39,5 +29,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewMod
         public string? DiagnosisPA { get; set; }
         public List<HasilImunoHistokimiaItem>? HasilImunoHistokimia { get; set; } = new();
         public string? Keterangan { get; set; }
+        public string? DetailDiagnosaKlinis { get; set; }
+        public string? ReseptorEstrogenER { get; set; }
+        public string? ReseptorProgesteronPR { get; set; }
+        public string? HER { get; set; }
+        public string? Ki67 { get; set; }
+        public string? StatusER { get; set; }
+        public string? StatusPR { get; set; }
+        public string? HERImunohistokimia { get; set; }
+        public string? LainLain { get; set; }
     }
 }
