@@ -9,7 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
     /// <summary>
     /// Satu service untuk:
     /// 1. Menentukan status coverage setiap LabBookingDetail.
-    /// 2. Menyimpan IsTercover pada LabBookingDetail.
+    /// 2. Menyimpan StatusTercover pada LabBookingDetail.
     /// 3. Menghitung nilai tercover dan tidak tercover.
     /// 4. Menyimpan rekap kalkulasi pada header LabBooking.
     /// </summary>
@@ -68,7 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                 }
 
                 // Langkah 1:
-                // Tandai IsTercover pada seluruh detail aktif berdasarkan pasangan:
+                // Tandai StatusTercover pada seluruh detail aktif berdasarkan pasangan:
                 // AsuransiId + PemeriksaanLabId pada MstPemeriksaanAsuransi.
                 await UpdateDetailCoverageStatusAsync(
                     connection,
@@ -147,13 +147,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
             CancellationToken cancellationToken)
         {
             const string sql = @"
-SELECT
-    lb.""BookingLabId"",
-    lb.""AsuransiId""
-FROM public.""LabBooking"" lb
-WHERE lb.""BookingLabId"" = @bookingLabId
-  AND COALESCE(lb.""IsDelete"", FALSE) = FALSE
-FOR UPDATE;";
+            SELECT
+                lb.""BookingLabId"",
+                lb.""AsuransiId""
+            FROM public.""LabBooking"" lb
+            WHERE lb.""BookingLabId"" = @bookingLabId
+              AND COALESCE(lb.""IsDelete"", FALSE) = FALSE
+            FOR UPDATE;";   
 
             await using var command = CreateCommand(connection, sql);
             AddGuidParameter(command, "@bookingLabId", bookingLabId);
@@ -181,22 +181,22 @@ FOR UPDATE;";
             CancellationToken cancellationToken)
         {
             const string sql = @"
-UPDATE public.""LabBookingDetail"" AS d
-SET
-    ""IsTercover"" = CASE
-        WHEN @asuransiId IS NULL THEN FALSE
-        ELSE EXISTS
-        (
-            SELECT 1
-            FROM public.""MstPemeriksaanAsuransi"" pa
-            WHERE pa.""PemeriksaanLabId"" = d.""PemeriksaanLabId""
-              AND pa.""AsuransiId"" = @asuransiId
-              AND COALESCE(pa.""IsDelete"", FALSE) = FALSE
-        )
-    END,
-    ""UpdateDateTime"" = CURRENT_TIMESTAMP
-WHERE d.""BookingLabId"" = @bookingLabId
-  AND COALESCE(d.""IsDelete"", FALSE) = FALSE;";
+            UPDATE public.""LabBookingDetail"" AS d
+            SET
+                ""StatusTercover"" = CASE
+                    WHEN @asuransiId IS NULL THEN FALSE
+                    ELSE EXISTS
+                    (
+                        SELECT 1
+                        FROM public.""MstPemeriksaanAsuransi"" pa
+                        WHERE pa.""PemeriksaanLabId"" = d.""PemeriksaanLabId""
+                          AND pa.""AsuransiId"" = @asuransiId
+                          AND COALESCE(pa.""IsDelete"", FALSE) = FALSE
+                    )
+                END,
+                ""UpdateDateTime"" = CURRENT_TIMESTAMP
+            WHERE d.""BookingLabId"" = @bookingLabId
+              AND COALESCE(d.""IsDelete"", FALSE) = FALSE;";
 
             await using var command = CreateCommand(connection, sql);
             AddGuidParameter(command, "@bookingLabId", bookingLabId);
@@ -211,20 +211,20 @@ WHERE d.""BookingLabId"" = @bookingLabId
             CancellationToken cancellationToken)
         {
             const string sql = @"
-SELECT
-    d.""DetailBookingLabId"",
-    d.""PemeriksaanLabId"",
-    p.""NamaPemeriksaan"",
-    COALESCE(p.""HargaPemeriksaan"", 0) AS ""HargaPemeriksaan"",
-    COALESCE(d.""QtyOrder"", 1) AS ""QtyOrder"",
-    COALESCE(d.""IsTercover"", FALSE) AS ""IsTercover""
-FROM public.""LabBookingDetail"" d
-INNER JOIN public.""LabPemeriksaans"" p
-    ON p.""PemeriksaanLabId"" = d.""PemeriksaanLabId""
-WHERE d.""BookingLabId"" = @bookingLabId
-  AND COALESCE(d.""IsDelete"", FALSE) = FALSE
-  AND COALESCE(p.""IsDelete"", FALSE) = FALSE
-ORDER BY d.""CreateDateTime"" ASC;";
+            SELECT
+                d.""DetailBookingLabId"",
+                d.""PemeriksaanLabId"",
+                p.""NamaPemeriksaan"",
+                COALESCE(p.""HargaPemeriksaan"", 0) AS ""HargaPemeriksaan"",
+                COALESCE(d.""QtyOrder"", 1) AS ""QtyOrder"",
+                COALESCE(d.""StatusTercover"", FALSE) AS ""StatusTercover""
+            FROM public.""LabBookingDetail"" d
+            INNER JOIN public.""LabPemeriksaans"" p
+                ON p.""PemeriksaanLabId"" = d.""PemeriksaanLabId""
+            WHERE d.""BookingLabId"" = @bookingLabId
+              AND COALESCE(d.""IsDelete"", FALSE) = FALSE
+              AND COALESCE(p.""IsDelete"", FALSE) = FALSE
+            ORDER BY d.""CreateDateTime"" ASC;";
 
             await using var command = CreateCommand(connection, sql);
             AddGuidParameter(command, "@bookingLabId", bookingLabId);
@@ -274,13 +274,13 @@ ORDER BY d.""CreateDateTime"" ASC;";
             CancellationToken cancellationToken)
         {
             const string sql = @"
-UPDATE public.""LabBooking""
-SET
-    ""NilaiTercover"" = @nilaiTercover,
-    ""NilaiTidakTercover"" = @nilaiTidakTercover,
-    ""UpdateDateTime"" = CURRENT_TIMESTAMP
-WHERE ""BookingLabId"" = @bookingLabId
-  AND COALESCE(""IsDelete"", FALSE) = FALSE;";
+            UPDATE public.""LabBooking""
+            SET
+                ""NilaiTercover"" = @nilaiTercover,
+                ""NilaiTidakTercover"" = @nilaiTidakTercover,
+                ""UpdateDateTime"" = CURRENT_TIMESTAMP
+            WHERE ""BookingLabId"" = @bookingLabId
+              AND COALESCE(""IsDelete"", FALSE) = FALSE;";  
 
             await using var command = CreateCommand(connection, sql);
             AddGuidParameter(command, "@bookingLabId", bookingLabId);
