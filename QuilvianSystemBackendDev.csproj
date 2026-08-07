@@ -16,6 +16,10 @@
     <None Remove="Areas\Keuangan\**" />
     <None Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\..\..\Downloads\appsettings.Development.json" Link="appsettings.Development.json" />
+  </ItemGroup>
  
   <ItemGroup>
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.22" />
