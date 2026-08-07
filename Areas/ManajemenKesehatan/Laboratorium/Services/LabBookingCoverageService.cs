@@ -274,18 +274,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
             CancellationToken cancellationToken)
         {
             const string sql = @"
-            UPDATE public.""LabBooking""
-            SET
-                ""NilaiTercover"" = @nilaiTercover,
-                ""NilaiTidakTercover"" = @nilaiTidakTercover,
-                ""UpdateDateTime"" = CURRENT_TIMESTAMP
-            WHERE ""BookingLabId"" = @bookingLabId
-              AND COALESCE(""IsDelete"", FALSE) = FALSE;";  
+        UPDATE public.""LabBooking""
+        SET
+            ""KalkulasiTercover"" = @nilaiTercover,
+            ""KalkulasiTidakTercover"" = @nilaiTidakTercover,
+            ""UpdateDateTime"" = CURRENT_TIMESTAMP
+        WHERE ""BookingLabId"" = @bookingLabId
+          AND COALESCE(""IsDelete"", FALSE) = FALSE;";
 
             await using var command = CreateCommand(connection, sql);
-            AddGuidParameter(command, "@bookingLabId", bookingLabId);
-            AddDecimalParameter(command, "@nilaiTercover", nilaiTercover);
-            AddDecimalParameter(command, "@nilaiTidakTercover", nilaiTidakTercover);
+
+            AddGuidParameter(
+                command,
+                "@bookingLabId",
+                bookingLabId);
+
+            AddDecimalParameter(
+                command,
+                "@nilaiTercover",
+                nilaiTercover);
+
+            AddDecimalParameter(
+                command,
+                "@nilaiTidakTercover",
+                nilaiTidakTercover);
 
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
