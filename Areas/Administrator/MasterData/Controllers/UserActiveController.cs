@@ -231,7 +231,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         // TTD
                         // =========================
                         TTDId = td != null ? td.TTDId : (Guid?)null,
-                        TTDPath = td != null ? td.TTDPath : null,
+                        TTDPath = td.TTDPath != null ? "/uploads" + td.TTDPath : null,
 
                         // =========================
                         // DATA KARYAWAN
@@ -451,7 +451,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     // TTD
                     // =========================
                     TTDId = td != null ? td.TTDId : (Guid?)null,
-                    TTDPath = td != null ? td.TTDPath : null,
+                    TTDPath = td.TTDPath != null ? "/uploads" + td.TTDPath : null,
 
                     // =========================
                     // DATA KARYAWAN
@@ -2114,7 +2114,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                      FotoPath = a != null ? a.FotoPath : null,
 
                      TTDId = td != null ? td.TTDId : (Guid?)null,
-                     TTDPath = td != null ? td.TTDPath : null,
+                     TTDPath = td.TTDPath != null ? "/uploads" + td.TTDPath : null,
 
                      // id
                      DokterId = dok != null ? dok.DokterId : (Guid?)null,

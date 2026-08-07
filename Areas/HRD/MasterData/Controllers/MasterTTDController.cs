@@ -39,7 +39,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 {
                     m.TTDId,
                     m.UserActiveId,
-                    m.TTDPath,
+                    TTDPath = m.TTDPath != null ? "/uploads" + m.TTDPath : null,
                     m.Keterangan,
                     m.CreateDateTime, m.CreateBy, m.UpdateDateTime, m.UpdateBy, m.DeleteDateTime, m.DeleteBy, m.IsDelete
                 };
@@ -61,11 +61,35 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
         public async Task<IActionResult> GetTtdById(Guid UserActiveId)
         {
             var listdata = await _context.MasterTTDs
-                .FirstOrDefaultAsync(x => x.UserActiveId == UserActiveId);
+                .Where(x => x.UserActiveId == UserActiveId)
+                .Select(m => new
+                {
+                    m.TTDId,
+                    m.UserActiveId,
+
+                    TTDPath = m.TTDPath == null
+                        ? null
+                        : m.TTDPath.StartsWith("/")
+                            ? "/uploads" + m.TTDPath
+                            : "/uploads/" + m.TTDPath,
+
+                    m.Keterangan,
+                    m.CreateDateTime,
+                    m.CreateBy,
+                    m.UpdateDateTime,
+                    m.UpdateBy,
+                    m.DeleteDateTime,
+                    m.DeleteBy,
+                    m.IsDelete
+                })
+                .FirstOrDefaultAsync();
 
             if (listdata == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new
+                {
+                    message = "Data tidak ditemukan."
+                });
             }
 
             return Ok(new
