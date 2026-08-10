@@ -14,6 +14,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Models
 
         public Guid COAId { get; set; }
 
+        public Guid DetailTempRJId { get; set; }
+        public string? RoleSetupCOA { get; set; }
+
         [Column(TypeName = "numeric(18,2)")]
         public decimal NilaiDebit { get; set; }
 
