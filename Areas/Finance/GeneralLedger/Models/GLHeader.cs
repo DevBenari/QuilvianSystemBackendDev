@@ -43,5 +43,40 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Models
 
         [MaxLength(500)]
         public string? Keterangan { get; set; }
+
+
+        // ==========================================
+        // RECURRING JOURNAL
+        // ==========================================
+
+        public Guid? TempRJId { get; set; }
+
+
+        // ==========================================
+        // CURRENCY
+        // ==========================================
+
+        public Guid? MataUangId { get; set; }
+
+        [MaxLength(100)]
+        public string? NamaMataUang { get; set; }
+
+
+        // ==========================================
+        // EXCHANGE RATE
+        // ==========================================
+
+        public Guid? ExchangeRateId { get; set; }
+
+        [Column(TypeName = "numeric(18,6)")]
+        public decimal? RateToIdr { get; set; }
+
+
+        // ==========================================
+        // BALANCE
+        // ==========================================
+
+        [Column(TypeName = "numeric(18,2)")]
+        public decimal? UnbalanceAmount { get; set; }
     }
 }
