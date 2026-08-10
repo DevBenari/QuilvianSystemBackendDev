@@ -22,7 +22,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Guid? PenanggungJawabId { get; set; }
         public Guid? PenanggungJawabAnalisId { get; set; }
         public DateTime? TanggalPemeriksaan {  get; set; }
-        public string? DokterLuasRS { get; set; }
+        public string? DokterLuarRS { get; set; }
         public string? Keterangan {  get; set; }
 
         // specimen

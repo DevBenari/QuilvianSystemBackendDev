@@ -1016,7 +1016,15 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Film> Films { get; set; }
         public DbSet<TarifFilm> TarifFilms { get; set; }
         public DbSet<FaskesRujukan> FaskesRujukans { get; set; }
+        public DbSet<MstAntibiotik> MstAntibiotiks { get; set; }
 
+        public DbSet<MstBakteri> MstBakteris { get; set; }
+
+        public DbSet<MstSubBakteri> MstSubBakteris { get; set; }
+
+        public DbSet<MstMappingBakteri> MapBakteris { get; set; }
+
+        public DbSet<MstMapAntibiotikSubBakteri> MapAntibiotikSubBakteris { get; set; }
         #endregion
 
         #region Areas Keuangan
@@ -1223,6 +1231,7 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<LabRujukan> LabRujukans { get; set; }
             public DbSet<LabBookingBatal> LabBookingBatals { get; set; }
             public DbSet<LabHasilSpecimen> LabHasilSpecimens { get; set; }
+            public DbSet<LabHasilSetBakteri> LabHasilSetBakteris { get; set; }
 
         #endregion
 

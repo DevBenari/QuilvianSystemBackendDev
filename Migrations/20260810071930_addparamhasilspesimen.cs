@@ -28,7 +28,7 @@ namespace QuilvianSystemBackendDev.Migrations
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
-                name: "DokterLuasRS",
+                name: "DokterLuarRS",
                 table: "LabHasils",
                 type: "text",
                 nullable: true);
@@ -95,7 +95,7 @@ namespace QuilvianSystemBackendDev.Migrations
                 table: "LabHasils");
 
             migrationBuilder.DropColumn(
-                name: "DokterLuasRS",
+                name: "DokterLuarRS",
                 table: "LabHasils");
 
             migrationBuilder.DropColumn(

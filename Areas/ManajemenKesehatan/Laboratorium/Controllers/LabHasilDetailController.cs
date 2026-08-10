@@ -127,6 +127,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.StatusPR,
                              a.HERImunohistokimia,
                              a.LainLain,
+                             a.StatusHasil,
+                             a.HasilPemeriksaan,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -237,6 +239,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.StatusPR,
                     a.HERImunohistokimia,
                     a.LainLain,
+                    a.StatusHasil,
+                    a.HasilPemeriksaan,
                     a.Keterangan,
 
                     // Lab Hasil
@@ -414,6 +418,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     Anjuran = vm.Anjuran,
                     DiagnosisPA = vm.DiagnosisPA,
                     HasilImunoHistokimia = vm.HasilImunoHistokimia ?? new List<HasilImunoHistokimiaItem>(), 
+                    StatusHasil = vm.StatusHasil,
+                    HasilPemeriksaan = vm.HasilPemeriksaan,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -511,6 +517,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.Anjuran = vm.Anjuran;
                 data.DiagnosisPA = vm.DiagnosisPA;
                 data.HasilImunoHistokimia = vm.HasilImunoHistokimia ?? new List<HasilImunoHistokimiaItem>();
+                data.StatusHasil = vm.StatusHasil;
+                data.HasilPemeriksaan = vm.HasilPemeriksaan;
                 data.Keterangan = vm.Keterangan;
 
                 // ======================================================
@@ -735,6 +743,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.Rincian,
                              a.Anjuran,
                              a.DiagnosisPA,
+                             a.StatusHasil,
+                             a.HasilPemeriksaan,
                              a.Keterangan,
 
                              // ttg Lab hasil

@@ -13,8 +13,8 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260810071930_addparamhasilspesimen")]
-    partial class addparamhasilspesimen
+    [Migration("20260810112215_AddMasterBakteriDanAntibiotik")]
+    partial class AddMasterBakteriDanAntibiotik
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -10581,9 +10581,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Anjuran")
                         .HasColumnType("text");
 
-                    b.Property<string>("BahanPemeriksaanLainnya")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("CreateBy")
                         .HasColumnType("uuid");
 
@@ -10625,6 +10622,9 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("HasilMikroskopik")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HasilPemeriksaan")
                         .HasColumnType("text");
 
                     b.Property<string>("InfoNReff")
@@ -10711,6 +10711,66 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("DetailHasilLabId");
 
                     b.ToTable("LabHasilDetails");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabHasilSetBakteri", b =>
+                {
+                    b.Property<Guid>("LabHasilSetBakteriId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AsalSpecimenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("JenisSpecimenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("KunjunganId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("LabHasilId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PasienId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("LabHasilSetBakteriId");
+
+                    b.HasIndex("AsalSpecimenId");
+
+                    b.HasIndex("JenisSpecimenId");
+
+                    b.HasIndex("KunjunganId");
+
+                    b.HasIndex("LabHasilId");
+
+                    b.HasIndex("PasienId");
+
+                    b.ToTable("LabHasilSetBakteris");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabHasilSpecimen", b =>
@@ -14986,6 +15046,228 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("ModulMCUId");
 
                     b.ToTable("MstModulMCU", "public");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstAntibiotik", b =>
+                {
+                    b.Property<Guid>("AntibiotikId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("KodeAntibiotik")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("Microgram")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("AntibiotikId");
+
+                    b.ToTable("MstAntibiotiks");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstBakteri", b =>
+                {
+                    b.Property<Guid>("BakteriId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("KodeBakteri")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("BakteriId");
+
+                    b.ToTable("MstBakteris");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstMapAntibiotikSubBakteri", b =>
+                {
+                    b.Property<Guid>("MapAntibiotikSubBakteriId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AntibiotikId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("CriticalMax")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("CriticalMin")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("NormalMax")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("NormalMin")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid?>("SubBakteriId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("UrutanTampil")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("MapAntibiotikSubBakteriId");
+
+                    b.HasIndex("AntibiotikId");
+
+                    b.HasIndex("SubBakteriId");
+
+                    b.ToTable("MapAntibiotikSubBakteris");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstMappingBakteri", b =>
+                {
+                    b.Property<Guid>("MapBakteriId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BakteriId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("SubBakteriId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("MapBakteriId");
+
+                    b.HasIndex("BakteriId");
+
+                    b.HasIndex("SubBakteriId");
+
+                    b.ToTable("MapBakteris");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstSubBakteri", b =>
+                {
+                    b.Property<Guid>("SubBakteriId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("KodeSubBakteri")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("SubBakteriId");
+
+                    b.ToTable("MstSubBakteris");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Negara", b =>
@@ -25436,6 +25718,39 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("PenanggungJawabAnalis");
                 });
 
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabHasilSetBakteri", b =>
+                {
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.SpecimenAsal", "AsalSpecimen")
+                        .WithMany()
+                        .HasForeignKey("AsalSpecimenId");
+
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.SpecimenJenis", "JenisSpecimen")
+                        .WithMany()
+                        .HasForeignKey("JenisSpecimenId");
+
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.Kunjungan", "Kunjungan")
+                        .WithMany()
+                        .HasForeignKey("KunjunganId");
+
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabHasil", "LabHasil")
+                        .WithMany()
+                        .HasForeignKey("LabHasilId");
+
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.PendaftaranPasienBaru", "Pasien")
+                        .WithMany()
+                        .HasForeignKey("PasienId");
+
+                    b.Navigation("AsalSpecimen");
+
+                    b.Navigation("JenisSpecimen");
+
+                    b.Navigation("Kunjungan");
+
+                    b.Navigation("LabHasil");
+
+                    b.Navigation("Pasien");
+                });
+
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabHasilSpecimen", b =>
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.SpecimenAsal", "AsalSpecimen")
@@ -25724,6 +26039,36 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasForeignKey("KelurahanId");
 
                     b.Navigation("Kelurahan");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstMapAntibiotikSubBakteri", b =>
+                {
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstAntibiotik", "Antibiotik")
+                        .WithMany("MapAntibiotikSubBakteris")
+                        .HasForeignKey("AntibiotikId");
+
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstSubBakteri", "SubBakteri")
+                        .WithMany("MapAntibiotikSubBakteris")
+                        .HasForeignKey("SubBakteriId");
+
+                    b.Navigation("Antibiotik");
+
+                    b.Navigation("SubBakteri");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstMappingBakteri", b =>
+                {
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstBakteri", "Bakteri")
+                        .WithMany("MapBakteris")
+                        .HasForeignKey("BakteriId");
+
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstSubBakteri", "SubBakteri")
+                        .WithMany("MapBakteris")
+                        .HasForeignKey("SubBakteriId");
+
+                    b.Navigation("Bakteri");
+
+                    b.Navigation("SubBakteri");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Obat", b =>
@@ -26173,6 +26518,23 @@ namespace QuilvianSystemBackendDev.Migrations
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KonversiSatuan", b =>
                 {
                     b.Navigation("FarmasiRJs");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstAntibiotik", b =>
+                {
+                    b.Navigation("MapAntibiotikSubBakteris");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstBakteri", b =>
+                {
+                    b.Navigation("MapBakteris");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.MstSubBakteri", b =>
+                {
+                    b.Navigation("MapAntibiotikSubBakteris");
+
+                    b.Navigation("MapBakteris");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Negara", b =>

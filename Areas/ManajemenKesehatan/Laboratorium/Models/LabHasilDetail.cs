@@ -69,7 +69,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? StatusPR { get; set; }
         public string? HERImunohistokimia { get; set; }
         public string? StatusHasil { get; set; }
-        public string? BahanPemeriksaanLainnya { get; set; }
+        public string? HasilPemeriksaan { get; set; }
         public string? LainLain { get; set; }
     }
 }
