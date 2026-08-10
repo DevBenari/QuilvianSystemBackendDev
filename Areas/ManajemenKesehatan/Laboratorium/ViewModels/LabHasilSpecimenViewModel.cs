@@ -6,6 +6,6 @@
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
         public Guid? AsalSpecimenId { get; set; }
-        public Guid? JenisSpecimenId { get; set; }
+        public List<Guid>? JenisSpecimenId { get; set; }
     }
 }

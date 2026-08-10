@@ -22,6 +22,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Guid? PenanggungJawabId { get; set; }
         public Guid? PenanggungJawabAnalisId { get; set; }
         public DateTime? TanggalPemeriksaan {  get; set; }
+        public string? DokterLuasRS { get; set; }
         public string? Keterangan {  get; set; }
 
         // specimen
@@ -32,6 +33,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public decimal? StoolVolume { get; set; }
         public decimal? JaringanVolume { get; set; }
         public decimal? BodyFluidVolume { get; set; }
+        public string? BahanPemeriksaanLainnya { get; set; }
+        public string? KeteranganBahanPemeriksaan { get; set; }
         public Guid? PetugasSpecimenId { get; set; }
         public DateTime? TanggalSpecimen { get; set; }
         public TimeOnly? JamSpecimen { get; set; }

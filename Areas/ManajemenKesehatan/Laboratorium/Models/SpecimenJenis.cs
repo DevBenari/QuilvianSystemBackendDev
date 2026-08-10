@@ -11,5 +11,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? KodeJenisSpecimen { get; set; } 
         public Guid? AsalSpecimenId { get; set; }
         public string? Keterangan { get; set; }
+
+        public ICollection<LabHasilSpecimenJenis> LabHasilSpecimens { get; set; }
+        = new List<LabHasilSpecimenJenis>();
     }
 }

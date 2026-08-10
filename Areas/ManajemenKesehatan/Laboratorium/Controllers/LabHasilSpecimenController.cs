@@ -66,8 +66,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 TanggalLahir = a.Pasien != null ? a.Pasien.TanggalLahir : null,
                                 a.AsalSpecimenId,
                                 NamaAsalSpecimen = a.AsalSpecimen != null ? a.AsalSpecimen.AsalSpecimen : null,
-                                a.JenisSpecimenId,
-                                NamaJenisSpecimen = a.JenisSpecimen != null ? a.JenisSpecimen.NamaJenisSpecimen : null,
+                                JenisSpecimen = a.JenisSpecimens.Select(j => new
+                                {
+                                    j.JenisSpecimenId,
+
+                                    NamaJenisSpecimen =
+                                        j.JenisSpecimen != null
+                                            ? j.JenisSpecimen.NamaJenisSpecimen
+                                            : null
+                                })
+                                .ToList(),
                             });
 
             if (listdata == null)
@@ -87,135 +95,389 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         {
             if (vm == null || !ModelState.IsValid)
             {
-                return BadRequest(new { message = "Data tidak valid." });
+                return BadRequest(new
+                {
+                    message = "Data tidak valid."
+                });
             }
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
+                // Cek koneksi database
+                if (!await _applicationDbContext.Database.CanConnectAsync())
                 {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                    return StatusCode(500, new
+                    {
+                        message = "Tidak dapat terhubung ke database."
+                    });
                 }
 
-                // **Ambil User ID dari JWT Claims**
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                // Ambil user login dari JWT
+                var emailLogin = User
+                    .FindFirst(ClaimTypes.NameIdentifier)?
+                    .Value;
+
                 if (string.IsNullOrEmpty(emailLogin))
                 {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                    return Unauthorized(new
+                    {
+                        message = "User tidak terautentikasi!"
+                    });
                 }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                // Ambil UserActive
+                var getUserActive = await _applicationDbContext
+                    .UserActives
+                    .FirstOrDefaultAsync(x =>
+                        x.Email == emailLogin);
+
                 if (getUserActive == null)
                 {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                    return Unauthorized(new
+                    {
+                        message = "User aktif tidak ditemukan!"
+                    });
                 }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Buat Data Baru**
+                // Validasi Jenis Specimen
+                if (vm.JenisSpecimenId == null ||
+                    !vm.JenisSpecimenId.Any())
+                {
+                    return BadRequest(new
+                    {
+                        message = "Jenis specimen wajib dipilih."
+                    });
+                }
+
+                // Hilangkan duplicate ID
+                var jenisSpecimenIds = vm.JenisSpecimenId
+                    .Where(x => x != Guid.Empty)
+                    .Distinct()
+                    .ToList();
+
+                if (!jenisSpecimenIds.Any())
+                {
+                    return BadRequest(new
+                    {
+                        message = "Jenis specimen tidak valid."
+                    });
+                }
+
+                // Validasi semua JenisSpecimenId tersedia di database
+                var validJenisSpecimenIds = await _applicationDbContext
+                    .SpecimenJeniss
+                    .Where(x =>
+                        jenisSpecimenIds.Contains(x.JenisSpecimenId))
+                    .Select(x => x.JenisSpecimenId)
+                    .ToListAsync();
+
+                if (validJenisSpecimenIds.Count != jenisSpecimenIds.Count)
+                {
+                    var invalidIds = jenisSpecimenIds
+                        .Except(validJenisSpecimenIds)
+                        .ToList();
+
+                    return BadRequest(new
+                    {
+                        message = "Terdapat JenisSpecimenId yang tidak ditemukan.",
+                        invalidJenisSpecimenIds = invalidIds
+                    });
+                }
+
+                var labHasilSpecimenId = Guid.NewGuid();
+
+                // Buat data utama
                 var data = new LabHasilSpecimen
                 {
-                    LabHasilSpecimenId = Guid.NewGuid(),
+                    LabHasilSpecimenId = labHasilSpecimenId,
+
                     LabHasilId = vm.LabHasilId,
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     AsalSpecimenId = vm.AsalSpecimenId,
-                    JenisSpecimenId = vm.JenisSpecimenId,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
+
+                    // Navigation collection
+                    JenisSpecimens = jenisSpecimenIds
+                        .Select(jenisSpecimenId =>
+                            new LabHasilSpecimenJenis
+                            {
+                                LabHasilSpecimenJenisId = Guid.NewGuid(),
+
+                                LabHasilSpecimenId = labHasilSpecimenId,
+
+                                JenisSpecimenId = jenisSpecimenId
+                            })
+                        .ToList()
                 };
 
-                // **Simpan ke Database**
-                _applicationDbContext.LabHasilSpecimens.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                // Simpan data utama + relation
+                await _applicationDbContext
+                    .LabHasilSpecimens
+                    .AddAsync(data);
 
-                if (result > 0)
+                var result = await _applicationDbContext
+                    .SaveChangesAsync();
+
+                if (result <= 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    return StatusCode(500, new
+                    {
+                        message = "Data tidak berhasil disimpan ke database."
+                    });
                 }
-                else
+
+                return Created("", new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
+                    message = "Tambah Data Berhasil || 201 Created",
+
+                    data = new
+                    {
+                        labHasilSpecimenId = data.LabHasilSpecimenId,
+
+                        jenisSpecimenIds = jenisSpecimenIds
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new
+                {
+                    message = "Gagal menyimpan data.",
+                    detail = dbEx.InnerException?.Message
+                             ?? dbEx.Message
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    message = "Terjadi kesalahan internal.",
+                    detail = ex.Message
+                });
             }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] LabHasilSpecimenViewModel vm)
+        public async Task<IActionResult> Update(Guid id,[FromBody] LabHasilSpecimenViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
-                return BadRequest(new { message = "Data tidak valid." });
+                return BadRequest(new
+                {
+                    message = "Data tidak valid."
+                });
             }
 
             try
             {
-                // **Cek koneksi ke database**
+                // Cek koneksi database
                 if (!await _applicationDbContext.Database.CanConnectAsync())
                 {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                    return StatusCode(500, new
+                    {
+                        message = "Tidak dapat terhubung ke database."
+                    });
                 }
 
-                // **Ambil User ID dari JWT Claims**
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                // Ambil user login dari JWT
+                var emailLogin = User
+                    .FindFirst(ClaimTypes.NameIdentifier)?
+                    .Value;
+
                 if (string.IsNullOrEmpty(emailLogin))
                 {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                    return Unauthorized(new
+                    {
+                        message = "User tidak terautentikasi!"
+                    });
                 }
 
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                // Ambil UserActive
+                var getUserActive = await _applicationDbContext
+                    .UserActives
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Email == emailLogin);
+
                 if (getUserActive == null)
                 {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                    return Unauthorized(new
+                    {
+                        message = "User aktif tidak ditemukan!"
+                    });
                 }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.LabHasilSpecimens.FindAsync(id);
+                // Ambil data LabHasilSpecimen beserta relation JenisSpecimen
+                var data = await _applicationDbContext
+                    .LabHasilSpecimens
+                    .Include(x => x.JenisSpecimens)
+                    .FirstOrDefaultAsync(x =>
+                        x.LabHasilSpecimenId == id);
+
                 if (data == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return NotFound(new
+                    {
+                        message = "Data Lab Hasil Specimen tidak ditemukan."
+                    });
                 }
 
-                // **Update Data**
+                // Validasi Jenis Specimen
+                if (vm.JenisSpecimenId == null ||
+                    !vm.JenisSpecimenId.Any())
+                {
+                    return BadRequest(new
+                    {
+                        message = "Jenis specimen wajib dipilih."
+                    });
+                }
+
+                // Bersihkan Guid.Empty dan duplicate
+                var jenisSpecimenIds = vm.JenisSpecimenId
+                    .Where(x => x != Guid.Empty)
+                    .Distinct()
+                    .ToList();
+
+                if (!jenisSpecimenIds.Any())
+                {
+                    return BadRequest(new
+                    {
+                        message = "Jenis specimen tidak valid."
+                    });
+                }
+
+                // Validasi semua JenisSpecimenId tersedia di database
+                var validJenisSpecimenIds = await _applicationDbContext
+                    .SpecimenJeniss
+                    .Where(x =>
+                        jenisSpecimenIds.Contains(x.JenisSpecimenId))
+                    .Select(x => x.JenisSpecimenId)
+                    .ToListAsync();
+
+                if (validJenisSpecimenIds.Count != jenisSpecimenIds.Count)
+                {
+                    var invalidIds = jenisSpecimenIds
+                        .Except(validJenisSpecimenIds)
+                        .ToList();
+
+                    return BadRequest(new
+                    {
+                        message = "Terdapat JenisSpecimenId yang tidak ditemukan.",
+                        invalidJenisSpecimenIds = invalidIds
+                    });
+                }
+
+                // ============================================
+                // UPDATE DATA UTAMA
+                // ============================================
+
                 data.LabHasilId = vm.LabHasilId;
                 data.KunjunganId = vm.KunjunganId;
                 data.PasienId = vm.PasienId;
                 data.AsalSpecimenId = vm.AsalSpecimenId;
-                data.JenisSpecimenId = vm.JenisSpecimenId;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.LabHasilSpecimens.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                // ============================================
+                // HAPUS RELATION JENIS SPECIMEN LAMA
+                // ============================================
 
-                if (result > 0)
+                if (data.JenisSpecimens != null &&
+                    data.JenisSpecimens.Any())
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    _applicationDbContext
+                        .Set<LabHasilSpecimenJenis>()
+                        .RemoveRange(data.JenisSpecimens);
+
+                    data.JenisSpecimens.Clear();
                 }
-                else
+
+                // ============================================
+                // TAMBAHKAN RELATION JENIS SPECIMEN BARU
+                // ============================================
+
+                foreach (var jenisSpecimenId in jenisSpecimenIds)
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                    data.JenisSpecimens.Add(
+                        new LabHasilSpecimenJenis
+                        {
+                            LabHasilSpecimenJenisId = Guid.NewGuid(),
+
+                            LabHasilSpecimenId =
+                                data.LabHasilSpecimenId,
+
+                            JenisSpecimenId =
+                                jenisSpecimenId
+                        });
                 }
+
+                // Simpan perubahan
+                var result = await _applicationDbContext
+                    .SaveChangesAsync();
+
+                if (result <= 0)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "Data tidak berhasil diperbarui."
+                    });
+                }
+
+                return Ok(new
+                {
+                    message = "Update Data Berhasil || 200 OK",
+
+                    data = new
+                    {
+                        labHasilSpecimenId =
+                            data.LabHasilSpecimenId,
+
+                        labHasilId =
+                            data.LabHasilId,
+
+                        kunjunganId =
+                            data.KunjunganId,
+
+                        pasienId =
+                            data.PasienId,
+
+                        asalSpecimenId =
+                            data.AsalSpecimenId,
+
+                        jenisSpecimenIds =
+                            jenisSpecimenIds,
+
+                        updateBy =
+                            data.UpdateBy,
+
+                        updateDateTime =
+                            data.UpdateDateTime
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new
+                {
+                    message = "Gagal memperbarui data.",
+                    detail = dbEx.InnerException?.Message
+                             ?? dbEx.Message
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    message = "Terjadi kesalahan internal.",
+                    detail = ex.Message
+                });
             }
         }
 
@@ -280,7 +542,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
         }
 
-
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
         int page = 1,
@@ -317,8 +578,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              NoRM = a.Pasien != null ? a.Pasien.NoRekamMedis : null,
                              a.AsalSpecimenId,
                              NamaAsalSpecimen = a.AsalSpecimen != null ? a.AsalSpecimen.AsalSpecimen : null,
-                             a.JenisSpecimenId,
-                             NamaJenisSpecimen = a.JenisSpecimen != null ? a.JenisSpecimen.NamaJenisSpecimen : null,
+                             JenisSpecimen = a.JenisSpecimens.Select(j => new
+                             {
+                                 j.JenisSpecimenId,
+
+                                 NamaJenisSpecimen =
+                                     j.JenisSpecimen != null
+                                         ? j.JenisSpecimen.NamaJenisSpecimen
+                                         : null
+                             })
+                                .ToList(),
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
