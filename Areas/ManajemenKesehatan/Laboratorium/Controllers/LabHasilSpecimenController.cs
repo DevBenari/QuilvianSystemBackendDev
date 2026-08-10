@@ -5,13 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -67,6 +63,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 a.PasienId,
                                 NamaPasien = a.Pasien != null ? a.Pasien.NamaLengkap : null,
                                 NoRM = a.Pasien != null ? a.Pasien.NoRekamMedis : null,
+                                TanggalLahir = a.Pasien != null ? a.Pasien.TanggalLahir : null,
                                 a.AsalSpecimenId,
                                 NamaAsalSpecimen = a.AsalSpecimen != null ? a.AsalSpecimen.AsalSpecimen : null,
                                 a.JenisSpecimenId,
@@ -316,6 +313,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              NoRegistrasi = a.Kunjungan != null ? a.Kunjungan.NoRegistrasi : null,
                              a.PasienId,
                              NamaPasien = a.Pasien != null ? a.Pasien.NamaLengkap : null,
+                             TanggalLahir = a.Pasien != null ? a.Pasien.TanggalLahir : null,
                              NoRM = a.Pasien != null ? a.Pasien.NoRekamMedis : null,
                              a.AsalSpecimenId,
                              NamaAsalSpecimen = a.AsalSpecimen != null ? a.AsalSpecimen.AsalSpecimen : null,
