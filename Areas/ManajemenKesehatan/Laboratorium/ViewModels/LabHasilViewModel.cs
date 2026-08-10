@@ -8,6 +8,7 @@
         public List<Guid>? UserActiveId { get; set; } = new List<Guid>();
         public Guid? PenanggungJawabId { get; set; }
         public Guid? PenanggungJawabAnalisId { get; set; }
+        public string? DokterLuarRS { get; set; }
         // specimen
         public decimal? BloodVolume { get; set; }
         public decimal? SputumVolume { get; set; }
@@ -31,6 +32,8 @@
         public string? FiksasiDigunakan { get; set; }
         public string? PolaTujuanPengambilan { get; set; }
         public string? BahanNonGinekologi { get; set; }
+        public string? BahanPemeriksaanLainnya { get; set; }
+        public string? KeteranganBahanPemeriksaan { get; set; }
         public string? Keterangan { get; set; }
 
     }

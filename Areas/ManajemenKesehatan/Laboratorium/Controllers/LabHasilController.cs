@@ -117,6 +117,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.IsKonfirmatorDPJP,
                              a.PenanggungJawabId,
                              a.PenanggungJawabAnalisId,
+                             DokterLuarRS = a.DokterLuasRS,
                              a.TanggalPemeriksaan,
                              a.BloodVolume,
                              a.SputumVolume,
@@ -128,6 +129,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.PetugasSpecimenId,
                              a.TanggalSpecimen,
                              a.JamSpecimen,
+                             a.BahanPemeriksaanLainnya,
+                             a.KeteranganBahanPemeriksaan,
                              a.Keterangan,
                              //Kategori pemeriksaan PA
                              a.KategoriPemeriksaanPA,
@@ -205,6 +208,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 a.UserActiveId,
                                 a.PenanggungJawabId,
                                 a.PenanggungJawabAnalisId,
+                                DokterLuarRS = a.DokterLuasRS,
                                 a.TanggalPemeriksaan,
                                 a.BloodVolume,
                                 a.SputumVolume,
@@ -216,6 +220,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 a.PetugasSpecimenId,
                                 a.TanggalSpecimen,
                                 a.JamSpecimen,
+                                a.BahanPemeriksaanLainnya,
+                                a.KeteranganBahanPemeriksaan,
                                 a.Keterangan,
                                 //Kategori pemeriksaan PA
                                 a.KategoriPemeriksaanPA,
@@ -292,6 +298,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     UserActiveId = vm.UserActiveId,
                     PenanggungJawabAnalisId = vm.PenanggungJawabId,
                     PenanggungJawabId = vm.PenanggungJawabId,
+                    DokterLuasRS = vm.DokterLuarRS,
                     TanggalPemeriksaan = vm.TanggalPemeriksaan,
                     BloodVolume = vm.BloodVolume,
                     SputumVolume = vm.SputumVolume,
@@ -315,6 +322,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     FiksasiDigunakan = vm.FiksasiDigunakan,
                     PolaTujuanPengambilan = vm.PolaTujuanPengambilan,
                     BahanNonGinekologi = vm.BahanNonGinekologi,
+                    BahanPemeriksaanLainnya = vm.BahanPemeriksaanLainnya,
+                    KeteranganBahanPemeriksaan = vm.KeteranganBahanPemeriksaan,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -389,6 +398,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.UserActiveId = vm.UserActiveId;
                 data.PenanggungJawabAnalisId = vm.PenanggungJawabId;
                 data.PenanggungJawabId = vm.PenanggungJawabId;
+                data.DokterLuasRS = vm.DokterLuarRS;
                 data.TanggalPemeriksaan = vm.TanggalPemeriksaan;
                 data.BloodVolume = vm.BloodVolume;
                 data.SputumVolume = vm.SputumVolume;
@@ -411,6 +421,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.FiksasiDigunakan = vm.FiksasiDigunakan;
                 data.PolaTujuanPengambilan = vm.PolaTujuanPengambilan;
                 data.BahanNonGinekologi = vm.BahanNonGinekologi;
+                data.BahanPemeriksaanLainnya = vm.BahanPemeriksaanLainnya;
+                data.KeteranganBahanPemeriksaan = vm.KeteranganBahanPemeriksaan;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -439,9 +451,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost("LabHasilKonfirmasi/{hasilLabId:guid}")]
-        public async Task<IActionResult> KirimWaKonfirmasi(
-            [FromRoute] Guid hasilLabId,
-            [FromBody] LabHasilKonfirmasiViewModel request,
+        public async Task<IActionResult> KirimWaKonfirmasi([FromRoute] Guid hasilLabId,[FromBody] LabHasilKonfirmasiViewModel request,
             CancellationToken cancellationToken)
         {
             if (request == null)
@@ -799,9 +809,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost("LabHasiWA-Pasien/{hasilLabId:guid}")]
-        public async Task<IActionResult> KirimWaPasien(
-        [FromRoute] Guid hasilLabId,
-        [FromBody] LabHasilWAPasienViewModel request,
+        public async Task<IActionResult> KirimWaPasien([FromRoute] Guid hasilLabId,[FromBody] LabHasilWAPasienViewModel request,
         CancellationToken cancellationToken)
         {
             if (request == null)
@@ -1260,6 +1268,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             a.UserActiveId,
                             a.PenanggungJawabId,
                             a.PenanggungJawabAnalisId,
+                            DokterLuarRS = a.DokterLuasRS,
                             a.TanggalPemeriksaan,
                             a.BloodVolume,
                             a.SputumVolume,
@@ -1271,6 +1280,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             a.PetugasSpecimenId,
                             a.TanggalSpecimen,
                             a.JamSpecimen,
+                            BahanPemeriksaanLainnya = a.BahanPemeriksaanLainnya,
+                            KeteranganBahanPemeriksaan = a.KeteranganBahanPemeriksaan,
                             a.Keterangan,
 
                             //Kategori pemeriksaan PA
@@ -1441,6 +1452,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.DokterPerujukId,
                             p.DokterPerujukNama,
                             p.NoPhoneKonfirmator,
+                            p.DokterLuarRS,
                             p.TanggalPemeriksaan,
                             p.BloodVolume,
                             p.SputumVolume,
@@ -1452,6 +1464,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.PetugasSpecimenId,
                             p.TanggalSpecimen,
                             p.JamSpecimen,
+                            p.BahanPemeriksaanLainnya,
+                            p.KeteranganBahanPemeriksaan,
                             p.Keterangan,
                             //Kategori pemeriksaan PA
                             p.KategoriPemeriksaanPA,
@@ -1620,6 +1634,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 p.PenanggungJawabId,
                 p.PenanggungJawabAnalisId,
                 p.TanggalPemeriksaan,
+                p.DokterLuarRS,
                 p.BloodVolume,
                 p.SputumVolume,
                 p.UrineVolume,
@@ -1630,6 +1645,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 p.PetugasSpecimenId,
                 p.TanggalSpecimen,
                 p.JamSpecimen,
+                p.BahanPemeriksaanLainnya,
+                p.KeteranganBahanPemeriksaan,
                 p.Keterangan,
                 //Kategori pemeriksaan PA
                 p.KategoriPemeriksaanPA,
@@ -1724,6 +1741,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.UserActiveId,
                     a.PenanggungJawabId,
                     a.PenanggungJawabAnalisId,
+                    DokterLuarRS = a.DokterLuasRS,
                     a.TanggalPemeriksaan,
                     a.BloodVolume,
                     a.SputumVolume,
@@ -1735,6 +1753,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.PetugasSpecimenId,
                     a.TanggalSpecimen,
                     a.JamSpecimen,
+                    a.BahanPemeriksaanLainnya,
+                    a.KeteranganBahanPemeriksaan,
                     a.Keterangan,
                     //Kategori pemeriksaan PA
                     a.KategoriPemeriksaanPA,
@@ -1898,6 +1918,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.PenanggungJawabId,
                             p.PenanggungJawabAnalisId,
                             p.TanggalPemeriksaan,
+                            p.DokterLuarRS,
                             p.BloodVolume,
                             p.SputumVolume,
                             p.UrineVolume,
@@ -1908,6 +1929,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.PetugasSpecimenId,
                             p.TanggalSpecimen,
                             p.JamSpecimen,
+                            p.BahanPemeriksaanLainnya,
+                            p.KeteranganBahanPemeriksaan,
                             p.Keterangan,
                             //Kategori pemeriksaan PA
                             p.KategoriPemeriksaanPA,
@@ -2177,6 +2200,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.UserActiveId,
                     a.PenanggungJawabId,
                     a.PenanggungJawabAnalisId,
+                    DokterLuarRS = a.DokterLuasRS,
                     a.TanggalPemeriksaan,
                     a.BloodVolume,
                     a.SputumVolume,
@@ -2188,6 +2212,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.PetugasSpecimenId,
                     a.TanggalSpecimen,
                     a.JamSpecimen,
+                    a.BahanPemeriksaanLainnya,
+                    a.KeteranganBahanPemeriksaan,
                     a.Keterangan,
                     //Kategori pemeriksaan PA
                     a.KategoriPemeriksaanPA,
@@ -2350,6 +2376,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.UserActiveId,
                             p.PenanggungJawabId,
                             p.PenanggungJawabAnalisId,
+                            p.DokterLuarRS,
                             p.TanggalPemeriksaan,
                             p.BloodVolume,
                             p.SputumVolume,
@@ -2361,6 +2388,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.PetugasSpecimenId,
                             p.TanggalSpecimen,
                             p.JamSpecimen,
+                            p.BahanPemeriksaanLainnya,
+                            p.KeteranganBahanPemeriksaan,
                             p.Keterangan,
                             //Kategori pemeriksaan PA
                             p.KategoriPemeriksaanPA,
@@ -2527,6 +2556,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 p.PenanggungJawabId,
                 p.PenanggungJawabAnalisId,
                 p.TanggalPemeriksaan,
+                p.DokterLuarRS,
                 p.BloodVolume,
                 p.SputumVolume,
                 p.UrineVolume,
@@ -2537,6 +2567,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 p.PetugasSpecimenId,
                 p.TanggalSpecimen,
                 p.JamSpecimen,
+                p.BahanPemeriksaanLainnya,
+                p.KeteranganBahanPemeriksaan,
                 p.Keterangan,
                 //Kategori pemeriksaan PA
                 p.KategoriPemeriksaanPA,
@@ -2630,6 +2662,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.UserActiveId,
                     a.PenanggungJawabId,
                     a.PenanggungJawabAnalisId,
+                    DokterLuarRS = a.DokterLuasRS,
                     a.TanggalPemeriksaan,
                     a.BloodVolume,
                     a.SputumVolume,
@@ -2641,6 +2674,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.PetugasSpecimenId,
                     a.TanggalSpecimen,
                     a.JamSpecimen,
+                    a.BahanPemeriksaanLainnya,
+                    a.KeteranganBahanPemeriksaan,
                     a.Keterangan,
                     //Kategori pemeriksaan PA
                     a.KategoriPemeriksaanPA,
@@ -2804,6 +2839,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.PenanggungJawabId,
                             p.PenanggungJawabAnalisId,
                             p.TanggalPemeriksaan,
+                            p.DokterLuarRS,
                             p.BloodVolume,
                             p.SputumVolume,
                             p.UrineVolume,
@@ -2814,6 +2850,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.PetugasSpecimenId,
                             p.TanggalSpecimen,
                             p.JamSpecimen,
+                            p.BahanPemeriksaanLainnya,
+                            p.KeteranganBahanPemeriksaan,
                             p.Keterangan,
                             //Kategori pemeriksaan PA
                             p.KategoriPemeriksaanPA,
@@ -2981,6 +3019,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 p.PenanggungJawabId,
                 p.PenanggungJawabAnalisId,
                 p.TanggalPemeriksaan,
+                p.DokterLuarRS,
                 p.BloodVolume,
                 p.SputumVolume,
                 p.UrineVolume,
@@ -2991,6 +3030,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 p.PetugasSpecimenId,
                 p.TanggalSpecimen,
                 p.JamSpecimen,
+                p.BahanPemeriksaanLainnya,
+                p.KeteranganBahanPemeriksaan,
                 p.Keterangan,
                 //Kategori pemeriksaan PA
                 p.KategoriPemeriksaanPA,
@@ -3085,6 +3126,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.PenanggungJawabId,
                     a.PenanggungJawabAnalisId,
                     a.TanggalPemeriksaan,
+                    DokterLuarRS = a.DokterLuasRS,
                     a.BloodVolume,
                     a.SputumVolume,
                     a.UrineVolume,
@@ -3095,6 +3137,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.PetugasSpecimenId,
                     a.TanggalSpecimen,
                     a.JamSpecimen,
+                    a.BahanPemeriksaanLainnya,
+                    a.KeteranganBahanPemeriksaan,
                     a.Keterangan,
                     //Kategori pemeriksaan PA
                     a.KategoriPemeriksaanPA,
@@ -3258,6 +3302,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.PenanggungJawabId,
                             p.PenanggungJawabAnalisId,
                             p.TanggalPemeriksaan,
+                            p.DokterLuarRS,
                             p.BloodVolume,
                             p.SputumVolume,
                             p.UrineVolume,
@@ -3268,6 +3313,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.PetugasSpecimenId,
                             p.TanggalSpecimen,
                             p.JamSpecimen,
+                            p.BahanPemeriksaanLainnya,
+                            p.KeteranganBahanPemeriksaan,
                             p.Keterangan,
                             //Kategori pemeriksaan PA
                             p.KategoriPemeriksaanPA,
@@ -3434,6 +3481,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 p.PenanggungJawabId,
                 p.PenanggungJawabAnalisId,
                 p.TanggalPemeriksaan,
+                p.DokterLuarRS,
                 p.BloodVolume,
                 p.SputumVolume,
                 p.UrineVolume,
@@ -3444,6 +3492,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 p.PetugasSpecimenId,
                 p.TanggalSpecimen,
                 p.JamSpecimen,
+                p.BahanPemeriksaanLainnya,
+                p.KeteranganBahanPemeriksaan,
                 p.Keterangan,
                 //Kategori pemeriksaan PA
                 p.KategoriPemeriksaanPA,
@@ -3539,6 +3589,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.PenanggungJawabId,
                     a.PenanggungJawabAnalisId,
                     a.TanggalPemeriksaan,
+                    DokterLuarRS = a.DokterLuasRS,
                     a.BloodVolume,
                     a.SputumVolume,
                     a.UrineVolume,
@@ -3549,6 +3600,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     a.PetugasSpecimenId,
                     a.TanggalSpecimen,
                     a.JamSpecimen,
+                    a.BahanPemeriksaanLainnya,
+                    a.KeteranganBahanPemeriksaan,
                     a.Keterangan,
                     //Kategori pemeriksaan PA
                     a.KategoriPemeriksaanPA,
@@ -3712,6 +3765,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             p.PenanggungJawabId,
                             p.PenanggungJawabAnalisId,
                             p.TanggalPemeriksaan,
+                            p.DokterLuarRS,
                             p.BloodVolume,
                             p.SputumVolume,
                             p.UrineVolume,
