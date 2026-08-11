@@ -366,7 +366,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.All.Controllers
                 {
                     return Created("", new
                     {
-                        message = data.AccManualJurnalId
+                        message = "Manual Jurnal berhasil dibuat.",
+                        AccManualJurnalId = data.AccManualJurnalId
                     });
                 }
 
