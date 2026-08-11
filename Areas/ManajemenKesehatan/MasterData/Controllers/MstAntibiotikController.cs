@@ -92,6 +92,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var data = new MstAntibiotik
                 {
                     AntibiotikId = Guid.NewGuid(),
+                    NamaAntibiotik = vm.NamaAntibiotik,
                     KodeAntibiotik = vm.KodeAntibiotik,
                     Microgram = vm.Microgram,
                     Keterangan = vm.Keterangan,
@@ -162,6 +163,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Update Data**
+                data.NamaAntibiotik = vm.NamaAntibiotik;
                 data.KodeAntibiotik = vm.KodeAntibiotik;
                 data.Microgram = vm.Microgram;
                 data.Keterangan = vm.Keterangan;
@@ -278,6 +280,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateBy,
                              CreateByName = u.FullName,
                              a.AntibiotikId,
+                             a.NamaAntibiotik,
                              a.KodeAntibiotik,
                              a.Microgram,
                              a.Keterangan,

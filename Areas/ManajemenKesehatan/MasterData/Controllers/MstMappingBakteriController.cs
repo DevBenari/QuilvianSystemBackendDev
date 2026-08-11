@@ -19,20 +19,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("FrontendCorsPolicy")]
-    public class MstSubBakteriController : Controller
+    public class MstMappingBakteriController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<MstSubBakteriController> _logger;
+        private readonly ILogger<MstMappingBakteriController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public MstSubBakteriController(
+        public MstMappingBakteriController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<MstSubBakteriController> logger,
+            ILogger<MstMappingBakteriController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -46,7 +46,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.MstSubBakteris.Find(id);
+            var listdata = (from a in _applicationDbContext.MapBakteris
+                            join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                            on a.CreateBy equals u.UserActiveId
+                            where a.IsDelete == false && a.MapBakteriId == id
+                            select new
+                            {
+                                a.CreateDateTime,
+                                a.CreateBy,
+                                CreateByName = u.FullName,
+                                a.MapBakteriId,
+                                a.BakteriId,
+                                NamaBakteri = a.Bakteri != null ? a.Bakteri.NamaBakteri : null,
+                                KodeBakteri = a.Bakteri != null ? a.Bakteri.KodeBakteri : null,
+                                a.SubBakteriId,
+                                KodeSubBakteri = a.SubBakteri != null ? a.SubBakteri.KodeSubBakteri : null,
+                                NamaSubBakteri = a.SubBakteri != null ? a.SubBakteri.NamaSubBakteri : null,
+                                a.Keterangan,
+                            });
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -60,7 +77,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] MstSubBakteriViewModel vm)
+        public async Task<IActionResult> Create([FromBody] MstMappingBakteriViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -89,12 +106,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Buat Data Baru**
-                var data = new MstSubBakteri
+                //cek duplikasi
+                bool isDuplicate = await _applicationDbContext.MapBakteris
+                    .AnyAsync(c => c.BakteriId == vm.BakteriId
+                    && c.SubBakteriId == vm.SubBakteriId
+                    && c.IsDelete == false);
+
+                if (isDuplicate)
                 {
-                    SubBakteriId = Guid.NewGuid(),
-                    NamaSubBakteri = vm.NamaSubBakteri,
-                    KodeSubBakteri = vm.KodeSubBakteri,
+                    return Conflict(new { message = "Mapping bakteri dan sub-bakteri ini telah ada" });
+                }
+
+                // **Buat Data Baru**
+                var data = new MstMappingBakteri
+                {
+                    MapBakteriId = Guid.NewGuid(),
+                    BakteriId = vm.BakteriId,
+                    SubBakteriId = vm.SubBakteriId,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -102,7 +130,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.MstSubBakteris.Add(data);
+                _applicationDbContext.MapBakteris.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -125,7 +153,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] MstSubBakteriViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] MstMappingBakteriViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -156,21 +184,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.MstSubBakteris.FindAsync(id);
+                var data = await _applicationDbContext.MapBakteris.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                //cek duplikasi
+                bool isDuplicate = await _applicationDbContext.MapBakteris
+                    .AnyAsync(c => c.BakteriId == vm.BakteriId
+                    && c.SubBakteriId == vm.SubBakteriId
+                    && c.MapBakteriId != id
+                    && c.IsDelete == false);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Mapping bakteri dan sub-bakteri ini telah ada" });
+                }
+
                 // **Update Data**
-                data.NamaSubBakteri = vm.NamaSubBakteri;
-                data.KodeSubBakteri = vm.KodeSubBakteri;
+                data.BakteriId = vm.BakteriId;
+                data.SubBakteriId = vm.SubBakteriId;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.MstSubBakteris.Update(data);
+                _applicationDbContext.MapBakteris.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -219,7 +259,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.MstSubBakteris.FindAsync(id);
+                var data = await _applicationDbContext.MapBakteris.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -231,7 +271,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.MstSubBakteris.Update(data);
+                _applicationDbContext.MapBakteris.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -255,21 +295,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        Guid? subbakteriId = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            Guid? bakteriId = null,
+            Guid? subBakteriId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = from a in _applicationDbContext.MstSubBakteris
+            var query = (from a in _applicationDbContext.MapBakteris
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -278,25 +319,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
+                             a.MapBakteriId,
+                             a.BakteriId,
+                             NamaBakteri = a.Bakteri != null ? a.Bakteri.NamaBakteri : null,
+                             KodeBakteri = a.Bakteri != null ? a.Bakteri.KodeBakteri : null,
                              a.SubBakteriId,
-                             a.NamaSubBakteri,
-                             a.KodeSubBakteri,
+                             KodeSubBakteri = a.SubBakteri != null ? a.SubBakteri.KodeSubBakteri : null,
+                             NamaSubBakteri = a.SubBakteri != null ? a.SubBakteri.NamaSubBakteri : null,
                              a.Keterangan,
-                         };
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
+                    EF.Functions.ILike(u.KodeBakteri, search) ||
                     EF.Functions.ILike(u.KodeSubBakteri, search)
                 );
             }
 
-            // filter by id
-            if (subbakteriId.HasValue)
+            // bakteri id
+            if (bakteriId.HasValue)
             {
-                query = query.Where(u => u.SubBakteriId == subbakteriId.Value);
+                query = query.Where(u => u.BakteriId == bakteriId.Value);
+            }
+
+            // sub bakteri id
+            if (subBakteriId.HasValue)
+            {
+                query = query.Where(u => u.SubBakteriId == subBakteriId.Value);
             }
 
             //// **Filter berdasarkan tanggal**

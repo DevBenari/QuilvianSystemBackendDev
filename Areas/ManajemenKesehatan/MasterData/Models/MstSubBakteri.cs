@@ -7,6 +7,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
     {
         [Key]
         public Guid SubBakteriId { get; set; }
+        public string? NamaSubBakteri { get; set; }
 
         public string? KodeSubBakteri { get; set; }
 

@@ -1,9 +1,9 @@
 ﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
-    public class MstBakteriViewModel
+    public class MstMappingBakteriViewModel
     {
-        public string? NamaBakteri { get; set; }
-        public string? KodeBakteri { get; set; }
+        public Guid? BakteriId { get; set; }
+        public Guid? SubBakteriId { get; set; }
         public string? Keterangan { get; set; }
     }
 }

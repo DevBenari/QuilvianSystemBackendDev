@@ -94,6 +94,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var data = new MstBakteri
                 {
                     BakteriId = Guid.NewGuid(),
+                    NamaBakteri = vm.NamaBakteri,
                     KodeBakteri = vm.KodeBakteri,
                     Keterangan = vm.Keterangan,
 
@@ -163,6 +164,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Update Data**
+                data.NamaBakteri = vm.NamaBakteri;
                 data.KodeBakteri = vm.KodeBakteri;
                 data.Keterangan = vm.Keterangan;
 
@@ -278,6 +280,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateBy,
                              CreateByName = u.FullName,
                              a.BakteriId,
+                             a.NamaBakteri,
                              a.KodeBakteri,
                              a.Keterangan,
                          });
