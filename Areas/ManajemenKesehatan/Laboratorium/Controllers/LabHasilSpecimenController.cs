@@ -547,6 +547,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? labHasilId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -599,6 +600,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     EF.Functions.ILike(u.NoRM, search) ||
                     EF.Functions.ILike(u.NoRegistrasi, search)
                 );
+            }
+
+            // filter by lab hasil id 
+            if (labHasilId.HasValue)
+            {
+                query = query.Where(u => u.LabHasilId == labHasilId.Value);
             }
 
             //// **Filter berdasarkan tanggal**
