@@ -522,14 +522,14 @@ namespace QuilvianSystemBackendDev.Areas.Finance.GeneralLedger.Controllers
                 // VALIDASI DETAIL TEMP RECURRING JOURNAL
                 // ====================================================
 
-                if (model.DetailTempRJId == Guid.Empty)
-                {
-                    return BadRequest(new
-                    {
-                        message =
-                            "DetailTempRJId wajib diisi"
-                    });
-                }
+                //if (model.DetailTempRJId == Guid.Empty)
+                //{
+                //    return BadRequest(new
+                //    {
+                //        message =
+                //            "DetailTempRJId wajib diisi"
+                //    });
+                //}
 
 
                 // ====================================================
