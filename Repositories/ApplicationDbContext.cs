@@ -1233,6 +1233,11 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<LabHasilSpecimen> LabHasilSpecimens { get; set; }
             public DbSet<LabHasilSpecimenJenis> LabHasilSpecimenJenis { get; set; }
             public DbSet<LabHasilSetBakteri> LabHasilSetBakteris { get; set; }
+            public DbSet<LabNilaiRujukan> LabNilaiRujukans { get; set; }
+
+            public DbSet<LabHasilBakteri> LabHasilBakteris { get; set; }
+
+            public DbSet<LabBakteriDetail> LabBakteriDetails { get; set; }
 
         #endregion
 

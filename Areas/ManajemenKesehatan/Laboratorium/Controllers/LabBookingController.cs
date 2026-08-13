@@ -144,6 +144,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         x.Booking.AsuransiId,
                         NamaAsuransi = x.Booking.Asuransi != null ? x.Booking.Asuransi.NamaAsuransi : null,
 
+                        x.Booking.IsSpecimenLayak,
+                        x.Booking.Specimen,
                         x.Booking.WaktuPemeriksaan,
                         x.Booking.WaktuPemeriksaanPersiapan,
                         x.Booking.SuratRujukan,
@@ -266,6 +268,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.DokterKonsulen,
 
                         b.TerapisId,
+
+                        b.IsSpecimenLayak,
+                        b.Specimen,
 
                         b.AsuransiId,
                         b.NamaAsuransi,
@@ -403,6 +408,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         KonfirmatorId = b.KonfirmatorId,
                         NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                         TglKonfrimasi = b.TglKonfirmasi,
+
+                        b.IsSpecimenLayak,
+                        b.Specimen,
+
                         b.WaktuKonfirmasi,
                         b.StatusKonfirmasi,
                         b.KalkulasiTercover,
@@ -664,7 +673,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                     header.DokterPemeriksaId,
                     header.NamaDokterPemeriksa,
-
                     header.KonfirmatorId,
                     header.NamaKonfirmator,
                     header.TglKonfrimasi,
@@ -680,6 +688,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.TindakLanjut,
                     header.HasilPenunjangLab,
                     header.AnjuranDiet,
+
+                    header.IsSpecimenLayak,
+                    header.Specimen,
 
                     header.Keterangan,
                     header.TTDPathPembatalan,
@@ -765,6 +776,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NoLab = vm.NoLab,
                     NoPA = vm.NoPA,
                     IsCito = vm.IsCito,
+                    IsSpecimenLayak = vm.IsSpecimenLayak,
+                    Specimen = vm.Specimen,
                     WaktuPemeriksaan = vm.WaktuPemeriksaan,
                     WaktuPemeriksaanPersiapan = vm.WaktuPemeriksaanPersiapan,
                     StatusBookingLab = false,
@@ -894,6 +907,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.DokterKonsulenId = vm.DokterKonsulenId;
                 entity.TerapisId = vm.TerapisId;
                 entity.IsCito = vm.IsCito;
+                entity.IsSpecimenLayak = vm.IsSpecimenLayak;
+                entity.Specimen = vm.Specimen;
                 entity.HemodialisaKe = vm.HemodialisaKe;
                 entity.NomorSuratJaminan = vm.NomorSuratJaminan;
                 entity.CatatanJaminan = vm.CatatanJaminan;
@@ -1958,6 +1973,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
+                    b.IsSpecimenLayak,
+                    b.Specimen,
                     b.KalkulasiTercover,
                     b.KalkulasiTidakTercover,
                     b.IsDelete,
@@ -2396,6 +2413,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
+                    b.IsSpecimenLayak,
+                    b.Specimen,
                     b.KalkulasiTercover,
                     b.KalkulasiTidakTercover,
                     b.IsDelete,
@@ -2907,6 +2926,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
+                    b.IsSpecimenLayak,
+                    b.Specimen,
                     b.KalkulasiTercover,
                     b.KalkulasiTidakTercover,
                     b.IsDelete,
@@ -3344,6 +3365,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
+                    b.IsSpecimenLayak,
+                    b.Specimen,
                     b.KalkulasiTercover,
                     b.KalkulasiTidakTercover,
                     b.IsDelete,
@@ -3764,6 +3787,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
+                    b.IsSpecimenLayak,
+                    b.Specimen,
                     b.KalkulasiTercover,
                     b.KalkulasiTidakTercover,
                     b.IsDelete,

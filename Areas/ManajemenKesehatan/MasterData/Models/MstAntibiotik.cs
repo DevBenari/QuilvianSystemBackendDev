@@ -1,4 +1,5 @@
-﻿using QuilvianSystemBackendDev.Models;
+﻿using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
@@ -18,5 +19,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         // =========================
         public ICollection<MstMapAntibiotikSubBakteri> MapAntibiotikSubBakteris { get; set; }
             = new List<MstMapAntibiotikSubBakteri>();
+
+        public ICollection<LabBakteriDetail> LabDetailBakteris { get; set; }
+            = new List<LabBakteriDetail>();
     }
 }

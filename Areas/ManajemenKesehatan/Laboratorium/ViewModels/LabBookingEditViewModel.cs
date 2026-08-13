@@ -24,6 +24,8 @@
         public string? Keterangan { get; set; } // Catatan atau keterangan tambahan
         public bool? IsPasienPersiapan { get; set; }
         public bool? IsCito { get; set; } // Penanda apakah pemeriksaan bersifat "Cito" (darurat)
+        public bool? IsSpecimenLayak { get; set; }
+        public List<string>? Specimen { get; set; }
         public string? DiagnosaAwal { get; set; }
         public string? StatusPemeriksaan { get; set; }
 
